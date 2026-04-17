@@ -180,12 +180,20 @@ export default function Dashboard() {
     processCandle({ ...liveCandleRef.current }, false)
   }, [processCandle])
 
-  // Bootstrap: load history + run engine
+  // Bootstrap: load history + run engine + backfill if no trades
   useEffect(() => {
-    fetchHistoricalCandles().then(hist => {
+    fetchHistoricalCandles().then(async hist => {
       candlesRef.current = hist
       setCandles(hist)
-      refreshTrades()
+
+      // Check if there are existing trades; if not, run backfill first
+      const tradesRes = await fetch('/api/trades')
+      const tradesData = await tradesRes.json() as TradesResponse
+      if (tradesData.trades.length === 0) {
+        // Trigger backfill (simulates last 20 historical trades)
+        await fetch('/api/backfill', { method: 'POST' })
+      }
+      await refreshTrades()
 
       let waited = 0
       const poll = setInterval(() => {

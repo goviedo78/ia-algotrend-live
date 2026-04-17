@@ -3,12 +3,14 @@
 import { useEffect, useRef } from 'react'
 import {
   createChart,
+  createSeriesMarkers,
   CandlestickSeries,
   LineSeries,
   type IChartApi,
   type ISeriesApi,
   type CandlestickData,
   type LineData,
+  type SeriesMarker,
   type Time,
 } from 'lightweight-charts'
 import type { Candle } from '@/lib/algotrend'
@@ -21,11 +23,13 @@ interface ChartProps {
 }
 
 export default function Chart({ candles, results, liveCandle }: ChartProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const chartRef     = useRef<IChartApi | null>(null)
-  const candleRef    = useRef<ISeriesApi<'Candlestick'> | null>(null)
-  const stBullRef    = useRef<ISeriesApi<'Line'> | null>(null)
-  const stBearRef    = useRef<ISeriesApi<'Line'> | null>(null)
+  const containerRef  = useRef<HTMLDivElement>(null)
+  const chartRef      = useRef<IChartApi | null>(null)
+  const candleRef     = useRef<ISeriesApi<'Candlestick'> | null>(null)
+  const stBullRef     = useRef<ISeriesApi<'Line'> | null>(null)
+  const stBearRef     = useRef<ISeriesApi<'Line'> | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const markersRef    = useRef<any>(null)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -37,7 +41,7 @@ export default function Chart({ candles, results, liveCandle }: ChartProps) {
       timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#1f2937' },
       rightPriceScale: { borderColor: '#1f2937' },
       width:  containerRef.current.clientWidth,
-      height: 480,
+      height: 500,
     })
     chartRef.current = chart
 
@@ -80,7 +84,7 @@ export default function Chart({ candles, results, liveCandle }: ChartProps) {
       })) as CandlestickData[]
     )
 
-    // Split SuperTrend into bullish and bearish segments (NaN gap = line break)
+    // Split SuperTrend into bullish and bearish segments
     const bullData: LineData[] = []
     const bearData: LineData[] = []
 
@@ -95,6 +99,40 @@ export default function Chart({ candles, results, liveCandle }: ChartProps) {
 
     stBullRef.current?.setData(bullData)
     stBearRef.current?.setData(bearData)
+
+    // Signal markers — arrows with probability %
+    const markers: SeriesMarker<Time>[] = []
+    for (const r of results) {
+      if (r.longSig) {
+        const prob = Math.round(r.probUp * 100)
+        markers.push({
+          time:     r.time as Time,
+          position: 'belowBar',
+          shape:    'arrowUp',
+          color:    '#289eff',
+          text:     `L ${prob}%`,
+          size:     1,
+        })
+      } else if (r.shortSig) {
+        const prob = Math.round(r.probDown * 100)
+        markers.push({
+          time:     r.time as Time,
+          position: 'aboveBar',
+          shape:    'arrowDown',
+          color:    '#ce3f6c',
+          text:     `S ${prob}%`,
+          size:     1,
+        })
+      }
+    }
+    // Remove old marker plugin and create fresh one
+    if (markersRef.current) {
+      markersRef.current.detachPrimitive?.()
+      markersRef.current = null
+    }
+    if (markers.length > 0 && candleRef.current) {
+      markersRef.current = createSeriesMarkers(candleRef.current, markers)
+    }
 
     chartRef.current?.timeScale().scrollToRealTime()
   }, [candles, results])
