@@ -1,5 +1,5 @@
-// Fusion Engine X10 — TypeScript port of the Pine Script indicator
-// Engines: GMMA (trend) + RSI/MACD (momentum) + Probability fusion + Signal gate
+// 🧠 IA AlgoTrend — TypeScript port of the Pine Script indicator
+// Engines: GMMA (trend) + RSI/MACD (momentum) + KNN Probability + Signal gate
 
 export interface Candle {
   time: number   // Unix seconds

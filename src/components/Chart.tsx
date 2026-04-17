@@ -218,7 +218,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
   return (
     <div className="relative w-full overflow-hidden rounded-[1.45rem] border border-[#d6deec] bg-gradient-to-b from-[#131b30] to-[#0d1323] shadow-[0_18px_45px_rgba(34,56,86,0.16)]">
       <div className="pointer-events-none absolute left-4 top-3 z-10 rounded-full border border-[#2f4269] bg-[#111a2f]/80 px-2.5 py-1 text-[10px] font-semibold tracking-[0.14em] text-[#95b4e9]">
-        ALGO EN VIVO
+        🧠 IA ALGOTREND
       </div>
       <div ref={containerRef} className="h-[500px] w-full" />
     </div>

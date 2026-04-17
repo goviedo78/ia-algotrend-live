@@ -1,11 +1,11 @@
 {
-  "name": "AlgoTrend Live — BTC Trading",
+  "name": "🧠 IA AlgoTrend — BTC Live",
   "short_name": "AlgoTrend",
-  "description": "Dashboard en vivo de estrategia SuperTrend + KNN para BTC con historial y métricas.",
+  "description": "Mesa de monitoreo en vivo para la estrategia IA AlgoTrend en BTC/USD.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b1220",
-  "theme_color": "#3b82f6",
+  "theme_color": "#289eff",
   "orientation": "portrait-primary",
   "icons": [
     {

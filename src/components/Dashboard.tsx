@@ -352,19 +352,15 @@ export default function Dashboard() {
         <header className="surface-panel reveal-up px-5 py-5 sm:px-6 sm:py-6">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div className="flex items-start gap-4">
-              <div className="shrink-0 rounded-2xl border border-[#1F2937] bg-[#0F172A] p-1.5 shadow-[0_10px_26px_rgba(0,0,0,0.45)]">
-                <Image
-                  src="/logo-gon.png"
-                  alt="Gon logo"
-                  width={56}
-                  height={56}
-                  className="rounded-xl"
-                  priority
-                />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827] shadow-[0_8px_20px_rgba(0,0,0,0.3)] border border-[#1f2937]">
+                <img src="/logo-algotrend.png" alt="IA AlgoTrend" className="h-9 w-9" />
               </div>
 
-              <div className="space-y-3">
-                <p className="label-eyebrow">AlgoTrend en Vivo</p>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#289eff]" />
+                  <p className="label-eyebrow">🧠 IA AlgoTrend en Vivo</p>
+                </div>
                 <h1 className="text-[1.65rem] leading-tight text-[#E5E7EB] sm:text-[2rem]">
                   Mesa de Trading BTC 1H
                 </h1>

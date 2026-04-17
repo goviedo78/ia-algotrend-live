@@ -20,13 +20,13 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AlgoTrend en Vivo — Trading BTC 1H",
-  description: "Dashboard en vivo de estrategia SuperTrend + KNN para BTC con historial y métricas.",
-  manifest: "/manifest.json",
+  title: '🧠 IA AlgoTrend — Live Monitoring',
+  description: 'Mesa de monitoreo en vivo para la estrategia Algotrend en BTC/USD.',
+  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
-    title: "AlgoTrend",
+    statusBarStyle: 'default',
+    title: 'IA AlgoTrend',
   },
 };
 
