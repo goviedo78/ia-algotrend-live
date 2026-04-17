@@ -1,52 +1,13 @@
-import Database from 'better-sqlite3'
-import path from 'path'
-import fs from 'fs'
+import { createClient } from '@supabase/supabase-js'
 
-const DATA_DIR = path.join(process.cwd(), 'data')
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
-const DB_PATH = path.join(DATA_DIR, 'trades.db')
-
-let _db: Database.Database | null = null
-
-export function getDb(): Database.Database {
-  if (!_db) {
-    _db = new Database(DB_PATH)
-    _db.pragma('journal_mode = WAL')
-    _db.exec(`
-      CREATE TABLE IF NOT EXISTS trades (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        direction   TEXT NOT NULL,       -- 'LONG' | 'SHORT'
-        open_time   INTEGER NOT NULL,    -- unix seconds
-        open_price  REAL NOT NULL,
-        stop_loss   REAL NOT NULL,
-        take_profit REAL NOT NULL,
-        close_time  INTEGER,
-        close_price REAL,
-        close_reason TEXT,              -- 'SL' | 'TP' | 'SIGNAL'
-        pnl_usd     REAL,
-        pnl_pct     REAL,
-        status      TEXT NOT NULL DEFAULT 'OPEN'  -- 'OPEN' | 'CLOSED'
-      );
-
-      CREATE TABLE IF NOT EXISTS settings (
-        key   TEXT PRIMARY KEY,
-        value TEXT NOT NULL
-      );
-    `)
-
-    // Seed initial balance if not exists
-    const row = _db.prepare('SELECT value FROM settings WHERE key = ?').get('balance') as { value: string } | undefined
-    if (!row) {
-      _db.prepare("INSERT INTO settings (key, value) VALUES ('balance', '10000')").run()
-    }
-  }
-  return _db
-}
-
-export type TradeStatus = 'OPEN' | 'CLOSED'
+export type TradeStatus    = 'OPEN' | 'CLOSED'
 export type TradeDirection = 'LONG' | 'SHORT'
-export type CloseReason = 'SL' | 'TP' | 'SIGNAL'
+export type CloseReason    = 'SL' | 'TP' | 'SIGNAL'
 
 export interface Trade {
   id: number
@@ -63,71 +24,70 @@ export interface Trade {
   status: TradeStatus
 }
 
-const POSITION_SIZE_USD = 10000   // full capital per trade (no leverage)
+const TABLE = 'algotrend_trades'
+const POSITION_SIZE_USD = 10000
 
-export function openTrade(
+export async function openTrade(
   direction: TradeDirection,
   openTime: number,
   openPrice: number,
   stopLoss: number,
   takeProfit: number
-): Trade {
-  const db = getDb()
+): Promise<Trade> {
+  // Close any open trade first
+  const open = await getOpenTrade()
+  if (open) await closeTrade(open.id, openTime, openPrice, 'SIGNAL')
 
-  // Close any open trade before opening a new one (one position at a time)
-  const open = db.prepare("SELECT * FROM trades WHERE status = 'OPEN'").get() as Trade | undefined
-  if (open) {
-    closeTrade(open.id, openTime, openPrice, 'SIGNAL')
-  }
+  const { data, error } = await supabase
+    .from(TABLE)
+    .insert({ direction, open_time: openTime, open_price: openPrice, stop_loss: stopLoss, take_profit: takeProfit, status: 'OPEN' })
+    .select()
+    .single()
 
-  const result = db.prepare(`
-    INSERT INTO trades (direction, open_time, open_price, stop_loss, take_profit, status)
-    VALUES (?, ?, ?, ?, ?, 'OPEN')
-  `).run(direction, openTime, openPrice, stopLoss, takeProfit)
-
-  return db.prepare('SELECT * FROM trades WHERE id = ?').get(result.lastInsertRowid) as Trade
+  if (error) throw new Error(error.message)
+  return data as Trade
 }
 
-export function closeTrade(
+export async function closeTrade(
   id: number,
   closeTime: number,
   closePrice: number,
   reason: CloseReason
-): Trade {
-  const db = getDb()
-  const trade = db.prepare('SELECT * FROM trades WHERE id = ?').get(id) as Trade
+): Promise<Trade> {
+  const { data: trade } = await supabase.from(TABLE).select().eq('id', id).single()
+  const t = trade as Trade
 
-  const multiplier = trade.direction === 'LONG' ? 1 : -1
-  const pnlPct = ((closePrice - trade.open_price) / trade.open_price) * multiplier * 100
+  const mult   = t.direction === 'LONG' ? 1 : -1
+  const pnlPct = ((closePrice - t.open_price) / t.open_price) * mult * 100
   const pnlUsd = POSITION_SIZE_USD * pnlPct / 100
 
-  db.prepare(`
-    UPDATE trades
-    SET close_time = ?, close_price = ?, close_reason = ?,
-        pnl_usd = ?, pnl_pct = ?, status = 'CLOSED'
-    WHERE id = ?
-  `).run(closeTime, closePrice, reason, pnlUsd, pnlPct, id)
+  const { data, error } = await supabase
+    .from(TABLE)
+    .update({ close_time: closeTime, close_price: closePrice, close_reason: reason, pnl_usd: pnlUsd, pnl_pct: pnlPct, status: 'CLOSED' })
+    .eq('id', id)
+    .select()
+    .single()
 
-  return db.prepare('SELECT * FROM trades WHERE id = ?').get(id) as Trade
+  if (error) throw new Error(error.message)
+  return data as Trade
 }
 
-export function getOpenTrade(): Trade | null {
-  const db = getDb()
-  return (db.prepare("SELECT * FROM trades WHERE status = 'OPEN'").get() as Trade) ?? null
+export async function getOpenTrade(): Promise<Trade | null> {
+  const { data } = await supabase.from(TABLE).select().eq('status', 'OPEN').maybeSingle()
+  return (data as Trade) ?? null
 }
 
-export function getAllTrades(limit = 100): Trade[] {
-  const db = getDb()
-  return db.prepare('SELECT * FROM trades ORDER BY open_time DESC LIMIT ?').all(limit) as Trade[]
+export async function getAllTrades(limit = 200): Promise<Trade[]> {
+  const { data } = await supabase.from(TABLE).select().order('open_time', { ascending: false }).limit(limit)
+  return (data ?? []) as Trade[]
 }
 
-export function getStats() {
-  const db = getDb()
-  const closed = db.prepare("SELECT * FROM trades WHERE status = 'CLOSED'").all() as Trade[]
-  const total = closed.length
-  const wins  = closed.filter(t => (t.pnl_usd ?? 0) > 0).length
-  const totalPnl = closed.reduce((sum, t) => sum + (t.pnl_usd ?? 0), 0)
-  const winRate = total > 0 ? (wins / total * 100) : 0
-  const balance = 10000 + totalPnl
-  return { total, wins, winRate, totalPnl, balance }
+export async function getStats() {
+  const { data } = await supabase.from(TABLE).select().eq('status', 'CLOSED')
+  const closed   = (data ?? []) as Trade[]
+  const total    = closed.length
+  const wins     = closed.filter(t => (t.pnl_usd ?? 0) > 0).length
+  const totalPnl = closed.reduce((s, t) => s + (t.pnl_usd ?? 0), 0)
+  const winRate  = total > 0 ? wins / total * 100 : 0
+  return { total, wins, winRate, totalPnl, balance: 10000 + totalPnl }
 }
