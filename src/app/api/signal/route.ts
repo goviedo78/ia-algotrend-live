@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { openTrade, closeTrade, getOpenTrade, updateOpenTradeRisk } from '@/lib/db'
+import { openTrade, closeTrade, getOpenTrade, updateOpenTradeRisk, type Trade } from '@/lib/db'
 import { notifyOpen, notifyClose } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { signal, time, price, stop, tp, open, high, low } = body as {
+    const { signal, time, price, stop, tp, open, high, low, probUp, probDown } = body as {
       signal: 'LONG' | 'SHORT' | null
       time: number
       price: number
@@ -16,6 +16,8 @@ export async function POST(req: NextRequest) {
       open?: number
       high?: number
       low?: number
+      probUp?: number
+      probDown?: number
     }
 
     const openTrade_ = await getOpenTrade()
@@ -48,11 +50,21 @@ export async function POST(req: NextRequest) {
       if (firstHit) {
         const closed = await closeTrade(openTrade_.id, time, firstHit.closePrice, firstHit.hit)
         await notifyClose(closed)
+        await sendPush(req, {
+          title: `⚪ AlgoTrend — Salida ${closed.direction}`,
+          body: `Precio: $${closed.close_price?.toLocaleString('en-US')} | PnL: ${closed.pnl_pct?.toFixed(2)}% (${closed.close_reason})`,
+          tag: `close-${closed.id}`
+        })
       } else {
         const secondHit = hitPath(path[1])
         if (secondHit) {
           const closed = await closeTrade(openTrade_.id, time, secondHit.closePrice, secondHit.hit)
           await notifyClose(closed)
+          await sendPush(req, {
+            title: `⚪ AlgoTrend — Salida ${closed.direction}`,
+            body: `Precio: $${closed.close_price?.toLocaleString('en-US')} | PnL: ${closed.pnl_pct?.toFixed(2)}% (${closed.close_reason})`,
+            tag: `close-${closed.id}`
+          })
         } else {
           // Trailing update with the same defaults used in the strategy.
           if (openTrade_.direction === 'LONG') {
@@ -79,6 +91,11 @@ export async function POST(req: NextRequest) {
           if (closeHit) {
             const closed = await closeTrade(openTrade_.id, time, price, closeHit)
             await notifyClose(closed)
+            await sendPush(req, {
+              title: `⚪ AlgoTrend — Salida ${closed.direction}`,
+              body: `Precio: $${closed.close_price?.toLocaleString('en-US')} | PnL: ${closed.pnl_pct?.toFixed(2)}% (${closed.close_reason})`,
+              tag: `close-${closed.id}`
+            })
           } else if (stopLoss !== openTrade_.stop_loss || takeProfit !== openTrade_.take_profit) {
             await updateOpenTradeRisk(openTrade_.id, stopLoss, takeProfit)
           }
@@ -88,29 +105,38 @@ export async function POST(req: NextRequest) {
 
     if (signal === 'LONG' || signal === 'SHORT') {
       const trade = await openTrade(signal, time, price, stop, tp)
+      
+      // Update telegram notification with probability if available
+      const prob = signal === 'LONG' ? (probUp ?? 0) : (probDown ?? 0)
+      const probText = (prob * 100).toFixed(1) + '%'
+      
       await notifyOpen(trade)
 
-      // Fire push notification to all PWA subscribers
       const emoji = signal === 'LONG' ? '🟢' : '🔴'
       const dir = signal === 'LONG' ? 'LARGO' : 'CORTO'
-      try {
-        await fetch(new URL('/api/push/send', req.url), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: `${emoji} AlgoTrend — ${dir} BTC`,
-            body: `Entrada: $${price.toLocaleString('en-US', { minimumFractionDigits: 2 })} | SL: $${stop.toFixed(2)} | TP: $${(tp ?? 0).toFixed(2)}`,
-            tag: `signal-${time}`,
-          }),
-        })
-      } catch (pushErr) {
-        console.error('[push notify]', pushErr)
-      }
+      
+      await sendPush(req, {
+        title: `${emoji} AlgoTrend — ${dir} (${probText})`,
+        body: `Entrada: $${price.toLocaleString('en-US')} | SL: $${stop.toLocaleString('en-US')} | TP: ${tp ? '$' + tp.toLocaleString('en-US') : 'Trailing'}`,
+        tag: `signal-${time}`,
+      })
     }
 
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('[signal]', err)
     return NextResponse.json({ error: 'Signal error' }, { status: 500 })
+  }
+}
+
+async function sendPush(req: NextRequest, payload: { title: string; body: string; tag: string }) {
+  try {
+    await fetch(new URL('/api/push/send', req.url), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  } catch (err) {
+    console.error('[push notify]', err)
   }
 }

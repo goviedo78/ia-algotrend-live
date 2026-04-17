@@ -198,6 +198,8 @@ export default function Dashboard() {
           open: newCandle.open, high: newCandle.high, low: newCandle.low,
           stop: signal === 'LONG' ? last.longStop : last.shortStop,
           tp: signal === 'LONG' ? last.longTp : last.shortTp,
+          probUp: last.probUp,
+          probDown: last.probDown,
         }),
       })
       await refreshTrades()
@@ -414,7 +416,13 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="flex flex-col gap-4">
             <div className="reveal-up reveal-delay-1">
-              <Chart candles={candles} results={results} liveCandle={liveCandle} />
+              <Chart 
+                candles={candles} 
+                results={results} 
+                liveCandle={liveCandle} 
+                trades={trades}
+                openTrade={openTrade}
+              />
             </div>
             <div className="reveal-up reveal-delay-2">
               <TradeTable trades={trades} openTrade={openTrade} currentPrice={lastPrice} />
