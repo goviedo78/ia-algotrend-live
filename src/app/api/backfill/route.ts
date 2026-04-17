@@ -13,6 +13,8 @@ const supabase = createClient(
 const TABLE = 'algotrend_trades'
 const PAIR  = 'btcusd'
 const STEP  = 3600
+const HISTORY_BATCHES = 12
+const TRADES_TO_STORE = 60
 
 interface BitstampOhlcEntry {
   timestamp: string; open: string; high: string; low: string; close: string; volume: string
@@ -20,10 +22,6 @@ interface BitstampOhlcEntry {
 
 async function fetchCandles(): Promise<Candle[]> {
   const url  = `https://www.bitstamp.net/api/v2/ohlc/${PAIR}/?step=${STEP}&limit=1000`
-  const r1   = await fetch(url).then(r => r.json()) as { data: { ohlc: BitstampOhlcEntry[] } }
-  const ohlc1 = r1.data.ohlc
-  const oldest = parseInt(ohlc1[0].timestamp)
-  const r2 = await fetch(`${url}&end=${oldest - 1}`).then(r => r.json()) as { data: { ohlc: BitstampOhlcEntry[] } }
 
   const parse = (arr: BitstampOhlcEntry[]): Candle[] => arr.map(e => ({
     time: parseInt(e.timestamp),
@@ -32,13 +30,27 @@ async function fetchCandles(): Promise<Candle[]> {
     volume: parseFloat(e.volume),
   }))
 
-  const all  = [...parse(r2.data.ohlc), ...parse(ohlc1)]
+  const batches: Candle[][] = []
+  let nextEnd: number | null = null
+
+  for (let i = 0; i < HISTORY_BATCHES; i++) {
+    const reqUrl = nextEnd === null ? url : `${url}&end=${nextEnd}`
+    const resp = await fetch(reqUrl).then(r => r.json()) as { data: { ohlc: BitstampOhlcEntry[] } }
+    const ohlc = resp.data?.ohlc ?? []
+    if (ohlc.length === 0) break
+    batches.unshift(parse(ohlc))
+    const oldest = parseInt(ohlc[0].timestamp)
+    nextEnd = oldest - 1
+    if (ohlc.length < 1000) break
+  }
+
+  const all = batches.flat()
   const seen = new Set<number>()
   return all.filter(c => seen.has(c.time) ? false : (seen.add(c.time), true)).sort((a, b) => a.time - b.time)
 }
 
-// Mini-backtester: simulate trades from signals
-function simulateTrades(candles: Candle[], results: ReturnType<typeof runAlgoTrend>, count = 20) {
+// Backtest aligned with TradingView strategy behavior (close-based script with OHLC traversal)
+function simulateTrades(candles: Candle[], results: ReturnType<typeof runAlgoTrend>, count = TRADES_TO_STORE) {
   type SimTrade = {
     direction: 'LONG' | 'SHORT'
     open_time: number; open_price: number
@@ -49,69 +61,166 @@ function simulateTrades(candles: Candle[], results: ReturnType<typeof runAlgoTre
     status: 'CLOSED'
   }
 
-  const trades: SimTrade[] = []
-
-  // Collect signal indices
-  const signals = results
-    .map((r, i) => ({ i, r }))
-    .filter(({ r }) => r.longSig || r.shortSig)
-
-  // Take last `count` signals
-  const window = signals.slice(-count)
-
-  for (let s = 0; s < window.length; s++) {
-    const { i, r } = window[s]
-    const direction: 'LONG' | 'SHORT' = r.longSig ? 'LONG' : 'SHORT'
-    const openPrice = r.close
-    const stopLoss  = direction === 'LONG' ? r.longStop  : r.shortStop
-    const takePro   = direction === 'LONG' ? r.longTp    : r.shortTp
-
-    let closeBar   = candles.length - 1
-    let closePrice = candles[closeBar].close
-    let closeReason: 'SL' | 'TP' | 'SIGNAL' = 'SIGNAL'
-
-    // Next signal index (to close on reversal)
-    const nextSigIdx = window[s + 1]?.i ?? Infinity
-
-    // Walk forward to find exit
-    for (let j = i + 1; j < candles.length; j++) {
-      const c = candles[j]
-
-      if (direction === 'LONG') {
-        if (c.low <= stopLoss) {
-          closePrice = stopLoss; closeReason = 'SL'; closeBar = j; break
-        }
-        if (c.high >= takePro) {
-          closePrice = takePro; closeReason = 'TP'; closeBar = j; break
-        }
-      } else {
-        if (c.high >= stopLoss) {
-          closePrice = stopLoss; closeReason = 'SL'; closeBar = j; break
-        }
-        if (c.low <= takePro) {
-          closePrice = takePro; closeReason = 'TP'; closeBar = j; break
-        }
-      }
-
-      // Close on next opposite signal
-      if (j >= nextSigIdx) {
-        closePrice = results[j].close; closeReason = 'SIGNAL'; closeBar = j; break
-      }
-    }
-
-    const mult   = direction === 'LONG' ? 1 : -1
-    const pnlPct = (closePrice - openPrice) / openPrice * mult * 100
-    const pnlUsd = 10000 * pnlPct / 100
-
-    trades.push({
-      direction, open_time: r.time, open_price: openPrice,
-      stop_loss: stopLoss, take_profit: takePro,
-      close_time: candles[closeBar].time, close_price: closePrice,
-      close_reason: closeReason, pnl_usd: pnlUsd, pnl_pct: pnlPct, status: 'CLOSED',
-    })
+  type OpenState = {
+    direction: 'LONG' | 'SHORT'
+    open_time: number
+    open_price: number
+    stop_loss: number
+    take_profit: number | null
+    trailing_active: boolean
+    trail_price: number | null
   }
 
-  return trades
+  const TRAIL_TRIGGER_PCT = 1.0
+  const TRAIL_OFFSET_PCT = 0.3
+
+  const trades: SimTrade[] = []
+  let open: OpenState | null = null
+
+  const getPath = (c: Candle): ('high' | 'low')[] => {
+    const distHigh = Math.abs(c.open - c.high)
+    const distLow = Math.abs(c.open - c.low)
+    return distHigh < distLow ? ['high', 'low'] : ['low', 'high']
+  }
+
+  const closeTrade = (idx: number, closePrice: number, reason: 'SL' | 'TP' | 'SIGNAL') => {
+    if (!open) return
+    const mult = open.direction === 'LONG' ? 1 : -1
+    const pnlPct = ((closePrice - open.open_price) / open.open_price) * mult * 100
+    const pnlUsd = (closePrice - open.open_price) * mult
+
+    trades.push({
+      direction: open.direction,
+      open_time: open.open_time,
+      open_price: open.open_price,
+      stop_loss: open.stop_loss,
+      take_profit: open.take_profit ?? open.stop_loss,
+      close_time: candles[idx].time,
+      close_price: closePrice,
+      close_reason: reason,
+      pnl_usd: pnlUsd,
+      pnl_pct: pnlPct,
+      status: 'CLOSED',
+    })
+    open = null
+  }
+
+  const openTrade = (idx: number, direction: 'LONG' | 'SHORT') => {
+    const r = results[idx]
+    open = {
+      direction,
+      open_time: candles[idx].time,
+      open_price: candles[idx].close,
+      stop_loss: direction === 'LONG' ? r.longStop : r.shortStop,
+      take_profit: direction === 'LONG' ? r.longTp : r.shortTp,
+      trailing_active: false,
+      trail_price: null,
+    }
+  }
+
+  const checkPathExit = (idx: number, leg: 'high' | 'low') => {
+    if (!open) return
+    const c = candles[idx]
+
+    if (open.direction === 'LONG') {
+      if (leg === 'low' && c.low <= open.stop_loss) {
+        closeTrade(idx, open.stop_loss, 'SL')
+        return
+      }
+      if (leg === 'high' && open.take_profit !== null && c.high >= open.take_profit) {
+        closeTrade(idx, open.take_profit, 'TP')
+        return
+      }
+    } else {
+      if (leg === 'high' && c.high >= open.stop_loss) {
+        closeTrade(idx, open.stop_loss, 'SL')
+        return
+      }
+      if (leg === 'low' && open.take_profit !== null && c.low <= open.take_profit) {
+        closeTrade(idx, open.take_profit, 'TP')
+        return
+      }
+    }
+  }
+
+  for (let i = 0; i < candles.length; i++) {
+    const c = candles[i]
+    const r = results[i]
+    const signalLong = Boolean(r?.longSig)
+    const signalShort = Boolean(r?.shortSig)
+
+    if (open) {
+      const [firstLeg, secondLeg] = getPath(c)
+
+      // Active stop/TP check using default TradingView intrabar path approximation.
+      checkPathExit(i, firstLeg)
+      if (open) checkPathExit(i, secondLeg)
+
+      if (open !== null) {
+        const position: OpenState = open as OpenState
+
+        // Trailing update (same formulas as Pine strategy).
+        if (position.direction === 'LONG') {
+          const gainPct = ((c.high - position.open_price) / position.open_price) * 100
+          if (!position.trailing_active && gainPct >= TRAIL_TRIGGER_PCT) {
+            position.trailing_active = true
+            position.trail_price = c.high * (1 - TRAIL_OFFSET_PCT / 100)
+            position.stop_loss = Math.max(position.open_price, position.trail_price)
+            position.take_profit = null
+          }
+          if (position.trailing_active) {
+            const newTrail = c.high * (1 - TRAIL_OFFSET_PCT / 100)
+            if (newTrail > (position.trail_price ?? -Infinity)) {
+              position.trail_price = newTrail
+              position.stop_loss = Math.max(position.open_price, position.trail_price)
+            }
+          }
+        } else {
+          const gainPct = ((position.open_price - c.low) / position.open_price) * 100
+          if (!position.trailing_active && gainPct >= TRAIL_TRIGGER_PCT) {
+            position.trailing_active = true
+            position.trail_price = c.low * (1 + TRAIL_OFFSET_PCT / 100)
+            position.stop_loss = Math.min(position.open_price, position.trail_price)
+            position.take_profit = null
+          }
+          if (position.trailing_active) {
+            const newTrail = c.low * (1 + TRAIL_OFFSET_PCT / 100)
+            if (newTrail < (position.trail_price ?? Infinity)) {
+              position.trail_price = newTrail
+              position.stop_loss = Math.min(position.open_price, position.trail_price)
+            }
+          }
+        }
+      }
+
+      if (open !== null) {
+        const position: OpenState = open as OpenState
+
+        // Close-bar validation after trailing update (matches process_orders_on_close behavior closely).
+        if (position.direction === 'LONG') {
+          if (c.close <= position.stop_loss) closeTrade(i, c.close, 'SL')
+          else if (position.take_profit !== null && c.close >= position.take_profit) closeTrade(i, c.close, 'TP')
+        } else {
+          if (c.close >= position.stop_loss) closeTrade(i, c.close, 'SL')
+          else if (position.take_profit !== null && c.close <= position.take_profit) closeTrade(i, c.close, 'TP')
+        }
+      }
+
+      // Reverse on opposite signal at bar close.
+      if (open !== null) {
+        const active: OpenState = open as OpenState
+        if ((active.direction === 'LONG' && signalShort) || (active.direction === 'SHORT' && signalLong)) {
+          const nextDirection: 'LONG' | 'SHORT' = signalLong ? 'LONG' : 'SHORT'
+          closeTrade(i, c.close, 'SIGNAL')
+          openTrade(i, nextDirection)
+        }
+      }
+    } else if (signalLong || signalShort) {
+      openTrade(i, signalLong ? 'LONG' : 'SHORT')
+    }
+  }
+
+  return trades.slice(-count)
 }
 
 export async function POST() {
@@ -121,10 +230,10 @@ export async function POST() {
 
     const candles = await fetchCandles()
     const results = runAlgoTrend(candles)
-    const trades  = simulateTrades(candles, results, 20)
+    const trades  = simulateTrades(candles, results, TRADES_TO_STORE)
 
     if (trades.length === 0) {
-      return NextResponse.json({ ok: true, inserted: 0, message: 'No signals found' })
+      return NextResponse.json({ ok: true, inserted: 0, message: 'No se encontraron señales' })
     }
 
     const { error } = await supabase.from(TABLE).insert(trades)

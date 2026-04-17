@@ -1,6 +1,6 @@
-// IA AlgoTrend — TypeScript port of the Pine Script v5 indicator
+// IA AlgoTrend — TypeScript port of the Pine Script v5 strategy
 // SuperTrend + KNN (K-Nearest Neighbors) + PCA
-// Preset: Cripto · Intraday (BTC/USDT 1H)
+// Defaults mirror ORIGINAL_BASE.pine
 
 export interface Candle {
   time: number   // unix seconds
@@ -38,33 +38,40 @@ export interface AlgoTrendResult {
   atrVal: number
 }
 
-// ── Preset: Cripto · Intraday (BTC/USDT 1H) ────────────────────────────────
+type MaType = 'SMA' | 'EMA' | 'DEMA' | 'TEMA' | 'LSMA' | 'WMA' | 'HMA' | 'ZLSMA' | 'SMMA' | 'THMA'
+type StopMode = 'SuperTrend' | 'Porcentaje'
+type TpMode = 'Ratio R:R' | 'Porcentaje'
+
+// ── Pine default preset (ORIGINAL_BASE.pine) ───────────────────────────────
 const PRESET = {
-  atrPeriod:          8,
-  factor:             1.8,
-  kNeighbors:         7,
-  samplingWindowSize: 600,
-  momentumWindow:     8,
-  probThreshold:      0.90,
-  maType:             'HMA' as const,
-  rsiLen:             14,
-  maLen:              14,
-  signalLen:          7,
-  chopLen:            10,
-  windowSize:         600,
-  pParam:             2.0,   // Minkowski: 2 = Euclidean
-  wParam:             2.0,   // Gaussian weight sensitivity
-  minDisplayProb:     85.0,
-  // Trade sizing
-  stopMult:           2.0,   // ATR multiplier for stop loss
-  tpMult:             3.5,   // ATR multiplier for take profit
+  atrPeriod: 10,
+  factor: 2.0,
+  kNeighbors: 20,
+  samplingWindowSize: 1000,
+  momentumWindow: 10,
+  probThreshold: 0.85,
+  maType: 'EMA' as MaType,
+  rsiLen: 25,
+  maLen: 100,
+  signalLen: 10,
+  chopLen: 14,
+  windowSize: 1000,
+  pParam: 7.0,
+  wParam: 2.0,   // Gaussian weight sensitivity
+  usePca: true,
+  minDisplayProb: 85.0,
+
+  // Risk management defaults (same as Pine strategy)
+  slMode: 'Porcentaje' as StopMode,
+  slPct: 2.0,
+  slOffsetTicks: 5,
+  tpMode: 'Ratio R:R' as TpMode,
+  tpRR: 1.5,
+  tpPct: 4.0,
+  tickSize: 1.0,
 }
 
 // ── Math helpers ─────────────────────────────────────────────────────────────
-
-function clamp(v: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, v))
-}
 
 // Wilder's ATR
 function calcAtr(candles: Candle[], period: number): number[] {
@@ -74,7 +81,7 @@ function calcAtr(candles: Candle[], period: number): number[] {
   for (let i = 1; i < n; i++) {
     const hl = candles[i].high - candles[i].low
     const hc = Math.abs(candles[i].high - candles[i - 1].close)
-    const lc = Math.abs(candles[i].low  - candles[i - 1].close)
+    const lc = Math.abs(candles[i].low - candles[i - 1].close)
     tr[i] = Math.max(hl, hc, lc)
   }
   const out: number[] = new Array(n).fill(NaN)
@@ -140,6 +147,57 @@ function calcHma(data: number[], period: number): number[] {
   return calcWma(diff, sqrtPeriod)
 }
 
+// DEMA = 2*EMA - EMA(EMA)
+function calcDema(data: number[], period: number): number[] {
+  const ema1 = calcEma(data, period)
+  const ema2 = calcEma(ema1, period)
+  return ema1.map((v, i) => isNaN(v) || isNaN(ema2[i]) ? NaN : 2 * v - ema2[i])
+}
+
+// TEMA = 3 * (EMA1 - EMA2) + EMA3
+function calcTema(data: number[], period: number): number[] {
+  const ema1 = calcEma(data, period)
+  const ema2 = calcEma(ema1, period)
+  const ema3 = calcEma(ema2, period)
+  return ema1.map((v, i) => {
+    if (isNaN(v) || isNaN(ema2[i]) || isNaN(ema3[i])) return NaN
+    return 3 * (v - ema2[i]) + ema3[i]
+  })
+}
+
+// SMMA/RMA (Wilder moving average)
+function calcRma(data: number[], period: number): number[] {
+  const out: number[] = new Array(data.length).fill(NaN)
+  if (data.length < period) return out
+  let sum = 0
+  let hasNaN = false
+  for (let i = 0; i < period; i++) {
+    if (isNaN(data[i])) { hasNaN = true; break }
+    sum += data[i]
+  }
+  if (hasNaN) return out
+  out[period - 1] = sum / period
+  for (let i = period; i < data.length; i++) {
+    if (isNaN(data[i])) continue
+    out[i] = (out[i - 1] * (period - 1) + data[i]) / period
+  }
+  return out
+}
+
+// THMA (same shape as Pine helper f_thma)
+function calcThma(data: number[], period: number): number[] {
+  const l3 = Math.max(1, Math.round(period / 3))
+  const l2 = Math.max(1, Math.round(period / 2))
+  const w1 = calcWma(data, l3)
+  const w2 = calcWma(data, l2)
+  const w3 = calcWma(data, period)
+  const mix = w1.map((v, i) => {
+    if (isNaN(v) || isNaN(w2[i]) || isNaN(w3[i])) return NaN
+    return v * 3 - w2[i] - w3[i]
+  })
+  return calcWma(mix, period)
+}
+
 // Linear regression (LSMA)
 function calcLinreg(data: number[], period: number): number[] {
   const out: number[] = new Array(data.length).fill(NaN)
@@ -148,8 +206,8 @@ function calcLinreg(data: number[], period: number): number[] {
     for (let j = 0; j < period; j++) {
       if (isNaN(data[i - j])) { valid = false; break }
       const x = j  // 0 = most recent
-      sumX  += x
-      sumY  += data[i - j]
+      sumX += x
+      sumY += data[i - j]
       sumXY += x * data[i - j]
       sumX2 += x * x
     }
@@ -165,18 +223,23 @@ function calcLinreg(data: number[], period: number): number[] {
 // ZLSMA = lsma + (lsma - sma)
 function calcZlsma(data: number[], period: number): number[] {
   const lsma = calcLinreg(data, period)
-  const sma  = calcSma(data, period)
+  const sma = calcSma(data, period)
   return lsma.map((v, i) => isNaN(v) || isNaN(sma[i]) ? NaN : v + (v - sma[i]))
 }
 
-function calcMa(type: string, data: number[], period: number): number[] {
+function calcMa(type: MaType, data: number[], period: number): number[] {
   switch (type) {
-    case 'EMA':   return calcEma(data, period)
-    case 'HMA':   return calcHma(data, period)
-    case 'LSMA':  return calcLinreg(data, period)
+    case 'SMA': return calcSma(data, period)
+    case 'EMA': return calcEma(data, period)
+    case 'DEMA': return calcDema(data, period)
+    case 'TEMA': return calcTema(data, period)
+    case 'LSMA': return calcLinreg(data, period)
+    case 'WMA': return calcWma(data, period)
+    case 'HMA': return calcHma(data, period)
     case 'ZLSMA': return calcZlsma(data, period)
-    case 'WMA':   return calcWma(data, period)
-    default:      return calcSma(data, period)
+    case 'SMMA': return calcRma(data, period)
+    case 'THMA': return calcThma(data, period)
+    default: return calcSma(data, period)
   }
 }
 
@@ -209,38 +272,20 @@ function calcChop(candles: Candle[], period: number): number[] {
   for (let i = 1; i < n; i++) {
     const hl = candles[i].high - candles[i].low
     const hc = Math.abs(candles[i].high - candles[i - 1].close)
-    const lc = Math.abs(candles[i].low  - candles[i - 1].close)
+    const lc = Math.abs(candles[i].low - candles[i - 1].close)
     tr[i] = Math.max(hl, hc, lc)
   }
   for (let i = period - 1; i < n; i++) {
     let sumTr = 0, hiHigh = -Infinity, loLow = Infinity
     for (let j = 0; j < period; j++) {
-      sumTr  += tr[i - j]
-      hiHigh  = Math.max(hiHigh, candles[i - j].high)
-      loLow   = Math.min(loLow,  candles[i - j].low)
+      sumTr += tr[i - j]
+      hiHigh = Math.max(hiHigh, candles[i - j].high)
+      loLow = Math.min(loLow, candles[i - j].low)
     }
     const range = hiHigh - loLow
     if (range > 0 && sumTr > 0) {
       out[i] = 100 * Math.log10(sumTr / range) / Math.log10(period)
     }
-  }
-  return out
-}
-
-// Rolling stdev (population, matching Pine's ta.stdev behavior)
-function rollStdev(data: number[], period: number): number[] {
-  const out: number[] = new Array(data.length).fill(NaN)
-  for (let i = period - 1; i < data.length; i++) {
-    let sum = 0, valid = true, count = 0
-    for (let j = 0; j < period; j++) {
-      if (isNaN(data[i - j])) { valid = false; break }
-      sum += data[i - j]; count++
-    }
-    if (!valid) continue
-    const mean = sum / period
-    let variance = 0
-    for (let j = 0; j < period; j++) variance += (data[i - j] - mean) ** 2
-    out[i] = Math.sqrt(variance / period)
   }
   return out
 }
@@ -278,7 +323,7 @@ function calcSupertrend(candles: Candle[], period: number, factor: number): {
   const direction: number[] = new Array(n).fill(NaN)
   const line: number[] = new Array(n).fill(NaN)
 
-  let prevUpper = NaN, prevLower = NaN, prevLine = NaN, prevDir = 1
+  let prevUpper = NaN, prevLower = NaN, prevLine = NaN
 
   for (let i = 1; i < n; i++) {
     const atr = atrArr[i]
@@ -311,10 +356,17 @@ function calcSupertrend(candles: Candle[], period: number, factor: number): {
 
     prevUpper = upper
     prevLower = lower
-    prevLine  = line[i]
-    prevDir   = dir
+    prevLine = line[i]
   }
   return { direction, line }
+}
+
+function crossedOver(curr: number, prev: number, level: number) {
+  return curr > level && prev <= level
+}
+
+function crossedUnder(curr: number, prev: number, level: number) {
+  return curr < level && prev >= level
 }
 
 // ── Main engine ───────────────────────────────────────────────────────────────
@@ -340,9 +392,9 @@ export function runAlgoTrend(candles: Candle[]): AlgoTrendResult[] {
   }
 
   // ── Features ────────────────────────────────────────────────────────────────
-  const mw  = p.momentumWindow
+  const mw = p.momentumWindow
   const rsiArr = calcRsi(closes, p.rsiLen)
-  const maArr  = calcMa(p.maType, closes, p.maLen)
+  const maArr = calcMa(p.maType, closes, p.maLen)
   const chopArr = calcChop(candles, p.chopLen)
 
   // MA deviation: (close[i] - MA[i-1]) / MA[i-1]
@@ -371,85 +423,95 @@ export function runAlgoTrend(candles: Candle[]): AlgoTrendResult[] {
   }
 
   // Multi-horizon: _s = current, _m = shifted by mw, _l = shifted by 2*mw
-  const rsiS    = rsiArr
-  const rsiM    = (i: number) => i >= mw     ? rsiArr[i - mw]     : NaN
-  const rsiL    = (i: number) => i >= mw * 2 ? rsiArr[i - mw * 2] : NaN
-  const maDevS  = maDev
-  const maDevM  = (i: number) => i >= mw     ? maDev[i - mw]     : NaN
-  const maDevL  = (i: number) => i >= mw * 2 ? maDev[i - mw * 2] : NaN
-  const rsiSdS  = rsiSigDist
-  const rsiSdM  = (i: number) => i >= mw     ? rsiSigDist[i - mw]     : NaN
-  const rsiSdL  = (i: number) => i >= mw * 2 ? rsiSigDist[i - mw * 2] : NaN
-  const chopS   = chopArr
-  const chopM   = (i: number) => i >= mw     ? chopArr[i - mw]     : NaN
-  const chopL   = (i: number) => i >= mw * 2 ? chopArr[i - mw * 2] : NaN
+  const rsiS = rsiArr
+  const rsiM = (i: number) => i >= mw ? rsiArr[i - mw] : NaN
+  const rsiL = (i: number) => i >= mw * 2 ? rsiArr[i - mw * 2] : NaN
+  const maDevS = maDev
+  const maDevM = (i: number) => i >= mw ? maDev[i - mw] : NaN
+  const maDevL = (i: number) => i >= mw * 2 ? maDev[i - mw * 2] : NaN
+  const rsiSdS = rsiSigDist
+  const rsiSdM = (i: number) => i >= mw ? rsiSigDist[i - mw] : NaN
+  const rsiSdL = (i: number) => i >= mw * 2 ? rsiSigDist[i - mw * 2] : NaN
+  const chopS = chopArr
+  const chopM = (i: number) => i >= mw ? chopArr[i - mw] : NaN
+  const chopL = (i: number) => i >= mw * 2 ? chopArr[i - mw * 2] : NaN
 
   // Normalize each feature array
   const win = p.windowSize
 
   // Build raw feature arrays first
-  const rawRsiS   = rsiS
-  const rawRsiM   = closes.map((_, i) => rsiM(i))
-  const rawRsiL   = closes.map((_, i) => rsiL(i))
+  const rawRsiS = rsiS
+  const rawRsiM = closes.map((_, i) => rsiM(i))
+  const rawRsiL = closes.map((_, i) => rsiL(i))
   const rawMaDevS = maDevS
   const rawMaDevM = closes.map((_, i) => maDevM(i))
   const rawMaDevL = closes.map((_, i) => maDevL(i))
   const rawRsiSdS = rsiSdS
   const rawRsiSdM = closes.map((_, i) => rsiSdM(i))
   const rawRsiSdL = closes.map((_, i) => rsiSdL(i))
-  const rawChopS  = chopS
-  const rawChopM  = closes.map((_, i) => chopM(i))
-  const rawChopL  = closes.map((_, i) => chopL(i))
+  const rawChopS = chopS
+  const rawChopM = closes.map((_, i) => chopM(i))
+  const rawChopL = closes.map((_, i) => chopL(i))
 
   // Normalized arrays
-  const zRsiS   = normalizeArr(rawRsiS,   win)
-  const zRsiM   = normalizeArr(rawRsiM,   win)
-  const zRsiL   = normalizeArr(rawRsiL,   win)
+  const zRsiS = normalizeArr(rawRsiS, win)
+  const zRsiM = normalizeArr(rawRsiM, win)
+  const zRsiL = normalizeArr(rawRsiL, win)
   const zMaDevS = normalizeArr(rawMaDevS, win)
   const zMaDevM = normalizeArr(rawMaDevM, win)
   const zMaDevL = normalizeArr(rawMaDevL, win)
   const zRsiSdS = normalizeArr(rawRsiSdS, win)
   const zRsiSdM = normalizeArr(rawRsiSdM, win)
   const zRsiSdL = normalizeArr(rawRsiSdL, win)
-  const zChopS  = normalizeArr(rawChopS,  win)
-  const zChopM  = normalizeArr(rawChopM,  win)
-  const zChopL  = normalizeArr(rawChopL,  win)
+  const zChopS = normalizeArr(rawChopS, win)
+  const zChopM = normalizeArr(rawChopM, win)
+  const zChopL = normalizeArr(rawChopL, win)
 
   // PCA (4 components, matching Pine exactly)
-  // pc1..4 are pre-normalized inputs, then normalized again
   const pcaRaw1 = zRsiS.map((_, i) => {
-    const v = zRsiS[i] + zMaDevS[i] + zRsiSdS[i] * 0.5
-    return isNaN(v) || isNaN(zRsiS[i]) || isNaN(zMaDevS[i]) || isNaN(zRsiSdS[i]) ? NaN : v
+    if (isNaN(zRsiS[i]) || isNaN(zMaDevS[i]) || isNaN(zRsiSdS[i])) return NaN
+    return zRsiS[i] + zMaDevS[i] + zRsiSdS[i] * 0.5
   })
   const pcaRaw2 = zRsiM.map((_, i) => {
-    const v = (zRsiM[i] + zMaDevM[i] + zRsiSdM[i] * 0.5) * 0.9
-    return isNaN(zRsiM[i]) || isNaN(zMaDevM[i]) || isNaN(zRsiSdM[i]) ? NaN : v
+    if (isNaN(zRsiM[i]) || isNaN(zMaDevM[i]) || isNaN(zRsiSdM[i])) return NaN
+    return zRsiM[i] + zMaDevM[i] + zRsiSdM[i] * 0.5
   })
   const pcaRaw3 = zRsiL.map((_, i) => {
-    const v = (zRsiL[i] + zMaDevL[i] + zRsiSdL[i] * 0.5) * 0.8
-    return isNaN(zRsiL[i]) || isNaN(zMaDevL[i]) || isNaN(zRsiSdL[i]) ? NaN : v
+    if (isNaN(zRsiL[i]) || isNaN(zMaDevL[i]) || isNaN(zRsiSdL[i])) return NaN
+    return zRsiL[i] + zMaDevL[i] + zRsiSdL[i] * 0.5
   })
   const pcaRaw4 = zChopS.map((_, i) => {
-    const v = (zChopS[i] + zChopM[i] * 0.9 + zChopL[i] * 0.8) * 0.8
-    return isNaN(zChopS[i]) || isNaN(zChopM[i]) || isNaN(zChopL[i]) ? NaN : v
+    if (isNaN(zChopS[i]) || isNaN(zChopM[i]) || isNaN(zChopL[i])) return NaN
+    return zChopS[i] + zChopM[i] * 0.9 + zChopL[i] * 0.8
   })
 
-  const pc1 = normalizeArr(pcaRaw1, win)
-  const pc2 = normalizeArr(pcaRaw2, win)
-  const pc3 = normalizeArr(pcaRaw3, win)
-  const pc4 = normalizeArr(pcaRaw4, win)
+  let pc1: number[] = []
+  let pc2: number[] = []
+  let pc3: number[] = []
+  let pc4: number[] = []
+  if (p.usePca) {
+    pc1 = normalizeArr(pcaRaw1, win)
+    pc2 = normalizeArr(pcaRaw2, win).map(v => isNaN(v) ? NaN : v * 0.9)
+    pc3 = normalizeArr(pcaRaw3, win).map(v => isNaN(v) ? NaN : v * 0.8)
+    pc4 = normalizeArr(pcaRaw4, win).map(v => isNaN(v) ? NaN : v * 0.8)
+  } else {
+    pc1 = zRsiM
+    pc2 = zMaDevM
+    pc3 = zRsiSdM
+    pc4 = zChopM
+  }
 
   // ── KNN ─────────────────────────────────────────────────────────────────────
-  const probUp:   number[] = new Array(n).fill(0)
+  const probUp: number[] = new Array(n).fill(0)
   const probDown: number[] = new Array(n).fill(0)
   const stride = mw
-  const minStart = win + mw
+  const minStart = win + mw + 1
 
   for (let i = minStart; i < n; i++) {
     if (isNaN(pc1[i]) || isNaN(pc2[i]) || isNaN(pc3[i]) || isNaN(pc4[i])) continue
 
     const distances: number[] = []
-    const labels:    number[] = []
+    const labels: number[] = []
 
     const lookback = Math.min(p.samplingWindowSize + mw, i - mw)
 
@@ -477,8 +539,8 @@ export function runAlgoTrend(candles: Candle[]): AlgoTrendResult[] {
     // Sort by distance
     const indices = distances.map((_, idx) => idx).sort((a, b) => distances[a] - distances[b])
 
-    // Gaussian sigma = median distance of first k neighbors
-    const sortedDists = indices.slice(0, p.kNeighbors).map(idx => distances[idx]).sort((a, b) => a - b)
+    // Gaussian sigma = median-like pick from fully sorted distance array (Pine behavior)
+    const sortedDists = [...distances].sort((a, b) => a - b)
     const sigmaIdx = Math.min(Math.floor(p.kNeighbors / 2), sortedDists.length - 1)
     const sigma = Math.max(sortedDists[sigmaIdx], 0.0001)
 
@@ -487,16 +549,16 @@ export function runAlgoTrend(candles: Candle[]): AlgoTrendResult[] {
 
     for (let j = 0; j < p.kNeighbors; j++) {
       const idx = indices[j]
-      const d   = distances[idx]
+      const d = distances[idx]
       const lbl = labels[idx]
-      const w   = Math.exp(-Math.pow(d, wp) / (2 * Math.pow(sigma, 2)))
-      if (lbl === 1)  sumWUp   += w
+      const w = Math.exp(-Math.pow(d, wp) / (2 * Math.pow(sigma, 2)))
+      if (lbl === 1) sumWUp += w
       if (lbl === -1) sumWDown += w
       sumW += w
     }
 
     if (sumW > 0) {
-      probUp[i]   = sumWUp   / sumW
+      probUp[i] = sumWUp / sumW
       probDown[i] = sumWDown / sumW
     }
   }
@@ -519,32 +581,46 @@ export function runAlgoTrend(candles: Candle[]): AlgoTrendResult[] {
       continue
     }
 
-    const prevProbUp   = i > 0 ? probUp[i - 1]   : 0
-    const prevProbDown = i > 0 ? probDown[i - 1]  : 0
+    const prevProbUp = i > 0 ? probUp[i - 1] : 0
+    const prevProbDown = i > 0 ? probDown[i - 1] : 0
     const thresh = p.probThreshold
 
-    // Crossover: current > thresh and previous <= thresh
-    const rawLong  = probUp[i]   > thresh && prevProbUp   <= thresh
-    const rawShort = probDown[i] > thresh && prevProbDown <= thresh
+    // Raw KNN threshold crosses
+    const rawLong = crossedOver(probUp[i], prevProbUp, thresh)
+    const rawShort = crossedOver(probDown[i], prevProbDown, thresh)
 
-    let longSig = false, shortSig = false
-    if (rawLong  && lastDir <= 0) { longSig  = true; lastDir = 1  }
-    if (rawShort && lastDir >= 0) { shortSig = true; lastDir = -1 }
+    if (rawLong && lastDir <= 0) lastDir = 1
+    if (rawShort && lastDir >= 0) lastDir = -1
 
-    // Update lastStDir: SuperTrend flip confirmed by KNN
-    const prevStDir = i > 0 ? stDir[i - 1] : stDir[i]
-    if (!isNaN(prevStDir) && (stDir[i] !== prevStDir || rawLong || rawShort)) {
-      if (stDir[i] < 0 && lastDir === 1  && probUp[i]   > thresh) lastStDir = 1
-      if (stDir[i] > 0 && lastDir === -1 && probDown[i] > thresh) lastStDir = -1
+    // last_stdir update (Pine logic)
+    const prevLastStDir = lastStDir
+    const prevStDir = i > 0 && !isNaN(stDir[i - 1]) ? stDir[i - 1] : 0
+    if (stDir[i] !== prevStDir || rawLong || rawShort) {
+      if (stDir[i] < 0 && lastDir === 1 && probUp[i] > thresh) lastStDir = stDir[i] * -1
+      if (stDir[i] > 0 && lastDir === -1 && probDown[i] > thresh) lastStDir = stDir[i] * -1
     }
 
-    // Visual signals (SuperTrend crossover + KNN above minDisplayProb)
-    const prevDir2   = i > 0 ? stDir[i - 1] : stDir[i]
-    const stFlipBull = !isNaN(prevDir2) && prevDir2 > 0 && stDir[i] < 0  // bearish→bullish
-    const stFlipBear = !isNaN(prevDir2) && prevDir2 < 0 && stDir[i] > 0  // bullish→bearish
+    // Confirmed signals (SuperTrend + KNN)
+    const signalLong = crossedOver(lastStDir, prevLastStDir, 0)
+    const signalShort = crossedUnder(lastStDir, prevLastStDir, 0)
 
-    const visibleLong  = stFlipBull && probUp[i]   * 100 >= p.minDisplayProb
-    const visibleShort = stFlipBear && probDown[i] * 100 >= p.minDisplayProb
+    // Pine-equivalent entry SL/TP calculation for strategy entries
+    const slOffset = p.slOffsetTicks * p.tickSize
+    const longStop = p.slMode === 'SuperTrend'
+      ? stLine[i] - slOffset
+      : closes[i] * (1 - p.slPct / 100) - slOffset
+    const shortStop = p.slMode === 'SuperTrend'
+      ? stLine[i] + slOffset
+      : closes[i] * (1 + p.slPct / 100) + slOffset
+
+    const longRisk = closes[i] - longStop
+    const shortRisk = shortStop - closes[i]
+    const longTp = p.tpMode === 'Ratio R:R'
+      ? closes[i] + longRisk * p.tpRR
+      : closes[i] * (1 + p.tpPct / 100)
+    const shortTp = p.tpMode === 'Ratio R:R'
+      ? closes[i] - shortRisk * p.tpRR
+      : closes[i] * (1 - p.tpPct / 100)
 
     const atrV = atrArr[i] ?? 0
 
@@ -554,14 +630,14 @@ export function runAlgoTrend(candles: Candle[]): AlgoTrendResult[] {
       supertrend: stLine[i],
       stDirection: stDir[i],
       lastStDir,
-      probUp:   probUp[i],
+      probUp: probUp[i],
       probDown: probDown[i],
-      longSig:  visibleLong,
-      shortSig: visibleShort,
-      longStop:  closes[i] - atrV * p.stopMult,
-      longTp:    closes[i] + atrV * p.tpMult,
-      shortStop: closes[i] + atrV * p.stopMult,
-      shortTp:   closes[i] - atrV * p.tpMult,
+      longSig: signalLong,
+      shortSig: signalShort,
+      longStop,
+      longTp,
+      shortStop,
+      shortTp,
       atrVal: atrV,
     })
   }

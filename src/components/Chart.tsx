@@ -35,32 +35,32 @@ export default function Chart({ candles, results, liveCandle }: ChartProps) {
     if (!containerRef.current) return
 
     const chart = createChart(containerRef.current, {
-      layout: { background: { color: '#080812' }, textColor: '#9ca3af' },
-      grid:   { vertLines: { color: '#111128' }, horzLines: { color: '#111128' } },
+      layout: { background: { color: '#0d1323' }, textColor: '#9bb1d8' },
+      grid:   { vertLines: { color: '#1f2c47' }, horzLines: { color: '#1f2c47' } },
       crosshair: { mode: 1 },
-      timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#1f2937' },
-      rightPriceScale: { borderColor: '#1f2937' },
+      timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#2d3e61' },
+      rightPriceScale: { borderColor: '#2d3e61' },
       width:  containerRef.current.clientWidth,
       height: 500,
     })
     chartRef.current = chart
 
     candleRef.current = chart.addSeries(CandlestickSeries, {
-      upColor: '#00e676', downColor: '#ff1744',
-      borderUpColor: '#00e676', borderDownColor: '#ff1744',
-      wickUpColor: '#00e676', wickDownColor: '#ff1744',
+      upColor: '#289eff', downColor: '#ffffff',
+      borderUpColor: '#289eff', borderDownColor: '#ffffff',
+      wickUpColor: '#289eff', wickDownColor: '#ffffff',
     })
 
-    // SuperTrend bullish line (blue)
+    // SuperTrend bullish line
     stBullRef.current = chart.addSeries(LineSeries, {
       color: '#289eff', lineWidth: 2,
       lastValueVisible: false, priceLineVisible: false,
       lineStyle: 0,
     })
 
-    // SuperTrend bearish line (pink/red)
+    // SuperTrend bearish line
     stBearRef.current = chart.addSeries(LineSeries, {
-      color: '#ce3f6c', lineWidth: 2,
+      color: '#b63e72', lineWidth: 2,
       lastValueVisible: false, priceLineVisible: false,
       lineStyle: 0,
     })
@@ -84,15 +84,15 @@ export default function Chart({ candles, results, liveCandle }: ChartProps) {
       })) as CandlestickData[]
     )
 
-    // Split SuperTrend into bullish and bearish segments
+    // Split SuperTrend using confirmed direction (last_stdir in Pine)
     const bullData: LineData[] = []
     const bearData: LineData[] = []
 
     for (const r of results) {
-      if (isNaN(r.supertrend) || isNaN(r.stDirection)) continue
-      if (r.stDirection < 0) {
+      if (isNaN(r.supertrend) || isNaN(r.lastStDir)) continue
+      if (r.lastStDir === 1) {
         bullData.push({ time: r.time as Time, value: r.supertrend })
-      } else {
+      } else if (r.lastStDir === -1) {
         bearData.push({ time: r.time as Time, value: r.supertrend })
       }
     }
@@ -104,23 +104,23 @@ export default function Chart({ candles, results, liveCandle }: ChartProps) {
     const markers: SeriesMarker<Time>[] = []
     for (const r of results) {
       if (r.longSig) {
-        const prob = Math.round(r.probUp * 100)
+        const prob = (r.probUp * 100).toFixed(1)
         markers.push({
           time:     r.time as Time,
           position: 'belowBar',
           shape:    'arrowUp',
           color:    '#289eff',
-          text:     `L ${prob}%`,
+          text:     `COMPRA (${prob}%)`,
           size:     1,
         })
       } else if (r.shortSig) {
-        const prob = Math.round(r.probDown * 100)
+        const prob = (r.probDown * 100).toFixed(1)
         markers.push({
           time:     r.time as Time,
           position: 'aboveBar',
           shape:    'arrowDown',
-          color:    '#ce3f6c',
-          text:     `S ${prob}%`,
+          color:    '#b63e72',
+          text:     `VENTA (${prob}%)`,
           size:     1,
         })
       }
@@ -149,5 +149,12 @@ export default function Chart({ candles, results, liveCandle }: ChartProps) {
     })
   }, [liveCandle])
 
-  return <div ref={containerRef} className="w-full rounded-lg overflow-hidden border border-[#1a1a30]" />
+  return (
+    <div className="relative w-full overflow-hidden rounded-[1.45rem] border border-[#d6deec] bg-gradient-to-b from-[#131b30] to-[#0d1323] shadow-[0_18px_45px_rgba(34,56,86,0.16)]">
+      <div className="pointer-events-none absolute left-4 top-3 z-10 rounded-full border border-[#2f4269] bg-[#111a2f]/80 px-2.5 py-1 text-[10px] font-semibold tracking-[0.12em] text-[#95b4e9]">
+        SUPERTREND + KNN
+      </div>
+      <div ref={containerRef} className="h-[500px] w-full" />
+    </div>
+  )
 }

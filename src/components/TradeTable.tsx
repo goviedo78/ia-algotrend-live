@@ -9,13 +9,15 @@ interface TradeTableProps {
 }
 
 function fmt(n: number | null | undefined) {
-  return (n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  if (typeof n !== 'number' || Number.isNaN(n)) return '—'
+  return n.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
 function fmtTime(ts: number) {
   return new Date(ts * 1000).toLocaleString('es-MX', {
-    month: '2-digit', day: '2-digit',
+    month: 'short', day: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
+    hour12: false,
   })
 }
 
@@ -24,32 +26,41 @@ export default function TradeTable({ trades: tradesProp, openTrade, currentPrice
   const livePnl = openTrade && currentPrice
     ? (() => {
         const mult = openTrade.direction === 'LONG' ? 1 : -1
-        const pct  = (currentPrice - openTrade.open_price) / openTrade.open_price * mult * 100
-        return { pct, usd: 10000 * pct / 100 }
+        const pct = (currentPrice - openTrade.open_price) / openTrade.open_price * mult * 100
+        const usd = (currentPrice - openTrade.open_price) * mult
+        return { pct, usd }
       })()
     : null
 
+  const closedTrades = trades.filter(t => t.status === 'CLOSED')
+
   return (
-    <div className="bg-[#080812] border border-[#1a1a30] rounded-lg overflow-hidden">
-      <div className="bg-[#04040e] px-4 py-2 border-b border-[#14142a] flex items-center justify-between">
-        <span className="text-[#00e5ff] text-xs font-bold tracking-widest">HISTORIAL DE OPERACIONES</span>
-        <span className="text-[#4a5a6a] text-xs">{trades.length} trades</span>
+    <div className="surface-panel overflow-hidden">
+      <div className="flex items-center justify-between border-b border-[#1F2937] px-5 py-4">
+        <div>
+          <p className="label-eyebrow">Historial de operaciones</p>
+          <p className="mt-1 text-xs text-[#9CA3AF]">Últimas operaciones del backtest y posición abierta en vivo.</p>
+        </div>
+        <span className="badge">{closedTrades.length} cerradas</span>
       </div>
 
-      {/* Open trade banner */}
       {openTrade && (
-        <div className={`px-4 py-2 flex items-center justify-between border-b border-[#14142a] ${openTrade.direction === 'LONG' ? 'bg-[#00e676]/5' : 'bg-[#ff1744]/5'}`}>
+        <div
+          className={`flex items-center justify-between border-b border-[#1F2937] px-5 py-3 ${
+            openTrade.direction === 'LONG' ? 'bg-[#0f2a1f]' : 'bg-[#2a1218]'
+          }`}
+        >
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-bold px-2 py-0.5 rounded ${openTrade.direction === 'LONG' ? 'bg-[#00e676]/20 text-[#00e676]' : 'bg-[#ff1744]/20 text-[#ff1744]'}`}>
-              {openTrade.direction} ABIERTO
+            <span className={`badge ${openTrade.direction === 'LONG' ? 'badge-live' : 'badge-danger'}`}>
+              {openTrade.direction === 'LONG' ? 'Largo abierto' : 'Corto abierto'}
             </span>
-            <span className="text-gray-400 text-xs font-mono">@ ${fmt(openTrade.open_price)}</span>
+            <span className="text-xs font-mono text-[#9CA3AF]">@ ${fmt(openTrade.open_price)}</span>
           </div>
           <div className="text-right">
-            <span className="text-xs text-[#4a5a6a]">SL ${fmt(openTrade.stop_loss)}  TP ${fmt(openTrade.take_profit)}</span>
+            <span className="text-xs text-[#9CA3AF]">SL ${fmt(openTrade.stop_loss)} · TP ${fmt(openTrade.take_profit)}</span>
             {livePnl && (
-              <span className={`ml-3 text-xs font-mono font-bold ${livePnl.usd >= 0 ? 'text-[#00e676]' : 'text-[#ff1744]'}`}>
-                {livePnl.usd >= 0 ? '+' : ''}${fmt(livePnl.usd)} ({livePnl.pct.toFixed(2)}%)
+              <span className={`ml-3 text-xs font-mono font-bold ${livePnl.usd >= 0 ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
+                {livePnl.usd >= 0 ? '+' : ''}${fmt(livePnl.usd)} ({livePnl.pct.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%)
               </span>
             )}
           </div>
@@ -59,47 +70,55 @@ export default function TradeTable({ trades: tradesProp, openTrade, currentPrice
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-[#4a5a6a] border-b border-[#14142a]">
-              <th className="px-3 py-2 text-left">Dir</th>
-              <th className="px-3 py-2 text-left">Apertura</th>
-              <th className="px-3 py-2 text-right">Entrada</th>
-              <th className="px-3 py-2 text-right">Cierre</th>
-              <th className="px-3 py-2 text-right">Razón</th>
-              <th className="px-3 py-2 text-right">PnL</th>
+            <tr className="border-b border-[#1F2937] text-[#9CA3AF]">
+              <th className="px-3 py-3 text-left">#</th>
+              <th className="px-3 py-3 text-left">Dirección</th>
+              <th className="px-3 py-3 text-left">Entrada</th>
+              <th className="px-3 py-3 text-left">Salida</th>
+              <th className="px-3 py-3 text-right">Precio Entrada</th>
+              <th className="px-3 py-3 text-right">Precio Salida</th>
+              <th className="px-3 py-3 text-right">Resultado</th>
             </tr>
           </thead>
           <tbody>
-            {trades.filter(t => t.status === 'CLOSED').slice(0, 50).map(trade => {
+            {closedTrades.slice(0, 80).map((trade, idx) => {
               const win = (trade.pnl_usd ?? 0) >= 0
+              const directionLabel = trade.direction === 'LONG' ? 'Largo' : 'Corto'
+              const exitLabel = trade.direction === 'LONG' ? 'Salida Largo' : 'Salida Corto'
+              const sequence = closedTrades.length - idx
               return (
-                <tr key={trade.id} className="border-b border-[#0c0c1a] hover:bg-[#0c0c1a] transition-colors">
-                  <td className="px-3 py-1.5">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${trade.direction === 'LONG' ? 'bg-[#00e676]/15 text-[#00e676]' : 'bg-[#ff1744]/15 text-[#ff1744]'}`}>
-                      {trade.direction}
+                <tr key={trade.id} className="border-b border-[#1F2937] transition-colors hover:bg-[#0F172A]">
+                  <td className="px-3 py-2.5">
+                    <span className="font-mono text-[#9CA3AF]">{sequence}</span>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <span className={`badge ${trade.direction === 'LONG' ? 'badge-live' : 'badge-danger'}`}>
+                      {trade.direction === 'LONG' ? 'Largo' : 'Corto'}
                     </span>
                   </td>
-                  <td className="px-3 py-1.5 text-[#4a5a6a] font-mono">{fmtTime(trade.open_time)}</td>
-                  <td className="px-3 py-1.5 text-right font-mono text-gray-300">${fmt(trade.open_price)}</td>
-                  <td className="px-3 py-1.5 text-right font-mono text-gray-300">{trade.close_price ? `$${fmt(trade.close_price)}` : '—'}</td>
-                  <td className="px-3 py-1.5 text-right">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                      trade.close_reason === 'TP' ? 'bg-[#00e676]/15 text-[#00e676]' :
-                      trade.close_reason === 'SL' ? 'bg-[#ff1744]/15 text-[#ff1744]' :
-                      'bg-yellow-400/15 text-yellow-400'
-                    }`}>
-                      {trade.close_reason ?? '—'}
-                    </span>
+                  <td className="px-3 py-2.5">
+                    <div className="font-mono text-[#E5E7EB]">{fmtTime(trade.open_time)}</div>
+                    <div className="text-[11px] text-[#9CA3AF]">{directionLabel}</div>
                   </td>
-                  <td className={`px-3 py-1.5 text-right font-mono font-semibold ${win ? 'text-[#00e676]' : 'text-[#ff1744]'}`}>
-                    {win ? '+' : ''}${fmt(trade.pnl_usd ?? 0)}
+                  <td className="px-3 py-2.5">
+                    <div className="font-mono text-[#E5E7EB]">{trade.close_time ? fmtTime(trade.close_time) : '—'}</div>
+                    <div className="text-[11px] text-[#9CA3AF]">{trade.close_time ? exitLabel : '—'}</div>
+                  </td>
+                  <td className="px-3 py-2.5 text-right font-mono text-[#E5E7EB]">${fmt(trade.open_price)}</td>
+                  <td className="px-3 py-2.5 text-right font-mono text-[#E5E7EB]">{trade.close_price ? `$${fmt(trade.close_price)}` : '—'}</td>
+                  <td className={`px-3 py-2.5 text-right font-mono font-semibold ${win ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
+                    <div>{win ? '+' : ''}${fmt(trade.pnl_usd ?? 0)}</div>
+                    <div className={win ? 'text-[#22C55E]' : 'text-[#EF4444]'}>
+                      {(trade.pnl_pct ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
+                    </div>
                   </td>
                 </tr>
               )
             })}
-            {trades.filter(t => t.status === 'CLOSED').length === 0 && (
+            {closedTrades.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-[#4a5a6a]">
-                  El engine está analizando — las operaciones aparecerán aquí
+                <td colSpan={7} className="px-4 py-8 text-center text-[#6B7280]">
+                  Esperando la primera operación cerrada...
                 </td>
               </tr>
             )}

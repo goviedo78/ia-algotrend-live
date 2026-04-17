@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { openTrade, closeTrade, getOpenTrade } from '@/lib/db'
+import { openTrade, closeTrade, getOpenTrade, updateOpenTradeRisk } from '@/lib/db'
 import { notifyOpen, notifyClose } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
@@ -7,36 +7,105 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { signal, time, price, stop, tp } = body as {
+    const { signal, time, price, stop, tp, open, high, low } = body as {
       signal: 'LONG' | 'SHORT' | null
       time: number
       price: number
       stop: number
       tp: number
+      open?: number
+      high?: number
+      low?: number
     }
 
     const openTrade_ = await getOpenTrade()
 
     if (openTrade_) {
-      const hitSL = openTrade_.direction === 'LONG'
-        ? price <= openTrade_.stop_loss
-        : price >= openTrade_.stop_loss
-      const hitTP = openTrade_.direction === 'LONG'
-        ? price >= openTrade_.take_profit
-        : price <= openTrade_.take_profit
+      const o = typeof open === 'number' ? open : price
+      const h = typeof high === 'number' ? high : price
+      const l = typeof low === 'number' ? low : price
 
-      if (hitSL) {
-        const closed = await closeTrade(openTrade_.id, time, openTrade_.stop_loss, 'SL')
+      const trailTriggerPct = 1.0
+      const trailOffsetPct = 0.3
+
+      let stopLoss = openTrade_.stop_loss
+      let takeProfit: number | null = openTrade_.take_profit
+
+      const path: ('high' | 'low')[] = Math.abs(o - h) < Math.abs(o - l) ? ['high', 'low'] : ['low', 'high']
+
+      const hitPath = (leg: 'high' | 'low') => {
+        if (openTrade_.direction === 'LONG') {
+          if (leg === 'low' && l <= stopLoss) return { hit: 'SL' as const, closePrice: stopLoss }
+          if (leg === 'high' && takeProfit !== null && h >= takeProfit) return { hit: 'TP' as const, closePrice: takeProfit }
+          return null
+        }
+        if (leg === 'high' && h >= stopLoss) return { hit: 'SL' as const, closePrice: stopLoss }
+        if (leg === 'low' && takeProfit !== null && l <= takeProfit) return { hit: 'TP' as const, closePrice: takeProfit }
+        return null
+      }
+
+      const firstHit = hitPath(path[0])
+      if (firstHit) {
+        const closed = await closeTrade(openTrade_.id, time, firstHit.closePrice, firstHit.hit)
         await notifyClose(closed)
-      } else if (hitTP) {
-        const closed = await closeTrade(openTrade_.id, time, openTrade_.take_profit, 'TP')
-        await notifyClose(closed)
+      } else {
+        const secondHit = hitPath(path[1])
+        if (secondHit) {
+          const closed = await closeTrade(openTrade_.id, time, secondHit.closePrice, secondHit.hit)
+          await notifyClose(closed)
+        } else {
+          // Trailing update with the same defaults used in the strategy.
+          if (openTrade_.direction === 'LONG') {
+            const gainPct = ((h - openTrade_.open_price) / openTrade_.open_price) * 100
+            if (gainPct >= trailTriggerPct) {
+              const trail = h * (1 - trailOffsetPct / 100)
+              stopLoss = Math.max(openTrade_.open_price, stopLoss, trail)
+              takeProfit = null
+            }
+          } else {
+            const gainPct = ((openTrade_.open_price - l) / openTrade_.open_price) * 100
+            if (gainPct >= trailTriggerPct) {
+              const trail = l * (1 + trailOffsetPct / 100)
+              stopLoss = Math.min(openTrade_.open_price, stopLoss, trail)
+              takeProfit = null
+            }
+          }
+
+          // Close-bar confirmation after trailing update.
+          const closeHit = openTrade_.direction === 'LONG'
+            ? (price <= stopLoss ? 'SL' : (takeProfit !== null && price >= takeProfit ? 'TP' : null))
+            : (price >= stopLoss ? 'SL' : (takeProfit !== null && price <= takeProfit ? 'TP' : null))
+
+          if (closeHit) {
+            const closed = await closeTrade(openTrade_.id, time, price, closeHit)
+            await notifyClose(closed)
+          } else if (stopLoss !== openTrade_.stop_loss || takeProfit !== openTrade_.take_profit) {
+            await updateOpenTradeRisk(openTrade_.id, stopLoss, takeProfit)
+          }
+        }
       }
     }
 
     if (signal === 'LONG' || signal === 'SHORT') {
       const trade = await openTrade(signal, time, price, stop, tp)
       await notifyOpen(trade)
+
+      // Fire push notification to all PWA subscribers
+      const emoji = signal === 'LONG' ? '🟢' : '🔴'
+      const dir = signal === 'LONG' ? 'LARGO' : 'CORTO'
+      try {
+        await fetch(new URL('/api/push/send', req.url), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: `${emoji} AlgoTrend — ${dir} BTC`,
+            body: `Entrada: $${price.toLocaleString('en-US', { minimumFractionDigits: 2 })} | SL: $${stop.toFixed(2)} | TP: $${(tp ?? 0).toFixed(2)}`,
+            tag: `signal-${time}`,
+          }),
+        })
+      } catch (pushErr) {
+        console.error('[push notify]', pushErr)
+      }
     }
 
     return NextResponse.json({ ok: true })

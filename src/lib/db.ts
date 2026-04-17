@@ -15,7 +15,7 @@ export interface Trade {
   open_time: number
   open_price: number
   stop_loss: number
-  take_profit: number
+  take_profit: number | null
   close_time: number | null
   close_price: number | null
   close_reason: CloseReason | null
@@ -25,14 +25,13 @@ export interface Trade {
 }
 
 const TABLE = 'algotrend_trades'
-const POSITION_SIZE_USD = 10000
 
 export async function openTrade(
   direction: TradeDirection,
   openTime: number,
   openPrice: number,
   stopLoss: number,
-  takeProfit: number
+  takeProfit: number | null
 ): Promise<Trade> {
   // Close any open trade first
   const open = await getOpenTrade()
@@ -41,6 +40,23 @@ export async function openTrade(
   const { data, error } = await supabase
     .from(TABLE)
     .insert({ direction, open_time: openTime, open_price: openPrice, stop_loss: stopLoss, take_profit: takeProfit, status: 'OPEN' })
+    .select()
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data as Trade
+}
+
+export async function updateOpenTradeRisk(
+  id: number,
+  stopLoss: number,
+  takeProfit: number | null
+): Promise<Trade> {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .update({ stop_loss: stopLoss, take_profit: takeProfit })
+    .eq('id', id)
+    .eq('status', 'OPEN')
     .select()
     .single()
 
@@ -59,7 +75,7 @@ export async function closeTrade(
 
   const mult   = t.direction === 'LONG' ? 1 : -1
   const pnlPct = ((closePrice - t.open_price) / t.open_price) * mult * 100
-  const pnlUsd = POSITION_SIZE_USD * pnlPct / 100
+  const pnlUsd = (closePrice - t.open_price) * mult
 
   const { data, error } = await supabase
     .from(TABLE)

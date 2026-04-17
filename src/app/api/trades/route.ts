@@ -5,9 +5,9 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const trades   = getAllTrades(200)
-    const openTrade = getOpenTrade()
-    const stats    = getStats()
+    const trades = await getAllTrades(200)
+    const openTrade = await getOpenTrade()
+    const stats = await getStats()
     return NextResponse.json({ trades, openTrade, stats })
   } catch (err) {
     console.error('[trades]', err)

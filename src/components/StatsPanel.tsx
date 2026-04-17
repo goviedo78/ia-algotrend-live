@@ -25,30 +25,33 @@ interface StatsPanelProps {
   lastPrice: number | null
 }
 
-function Row({ label, value, color }: { label: string; value: string; color?: string }) {
+function StatRow({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div className="flex justify-between items-center py-1 px-3 even:bg-[#0c0c1a]">
-      <span className="text-[#4a5a6a] text-xs">{label}</span>
-      <span className={`text-xs font-mono font-semibold ${color ?? 'text-gray-300'}`}>{value}</span>
+    <div className="flex items-center justify-between rounded-xl border border-[#1F2937] bg-[#0F172A] px-3 py-2.5 text-xs">
+      <span className="text-[#9CA3AF]">{label}</span>
+      <span className={`font-mono font-semibold ${color ?? 'text-[#E5E7EB]'}`}>{value}</span>
     </div>
   )
 }
 
-function ProbBar({ label, value, color }: { label: string; value: number; color: string }) {
+function ProbabilityBar(
+  { label, value, fill, textColor, threshold }: { label: string; value: number; fill: string; textColor: string; threshold: number },
+) {
   const pct = Math.round(value * 100)
-  const isActive = value >= PRESET.probThreshold
+  const isActive = value >= threshold
+
   return (
-    <div className="px-3 py-1.5 even:bg-[#0c0c1a]">
-      <div className="flex justify-between mb-1">
-        <span className="text-[#4a5a6a] text-xs">{label}</span>
-        <span className={`text-xs font-mono font-bold ${isActive ? color : 'text-gray-500'}`}>
-          {pct}% {isActive ? '✓' : ''}
+    <div className="rounded-2xl border border-[#1F2937] bg-[#0F172A] p-3">
+      <div className="mb-2 flex items-end justify-between">
+        <span className="text-[11px] uppercase tracking-[0.12em] text-[#6B7280]">{label}</span>
+        <span className={`font-mono text-xl font-semibold ${isActive ? textColor : 'text-[#6B7280]'}`}>
+          {pct}%
         </span>
       </div>
-      <div className="h-1 bg-[#1a1a30] rounded-full overflow-hidden">
+      <div className="h-2 overflow-hidden rounded-full bg-[#1F2937]">
         <div
           className="h-full rounded-full transition-all duration-300"
-          style={{ width: `${pct}%`, backgroundColor: isActive ? (color === 'text-[#289eff]' ? '#289eff' : '#ce3f6c') : '#374151' }}
+          style={{ width: `${pct}%`, backgroundColor: fill }}
         />
       </div>
     </div>
@@ -56,95 +59,134 @@ function ProbBar({ label, value, color }: { label: string; value: number; color:
 }
 
 export default function StatsPanel({ stats, engine, connected, lastPrice }: StatsPanelProps) {
-  const thresh = PRESET.probThreshold
+  const threshold = PRESET.probThreshold
+  const thresholdPct = Math.round(threshold * 100)
+  const currentProb = engine ? Math.max(engine.probUp, engine.probDown) : 0
+  const progressPct = Math.min(100, Math.round((currentProb / Math.max(threshold, 0.01)) * 100))
 
-  const stLabel = engine
-    ? engine.lastStDir > 0 ? 'ALCISTA' : engine.lastStDir < 0 ? 'BAJISTA' : 'NEUTRAL'
-    : '—'
-  const stColor = (engine?.lastStDir ?? 0) > 0 ? 'text-[#289eff]' : (engine?.lastStDir ?? 0) < 0 ? 'text-[#ce3f6c]' : 'text-gray-500'
+  const stLabel = engine ? engine.lastStDir > 0 ? 'Alcista' : engine.lastStDir < 0 ? 'Bajista' : 'Neutral' : '—'
+  const stClass = (engine?.lastStDir ?? 0) > 0
+    ? 'text-[#22D3EE]'
+    : (engine?.lastStDir ?? 0) < 0
+      ? 'text-[#F472B6]'
+      : 'text-[#9CA3AF]'
 
-  const probActual = engine ? Math.max(engine.probUp, engine.probDown) : 0
-  const isSignalActive = probActual >= thresh
-  const statusColor = isSignalActive
-    ? (engine && engine.probUp > engine.probDown ? 'text-[#289eff]' : 'text-[#ce3f6c]')
-    : 'text-gray-500'
-  const statusText = isSignalActive ? 'SEÑAL ACTIVA' : 'Esperando'
+  const modeLabel = currentProb >= threshold ? 'Señal activa' : 'En observación'
+  const modeClass = currentProb >= threshold
+    ? (engine && engine.probUp >= engine.probDown ? 'text-[#22D3EE]' : 'text-[#F472B6]')
+    : 'text-[#9CA3AF]'
 
-  const distToThresh = (thresh - probActual) * 100
-  const distColor = distToThresh <= 0 ? 'text-[#00e676]' : distToThresh < 5 ? 'text-yellow-400' : 'text-gray-400'
-  const distText  = distToThresh <= 0 ? 'Umbral superado' : `${distToThresh.toFixed(1)}% al umbral`
-
-  const pnlColor = (stats?.totalPnl ?? 0) >= 0 ? 'text-[#00e676]' : 'text-[#ff1744]'
+  const pnlColor = (stats?.totalPnl ?? 0) >= 0 ? 'text-[#22C55E]' : 'text-[#EF4444]'
 
   return (
-    <div className="flex flex-col gap-3">
-
-      {/* Engine panel */}
-      <div className="bg-[#080812] border border-[#1a1a30] rounded-lg overflow-hidden">
-        <div className="bg-[#04040e] px-3 py-2 flex items-center justify-between border-b border-[#14142a]">
-          <span className="text-[#289eff] text-xs font-bold tracking-widest">🤖 IA AlgoTrend</span>
-          <span className={`text-xs flex items-center gap-1 ${connected ? 'text-[#00e676]' : 'text-gray-500'}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-[#00e676] animate-pulse' : 'bg-gray-600'}`} />
-            {connected ? 'LIVE' : 'OFFLINE'}
+    <aside className="flex flex-col gap-4">
+      <section className="surface-panel px-5 py-5">
+        <div className="mb-4 flex items-center justify-between">
+          <p className="label-eyebrow">Estado del motor</p>
+          <span className={`badge inline-flex items-center gap-1.5 ${connected ? 'badge-live' : 'badge-danger'}`}>
+            {connected && <span className="live-dot" />}
+            {connected ? 'EN VIVO' : 'SIN CONEXIÓN'}
           </span>
         </div>
 
-        {lastPrice && (
-          <div className="px-3 py-2 text-center border-b border-[#14142a]">
-            <span className="text-white text-xl font-mono font-bold">
-              ${lastPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-            </span>
-            <span className="text-[#4a5a6a] text-xs ml-2">BTC/USDT</span>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="surface-panel-muted px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">Precio BTC</p>
+            <p className="mt-1 font-mono text-[1.05rem] font-semibold text-[#E5E7EB]">
+              {lastPrice ? `$${lastPrice.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '...'}
+            </p>
           </div>
-        )}
+          <div className="surface-panel-muted px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">{`ATR (${PRESET.atrPeriod})`}</p>
+            <p className="mt-1 font-mono text-[1.05rem] font-semibold text-[#E5E7EB]">{engine ? engine.atrVal.toFixed(2) : '...'}</p>
+          </div>
+        </div>
 
         {engine ? (
-          <>
-            <Row label="Preset"       value="Cripto · Intraday" color="text-yellow-400" />
-            <Row label="SuperTrend"   value={stLabel}           color={stColor} />
-            <Row label="Estado motor" value={statusText}        color={statusColor} />
-            <Row label="Distancia"    value={distText}          color={distColor} />
-            <Row label="Umbral"       value={`${(thresh * 100).toFixed(0)}%`} />
-            <Row label="ATR (8)"      value={engine.atrVal.toFixed(2)} />
-
-            <div className="border-t border-[#14142a] pt-1 pb-1">
-              <ProbBar label="Prob. alcista" value={engine.probUp}   color="text-[#289eff]" />
-              <ProbBar label="Prob. bajista" value={engine.probDown} color="text-[#ce3f6c]" />
+          <div className="mt-4 space-y-2">
+            <StatRow label="Preset" value="Base ORIGINAL (TradingView)" color="text-[#9CA3AF]" />
+            <div className="flex items-center justify-between rounded-xl border border-[#1F2937] bg-[#0F172A] px-3 py-2.5 text-xs">
+              <span className="text-[#9CA3AF]">Tendencia SuperTrend</span>
+              <span className={`font-mono font-semibold ${stClass}`} style={{ textShadow: '0 0 10px rgba(59,130,246,0.38)' }}>
+                {stLabel}
+              </span>
             </div>
-          </>
+            <StatRow label="Modo del motor" value={modeLabel} color={modeClass} />
+
+            <div className="rounded-xl border border-[#1F2937] bg-[#0F172A] px-3 py-2.5">
+              <div className="mb-1.5 flex items-center justify-between text-xs">
+                <span className="text-[#9CA3AF]">Umbral de disparo</span>
+                <span className="font-mono text-[#E5E7EB]">{thresholdPct}%</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-[#1F2937]">
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{ width: `${progressPct}%`, backgroundColor: '#3B82F6' }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 border-t border-[#1F2937] pt-3">
+              <ProbabilityBar label="Probabilidad alcista" value={engine.probUp} fill="#22C55E" textColor="text-[#22C55E]" threshold={threshold} />
+              <ProbabilityBar label="Probabilidad bajista" value={engine.probDown} fill="#EF4444" textColor="text-[#EF4444]" threshold={threshold} />
+            </div>
+          </div>
         ) : (
-          <div className="px-3 py-6 text-center text-[#4a5a6a] text-xs">
-            Cargando KNN engine...
+          <div className="mt-4 rounded-xl border border-[#1F2937] bg-[#0F172A] px-3 py-5 text-center text-xs text-[#9CA3AF]">
+            Cargando motor KNN...
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Performance */}
-      <div className="bg-[#080812] border border-[#1a1a30] rounded-lg overflow-hidden">
-        <div className="bg-[#04040e] px-3 py-2 border-b border-[#14142a]">
-          <span className="text-[#289eff] text-xs font-bold tracking-widest">PERFORMANCE</span>
-        </div>
+      <section className="surface-panel px-5 py-5">
+        <p className="label-eyebrow mb-3">Rendimiento</p>
         {stats ? (
-          <>
-            <Row label="Balance"   value={`$${(stats.balance ?? 10000).toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
-            <Row label="PnL total" value={`${(stats.totalPnl ?? 0) >= 0 ? '+' : ''}$${(stats.totalPnl ?? 0).toFixed(2)}`} color={pnlColor} />
-            <Row label="Win rate"  value={`${(stats.winRate ?? 0).toFixed(1)}%`} color={(stats.winRate ?? 0) >= 50 ? 'text-[#00e676]' : 'text-[#ff1744]'} />
-            <Row label="Trades"    value={`${stats.wins ?? 0}W / ${(stats.total ?? 0) - (stats.wins ?? 0)}L / ${stats.total ?? 0}T`} />
-          </>
+          <div className="space-y-2">
+            <StatRow label="Balance" value={`$${(stats.balance ?? 10000).toLocaleString('es-MX', { maximumFractionDigits: 0 })}`} />
+            <StatRow label="PnL total" value={`${(stats.totalPnl ?? 0) >= 0 ? '+' : ''}$${(stats.totalPnl ?? 0).toFixed(2)}`} color={pnlColor} />
+            <StatRow label="Tasa de acierto" value={`${(stats.winRate ?? 0).toFixed(1)}%`} color={(stats.winRate ?? 0) >= 50 ? 'text-[#22C55E]' : 'text-[#EF4444]'} />
+            <StatRow label="Operaciones" value={`${stats.wins ?? 0}G / ${(stats.total ?? 0) - (stats.wins ?? 0)}P / ${stats.total ?? 0}T`} />
+          </div>
         ) : (
-          <div className="px-3 py-4 text-center text-[#4a5a6a] text-xs">Sin trades aún</div>
+          <div className="rounded-xl border border-[#1F2937] bg-[#0F172A] px-3 py-4 text-center text-xs text-[#9CA3AF]">Aún no hay operaciones</div>
         )}
-      </div>
+      </section>
 
-      {/* Params */}
-      <div className="bg-[#080812] border border-[#1a1a30] rounded-lg overflow-hidden text-[10px] text-[#4a5a6a]">
-        <div className="px-3 py-2 space-y-0.5">
+      <section className="surface-panel px-5 py-5">
+        <p className="label-eyebrow mb-3">Gestión de riesgo</p>
+        <div className="space-y-2">
+          <StatRow label="Stop Loss" value={`${PRESET.slPct}% (${PRESET.slMode})`} color="text-[#EF4444]" />
+          <StatRow label="Take Profit" value={`${PRESET.tpRR}:1 R:R (${PRESET.tpMode})`} color="text-[#22C55E]" />
+          <div className="rounded-xl border border-[#1F2937] bg-[#0F172A] px-3 py-2.5">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#F59E0B]"></span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#F59E0B]">Trailing Stop Activo</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-lg bg-[#1F2937]/50 px-2.5 py-1.5">
+                <p className="text-[9px] uppercase tracking-wider text-[#6B7280]">Trigger</p>
+                <p className="font-mono text-sm font-semibold text-[#E5E7EB]">1.0%</p>
+              </div>
+              <div className="rounded-lg bg-[#1F2937]/50 px-2.5 py-1.5">
+                <p className="text-[9px] uppercase tracking-wider text-[#6B7280]">Offset</p>
+                <p className="font-mono text-sm font-semibold text-[#E5E7EB]">0.3%</p>
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] text-[#6B7280] leading-relaxed">
+              Cuando el precio sube 1% desde la entrada, el SL se mueve al precio de entrada y sigue al precio a 0.3% de distancia. El TP original se desactiva.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="surface-panel px-5 py-5">
+        <p className="label-eyebrow mb-3">Parámetros del modelo</p>
+        <div className="space-y-1 text-[11px] text-[#9CA3AF]">
           <div>ATR {PRESET.atrPeriod} · Factor {PRESET.factor} · K {PRESET.kNeighbors}</div>
           <div>Ventana {PRESET.samplingWindowSize} · Paso {PRESET.momentumWindow} · MA {PRESET.maType}</div>
           <div>RSI {PRESET.rsiLen} · CHOP {PRESET.chopLen} · p={PRESET.pParam} w={PRESET.wParam}</div>
         </div>
-      </div>
-
-    </div>
+      </section>
+    </aside>
   )
 }
