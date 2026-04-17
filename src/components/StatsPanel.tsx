@@ -126,10 +126,10 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
         </div>
         {stats ? (
           <>
-            <Row label="Balance"   value={`$${stats.balance.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
-            <Row label="PnL total" value={`${stats.totalPnl >= 0 ? '+' : ''}$${stats.totalPnl.toFixed(2)}`} color={pnlColor} />
-            <Row label="Win rate"  value={`${stats.winRate.toFixed(1)}%`} color={stats.winRate >= 50 ? 'text-[#00e676]' : 'text-[#ff1744]'} />
-            <Row label="Trades"    value={`${stats.wins}W / ${stats.total - stats.wins}L / ${stats.total}T`} />
+            <Row label="Balance"   value={`$${(stats.balance ?? 10000).toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
+            <Row label="PnL total" value={`${(stats.totalPnl ?? 0) >= 0 ? '+' : ''}$${(stats.totalPnl ?? 0).toFixed(2)}`} color={pnlColor} />
+            <Row label="Win rate"  value={`${(stats.winRate ?? 0).toFixed(1)}%`} color={(stats.winRate ?? 0) >= 50 ? 'text-[#00e676]' : 'text-[#ff1744]'} />
+            <Row label="Trades"    value={`${stats.wins ?? 0}W / ${(stats.total ?? 0) - (stats.wins ?? 0)}L / ${stats.total ?? 0}T`} />
           </>
         ) : (
           <div className="px-3 py-4 text-center text-[#4a5a6a] text-xs">Sin trades aún</div>

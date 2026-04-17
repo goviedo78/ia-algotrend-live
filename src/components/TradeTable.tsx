@@ -8,8 +8,8 @@ interface TradeTableProps {
   currentPrice: number | null
 }
 
-function fmt(n: number) {
-  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+function fmt(n: number | null | undefined) {
+  return (n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function fmtTime(ts: number) {
@@ -19,7 +19,8 @@ function fmtTime(ts: number) {
   })
 }
 
-export default function TradeTable({ trades, openTrade, currentPrice }: TradeTableProps) {
+export default function TradeTable({ trades: tradesProp, openTrade, currentPrice }: TradeTableProps) {
+  const trades = Array.isArray(tradesProp) ? tradesProp : []
   const livePnl = openTrade && currentPrice
     ? (() => {
         const mult = openTrade.direction === 'LONG' ? 1 : -1
