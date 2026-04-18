@@ -79,8 +79,9 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
     // Invisible series for deterministic label placement
     labelSeriesRef.current = chart.addSeries(LineSeries, {
       color: 'transparent',
-      lastValueVisible: false, priceLineVisible: false,
-      handleScroll: false, handleScale: false,
+      lastValueVisible: false,
+      priceLineVisible: false,
+      crosshairMarkerVisible: false,
     })
 
     const ro = new ResizeObserver(() => {
