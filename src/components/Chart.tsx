@@ -367,6 +367,11 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
     if (arrowMarkers.length > 0 && arrowSeriesRef.current) {
         arrowMarkersRef.current = createSeriesMarkers(arrowSeriesRef.current, arrowMarkers.sort((a, b) => (a.time as number) - (b.time as number)))
     }
+
+    // Restore EXIT markers on the main candle series
+    if (candleMarkers.length > 0 && candleRef.current) {
+        markersRef.current = createSeriesMarkers(candleRef.current, candleMarkers.sort((a, b) => (a.time as number) - (b.time as number)))
+    }
     
     // Line 1: Word (BUY/SELL)
     if (labelMarkers.length > 0 && labelSeriesRef.current) {
