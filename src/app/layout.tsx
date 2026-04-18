@@ -47,9 +47,7 @@ export default function RootLayout({
       lang="es"
       className={`${manrope.variable} ${syne.variable} ${ibmPlexMono.variable} h-full antialiased`}
     >
-      <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-      </head>
+      <head />
       <body className="min-h-full flex flex-col">
         {children}
         <ServiceWorkerRegistrar />

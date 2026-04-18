@@ -133,9 +133,9 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
           : null
         const probText = prob !== null ? ` ${prob.toFixed(1)}%` : ''
         
-        // Offset calculation: ~1.5% of entry price for label vertical offset
+        // Offset calculation: ~2.5% of entry price for label vertical offset
         const candle = candles.find(c => c.time === t.open_time)
-        const offset = t.open_price * 0.015
+        const offset = t.open_price * 0.025
         const labelPrice = t.direction === 'LONG' 
           ? (candle?.low ?? t.open_price) - offset 
           : (candle?.high ?? t.open_price) + offset
@@ -184,7 +184,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
       const probText = prob !== null ? ` ${prob.toFixed(1)}%` : ''
 
       const candle = candles.find(c => c.time === openTrade.open_time)
-      const offset = openTrade.open_price * 0.015
+      const offset = openTrade.open_price * 0.025
       const labelPrice = openTrade.direction === 'LONG' 
         ? (candle?.low ?? openTrade.open_price) - offset 
         : (candle?.high ?? openTrade.open_price) + offset
