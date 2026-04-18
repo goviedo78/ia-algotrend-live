@@ -254,14 +254,12 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
 
     // Main candles (Arrows)
     if (candleMarkers.length > 0 && candleRef.current) {
-        markersRef.current = createSeriesMarkers(candleMarkers.sort((a, b) => (a.time as number) - (b.time as number)))
-        candleRef.current.attachPrimitive(markersRef.current)
+        markersRef.current = createSeriesMarkers(candleRef.current, candleMarkers.sort((a, b) => (a.time as number) - (b.time as number)))
     }
     
     // Labels (Balloons at offset)
     if (labelMarkers.length > 0 && labelSeriesRef.current) {
-        labelMarkersRef.current = createSeriesMarkers(labelMarkers.sort((a, b) => (a.time as number) - (b.time as number)))
-        labelSeriesRef.current.attachPrimitive(labelMarkersRef.current)
+        labelMarkersRef.current = createSeriesMarkers(labelSeriesRef.current, labelMarkers.sort((a, b) => (a.time as number) - (b.time as number)))
     }
     
     chartRef.current?.timeScale().scrollToRealTime()
