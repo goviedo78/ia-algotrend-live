@@ -160,7 +160,8 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         const probText = prob !== null ? `(${prob.toFixed(1)}%)` : ''
         
         // Base anchor from candle high/low to ensure clearance
-        const basePrice = t.direction === 'LONG' ? results.find(r => r.time === t.open_time)?.low || t.open_price : results.find(r => r.time === t.open_time)?.high || t.open_price
+        const baseCandle = candles.find(c => c.time === t.open_time)
+        const basePrice = t.direction === 'LONG' ? baseCandle?.low || t.open_price : baseCandle?.high || t.open_price
         
         // Offset 0: Arrow (Closest)
         const offsetArrow = basePrice * 0.010
@@ -245,7 +246,8 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
       
       const probText = prob !== null ? `(${prob.toFixed(1)}%)` : ''
 
-      const basePrice = openTrade.direction === 'LONG' ? liveCandle?.low || openTrade.open_price : liveCandle?.high || openTrade.open_price
+      const baseCandle = candles.find(c => c.time === openTrade.open_time)
+      const basePrice = openTrade.direction === 'LONG' ? baseCandle?.low || openTrade.open_price : baseCandle?.high || openTrade.open_price
 
       const offsetArrow = basePrice * 0.010
       const arrowPrice = openTrade.direction === 'LONG' ? basePrice - offsetArrow : basePrice + offsetArrow
