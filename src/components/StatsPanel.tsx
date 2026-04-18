@@ -104,9 +104,9 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
 
         {engine ? (
           <div className="mt-4 space-y-2">
-            <StatRow label="Preset" value="Base ORIGINAL (TradingView)" color="text-[#9CA3AF]" />
+            <StatRow label="Filtro de IA" value="Motor Activo" color="text-[#9CA3AF]" />
             <div className="flex items-center justify-between rounded-xl border border-[#1F2937] bg-[#0F172A] px-3 py-2.5 text-xs">
-              <span className="text-[#9CA3AF]">Tendencia SuperTrend</span>
+              <span className="text-[#9CA3AF]">Dirección del Algoritmo</span>
               <span className={`font-mono font-semibold ${stClass}`} style={{ textShadow: '0 0 10px rgba(59,130,246,0.38)' }}>
                 {stLabel}
               </span>
@@ -133,7 +133,7 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
           </div>
         ) : (
           <div className="mt-4 rounded-xl border border-[#1F2937] bg-[#0F172A] px-3 py-5 text-center text-xs text-[#9CA3AF]">
-            Cargando motor KNN...
+            Cargando motor de IA...
           </div>
         )}
       </section>

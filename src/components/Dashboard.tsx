@@ -365,7 +365,7 @@ export default function Dashboard() {
                   Mesa de Trading BTC 1H
                 </h1>
                 <p className="max-w-2xl text-sm text-[#9CA3AF] sm:text-[0.95rem]">
-                  Monitor de ejecución SuperTrend + KNN con stream en vivo de Bitstamp e historial automático de operaciones.
+                  Monitor de ejecución de Algoritmos Inteligentes con stream en vivo de Bitstamp e historial automático de operaciones.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <span className="badge">
@@ -379,7 +379,7 @@ export default function Dashboard() {
                     {connected ? 'Stream en vivo' : 'Reconectando stream'}
                   </span>
                   <span className="badge">
-                    Estrategia: SuperTrend + KNN
+                    Algoritmo: Probabilidad IA
                   </span>
                   <NotificationBell />
                 </div>
@@ -434,7 +434,7 @@ export default function Dashboard() {
 
         {!engineReady && (
           <div className="surface-panel-muted px-4 py-2.5 text-center text-xs font-medium text-[#9CA3AF]">
-            Inicializando motor KNN...
+            Inicializando motor de IA...
           </div>
         )}
       </div>
