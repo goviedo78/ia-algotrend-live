@@ -32,6 +32,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const stBullRef = useRef<ISeriesApi<'Line'> | null>(null)
   const stBearRef = useRef<ISeriesApi<'Line'> | null>(null)
+  const labelSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
   
   // Track price lines and markers plugin to clean them up
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,6 +75,13 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
       color: '#b63e72', lineWidth: 2,
       lastValueVisible: false, priceLineVisible: false,
     })
+    
+    // Invisible series for deterministic label placement
+    labelSeriesRef.current = chart.addSeries(LineSeries, {
+      color: 'transparent',
+      lastValueVisible: false, priceLineVisible: false,
+      handleScroll: false, handleScale: false,
+    })
 
     const ro = new ResizeObserver(() => {
       if (containerRef.current) chart.applyOptions({ width: containerRef.current.clientWidth })
@@ -96,6 +104,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
 
     const bullData: LineData[] = []
     const bearData: LineData[] = []
+    const labelAnchorData: LineData[] = []
 
     for (const r of results) {
       if (isNaN(r.supertrend) || isNaN(r.lastStDir)) continue
@@ -110,7 +119,8 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
     stBearRef.current?.setData(bearData)
 
     // Build markers from actual trades
-    const markers: SeriesMarker<Time>[] = []
+    const candleMarkers: SeriesMarker<Time>[] = []
+    const labelMarkers: SeriesMarker<Time>[] = []
     
     // 1. Process closed trades
     for (const t of trades) {
@@ -119,21 +129,29 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         const prob = resultAtEntry 
           ? (t.direction === 'LONG' ? resultAtEntry.probUp : resultAtEntry.probDown) * 100 
           : null
-        const probText = prob !== null ? ` (${prob.toFixed(1)}%)` : ''
+        const probText = prob !== null ? ` ${prob.toFixed(1)}%` : ''
         
-        // Entry markers (Double approach for better visibility)
-        // 1. Arrow signal
-        markers.push({
+        // Offset calculation: ~1.5% of entry price for label vertical offset
+        const offset = t.open_price * 0.015
+        const labelPrice = t.direction === 'LONG' 
+          ? (t.low ?? t.open_price) - offset 
+          : (t.high ?? t.open_price) + offset
+        
+        labelAnchorData.push({ time: t.open_time as Time, value: labelPrice })
+
+        // 1. Arrow signal on main series
+        candleMarkers.push({
           time: t.open_time as Time,
           position: t.direction === 'LONG' ? 'belowBar' : 'aboveBar',
           shape: t.direction === 'LONG' ? 'arrowUp' : 'arrowDown',
           color: t.direction === 'LONG' ? '#289eff' : '#b63e72',
           size: 1,
         })
-        // 2. Probability "balloon"
-        markers.push({
+        
+        // 2. Probability "balloon" on anchor series
+        labelMarkers.push({
           time: t.open_time as Time,
-          position: t.direction === 'LONG' ? 'belowBar' : 'aboveBar',
+          position: 'inBar', // Use inBar because series is already at offset price
           shape: 'circle',
           color: t.direction === 'LONG' ? '#289eff' : '#b63e72',
           text: `${t.direction === 'LONG' ? 'BUY' : 'SELL'}${probText}`,
@@ -142,7 +160,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         
         // Exit marker
         if (t.close_time) {
-          markers.push({
+          candleMarkers.push({
             time: t.close_time as Time,
             position: t.direction === 'LONG' ? 'aboveBar' : 'belowBar',
             shape: t.direction === 'LONG' ? 'arrowDown' : 'arrowUp',
@@ -162,8 +180,15 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         : null
       const probText = prob !== null ? ` ${prob.toFixed(1)}%` : ''
 
+      const offset = openTrade.open_price * 0.015
+      const labelPrice = openTrade.direction === 'LONG' 
+        ? (openTrade.low ?? openTrade.open_price) - offset 
+        : (openTrade.high ?? openTrade.open_price) + offset
+      
+      labelAnchorData.push({ time: openTrade.open_time as Time, value: labelPrice })
+
       // 1. Arrow
-      markers.push({
+      candleMarkers.push({
         time: openTrade.open_time as Time,
         position: openTrade.direction === 'LONG' ? 'belowBar' : 'aboveBar',
         shape: openTrade.direction === 'LONG' ? 'arrowUp' : 'arrowDown',
@@ -171,9 +196,9 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         size: 1,
       })
       // 2. Balloon
-      markers.push({
+      labelMarkers.push({
         time: openTrade.open_time as Time,
-        position: openTrade.direction === 'LONG' ? 'belowBar' : 'aboveBar',
+        position: 'inBar',
         shape: 'circle',
         color: openTrade.direction === 'LONG' ? '#289eff' : '#b63e72',
         text: `BUY${probText} (LIVE)`,
@@ -212,13 +237,22 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
       }
     }
 
+    labelSeriesRef.current?.setData(labelAnchorData.sort((a, b) => (a.time as number) - (b.time as number)))
+
     // Update markers plugin
     if (markersRef.current) {
       markersRef.current.detachPrimitive?.()
       markersRef.current = null
     }
-    if (markers.length > 0 && candleRef.current) {
-      markersRef.current = createSeriesMarkers(candleRef.current, markers.sort((a, b) => (a.time as number) - (b.time as number)))
+
+    // Main candles (Arrows)
+    if (candleMarkers.length > 0 && candleRef.current) {
+      candleRef.current.setMarkers(candleMarkers.sort((a, b) => (a.time as number) - (b.time as number)))
+    }
+    
+    // Labels (Balloons at offset)
+    if (labelMarkers.length > 0 && labelSeriesRef.current) {
+      labelSeriesRef.current.setMarkers(labelMarkers.sort((a, b) => (a.time as number) - (b.time as number)))
     }
     
     chartRef.current?.timeScale().scrollToRealTime()
