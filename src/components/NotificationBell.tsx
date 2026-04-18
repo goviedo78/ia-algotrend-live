@@ -20,17 +20,27 @@ export default function NotificationBell() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      setPermState('unsupported')
-      return
-    }
-    setPermState(Notification.permission as PermState)
+    // Avoid calling setState synchronously during render
+    let mounted = true;
+    const checkState = async () => {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        if (mounted) setPermState('unsupported')
+        return
+      }
+      if (mounted) setPermState(Notification.permission as PermState)
 
-    // Check existing subscription
-    navigator.serviceWorker.ready.then(async (reg) => {
-      const sub = await reg.pushManager.getSubscription()
-      setIsSubscribed(!!sub)
-    })
+      // Check existing subscription
+      try {
+        const reg = await navigator.serviceWorker.ready
+        const sub = await reg.pushManager.getSubscription()
+        if (mounted) setIsSubscribed(!!sub)
+      } catch (err) {
+        console.error('Error checking subscription', err)
+      }
+    };
+
+    checkState();
+    return () => { mounted = false; };
   }, [])
 
   const subscribe = useCallback(async () => {

@@ -13,6 +13,7 @@ import {
   type SeriesMarker,
   type Time,
   type IPriceLine,
+  type ISeriesMarkersPluginApi,
 } from 'lightweight-charts'
 import type { Candle } from '@/lib/algotrend'
 import type { AlgoTrendResult } from '@/lib/algotrend'
@@ -38,12 +39,12 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
   const probSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
   
   // Track price lines and markers plugin to clean them up
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const markersRef = useRef<any>(null)
-  const arrowMarkersRef = useRef<any>(null)
-  const labelMarkersRef = useRef<any>(null)
-  const bubbleMarkersRef = useRef<any>(null)
-  const probMarkersRef = useRef<any>(null)
+
+  const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null)
+  const arrowMarkersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null)
+  const labelMarkersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null)
+  const bubbleMarkersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null)
+  const probMarkersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null)
   const slLineRef = useRef<IPriceLine | null>(null)
   const tpLineRef = useRef<IPriceLine | null>(null)
 
@@ -347,23 +348,23 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
     probSeriesRef.current?.setData(probAnchorData.sort((a, b) => (a.time as number) - (b.time as number)))
 
     if (markersRef.current) {
-      candleRef.current?.detachPrimitive(markersRef.current)
+      markersRef.current.detach()
       markersRef.current = null
     }
     if (arrowMarkersRef.current) {
-      arrowSeriesRef.current?.detachPrimitive(arrowMarkersRef.current)
+      arrowMarkersRef.current.detach()
       arrowMarkersRef.current = null
     }
     if (labelMarkersRef.current) {
-      labelSeriesRef.current?.detachPrimitive(labelMarkersRef.current)
+      labelMarkersRef.current.detach()
       labelMarkersRef.current = null
     }
     if (bubbleMarkersRef.current) {
-      bubbleSeriesRef.current?.detachPrimitive(bubbleMarkersRef.current)
+      bubbleMarkersRef.current.detach()
       bubbleMarkersRef.current = null
     }
     if (probMarkersRef.current) {
-      probSeriesRef.current?.detachPrimitive(probMarkersRef.current)
+      probMarkersRef.current.detach()
       probMarkersRef.current = null
     }
 
