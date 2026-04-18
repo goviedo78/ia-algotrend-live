@@ -212,6 +212,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
 
     // 2. Process open trade
     if (openTrade) {
+      const resultAtEntry = results.find(r => r.time === openTrade.open_time)
       const prob = resultAtEntry 
         ? (openTrade.direction === 'LONG' ? resultAtEntry.probUp : resultAtEntry.probDown) * 100 
         : null
