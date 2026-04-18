@@ -146,13 +146,13 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         const probText = prob !== null ? `(${prob.toFixed(1)}%)` : ''
         
         // Offset 1: For 'BUY/SELL' label
-        const offsetLabel = t.open_price * 0.018
+        const offsetLabel = t.open_price * 0.016
         const labelPrice = t.direction === 'LONG' 
           ? (t.open_price) - offsetLabel 
           : (t.open_price) + offsetLabel
         
         // Offset 2: For '% Prob' label (further away)
-        const offsetProb = t.open_price * 0.035
+        const offsetProb = t.open_price * 0.032
         const probPrice = t.direction === 'LONG' 
           ? (t.open_price) - offsetProb 
           : (t.open_price) + offsetProb
@@ -176,7 +176,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
           shape: 'circle',
           color: t.direction === 'LONG' ? '#289eff' : '#b63e72',
           text: t.direction === 'LONG' ? 'BUY' : 'SELL',
-          size: 2,
+          size: 0, // Hidden shape, only text visible
         })
 
         // 3. Probability Label Bubble (Line 2)
@@ -186,7 +186,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
           shape: 'circle',
           color: t.direction === 'LONG' ? '#289eff' : '#b63e72',
           text: probText,
-          size: 2,
+          size: 0, // Hidden shape, only text visible
         })
         
         // Exit marker
@@ -211,12 +211,12 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         : null
       const probText = prob !== null ? `(${prob.toFixed(1)}%)` : ''
 
-      const offsetLabel = openTrade.open_price * 0.018
+      const offsetLabel = openTrade.open_price * 0.016
       const labelPrice = openTrade.direction === 'LONG' 
         ? (openTrade.open_price) - offsetLabel 
         : (openTrade.open_price) + offsetLabel
 
-      const offsetProb = openTrade.open_price * 0.035
+      const offsetProb = openTrade.open_price * 0.032
       const probPrice = openTrade.direction === 'LONG' 
         ? (openTrade.open_price) - offsetProb 
         : (openTrade.open_price) + offsetProb
@@ -240,7 +240,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         shape: 'circle',
         color: openTrade.direction === 'LONG' ? '#289eff' : '#b63e72',
         text: openTrade.direction === 'LONG' ? 'BUY' : 'SELL',
-        size: 2,
+        size: 0,
       })
 
       // 3. Prob Label
@@ -250,7 +250,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         shape: 'circle',
         color: openTrade.direction === 'LONG' ? '#289eff' : '#b63e72',
         text: `${probText} LIVE`,
-        size: 2,
+        size: 0,
       })
 
       if (candleRef.current) {
