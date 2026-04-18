@@ -152,20 +152,20 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         
         const probText = prob !== null ? toBold(prob.toFixed(1)) + '%' : ''
         
-        // Offset 1: For 'BUY/SELL' label (With Bubble)
-        const offsetLabel = t.open_price * 0.012
-        const labelPrice = t.direction === 'LONG' 
-          ? (t.open_price) - offsetLabel 
-          : (t.open_price) + offsetLabel
-        
-        // Offset 2: For '% Prob' label (Big Bold Text)
-        const offsetProb = t.open_price * 0.024
+        // Offset 1: For '% Prob' label (Closer to arrow)
+        const offsetProb = t.open_price * 0.014
         const probPrice = t.direction === 'LONG' 
           ? (t.open_price) - offsetProb 
           : (t.open_price) + offsetProb
         
-        labelAnchorData.push({ time: t.open_time as Time, value: labelPrice })
+        // Offset 2: For 'BUY/SELL' label (Furthest/Bubble)
+        const offsetLabel = t.open_price * 0.028
+        const labelPrice = t.direction === 'LONG' 
+          ? (t.open_price) - offsetLabel 
+          : (t.open_price) + offsetLabel
+        
         probAnchorData.push({ time: t.open_time as Time, value: probPrice })
+        labelAnchorData.push({ time: t.open_time as Time, value: labelPrice })
 
         // 1. Arrow signal on main series (No text here)
         candleMarkers.push({
@@ -223,18 +223,20 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
 
       const probText = prob !== null ? toBold(prob.toFixed(1)) + '%' : ''
 
-      const offsetLabel = openTrade.open_price * 0.012
-      const labelPrice = openTrade.direction === 'LONG' 
-        ? (openTrade.open_price) - offsetLabel 
-        : (openTrade.open_price) + offsetLabel
-
-      const offsetProb = openTrade.open_price * 0.024
+      // Offset 1: For '% Prob' label (Closer to arrow)
+      const offsetProb = openTrade.open_price * 0.014
       const probPrice = openTrade.direction === 'LONG' 
         ? (openTrade.open_price) - offsetProb 
         : (openTrade.open_price) + offsetProb
+
+      // Offset 2: For 'BUY/SELL' label (Furthest/Bubble)
+      const offsetLabel = openTrade.open_price * 0.028
+      const labelPrice = openTrade.direction === 'LONG' 
+        ? (openTrade.open_price) - offsetLabel 
+        : (openTrade.open_price) + offsetLabel
       
-      labelAnchorData.push({ time: openTrade.open_time as Time, value: labelPrice })
       probAnchorData.push({ time: openTrade.open_time as Time, value: probPrice })
+      labelAnchorData.push({ time: openTrade.open_time as Time, value: labelPrice })
 
       // 1. Arrow
       candleMarkers.push({
