@@ -130,6 +130,10 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
     const bubbleAnchorData: LineData[] = []
     const probAnchorData: LineData[] = []
 
+    // Map-based lookup for O(1) performance
+    const candleMap = new Map(candles.map(c => [c.time, c]))
+    const resultsMap = new Map(results.map(r => [r.time, r]))
+
     for (const r of results) {
       if (isNaN(r.supertrend) || isNaN(r.lastStDir)) continue
       if (r.lastStDir === 1) {
@@ -152,7 +156,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
     // 1. Process closed trades
     for (const t of trades) {
       if (t.status === 'CLOSED') {
-        const resultAtEntry = results.find(r => r.time === t.open_time)
+        const resultAtEntry = resultsMap.get(t.open_time)
         const prob = resultAtEntry 
           ? (t.direction === 'LONG' ? resultAtEntry.probUp : resultAtEntry.probDown) * 100 
           : null
@@ -160,7 +164,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         const probText = prob !== null ? `(${prob.toFixed(1)}%)` : ''
         
         // Base anchor from candle high/low to ensure clearance
-        const baseCandle = candles.find(c => c.time === t.open_time)
+        const baseCandle = candleMap.get(t.open_time)
         const basePrice = t.direction === 'LONG' ? baseCandle?.low || t.open_price : baseCandle?.high || t.open_price
         
         // Offset 0: Arrow (Closest)
@@ -239,14 +243,14 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
 
     // 2. Process open trade
     if (openTrade) {
-      const resultAtEntry = results.find(r => r.time === openTrade.open_time)
+      const resultAtEntry = resultsMap.get(openTrade.open_time)
       const prob = resultAtEntry 
         ? (openTrade.direction === 'LONG' ? resultAtEntry.probUp : resultAtEntry.probDown) * 100 
         : null
       
       const probText = prob !== null ? `(${prob.toFixed(1)}%)` : ''
 
-      const baseCandle = candles.find(c => c.time === openTrade.open_time)
+      const baseCandle = candleMap.get(openTrade.open_time)
       const basePrice = openTrade.direction === 'LONG' ? baseCandle?.low || openTrade.open_price : baseCandle?.high || openTrade.open_price
 
       const offsetArrow = basePrice * 0.010
