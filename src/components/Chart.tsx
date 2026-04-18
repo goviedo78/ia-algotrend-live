@@ -37,6 +37,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
   // Track price lines and markers plugin to clean them up
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<any>(null)
+  const labelMarkersRef = useRef<any>(null)
   const slLineRef = useRef<IPriceLine | null>(null)
   const tpLineRef = useRef<IPriceLine | null>(null)
 
@@ -242,20 +243,25 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
 
     labelSeriesRef.current?.setData(labelAnchorData.sort((a, b) => (a.time as number) - (b.time as number)))
 
-    // Update markers plugin
     if (markersRef.current) {
-      markersRef.current.detachPrimitive?.()
+      candleRef.current?.detachPrimitive(markersRef.current)
       markersRef.current = null
+    }
+    if (labelMarkersRef.current) {
+      labelSeriesRef.current?.detachPrimitive(labelMarkersRef.current)
+      labelMarkersRef.current = null
     }
 
     // Main candles (Arrows)
     if (candleMarkers.length > 0 && candleRef.current) {
-      candleRef.current.setMarkers(candleMarkers.sort((a, b) => (a.time as number) - (b.time as number)))
+        markersRef.current = createSeriesMarkers(candleMarkers.sort((a, b) => (a.time as number) - (b.time as number)))
+        candleRef.current.attachPrimitive(markersRef.current)
     }
     
     // Labels (Balloons at offset)
     if (labelMarkers.length > 0 && labelSeriesRef.current) {
-      labelSeriesRef.current.setMarkers(labelMarkers.sort((a, b) => (a.time as number) - (b.time as number)))
+        labelMarkersRef.current = createSeriesMarkers(labelMarkers.sort((a, b) => (a.time as number) - (b.time as number)))
+        labelSeriesRef.current.attachPrimitive(labelMarkersRef.current)
     }
     
     chartRef.current?.timeScale().scrollToRealTime()
