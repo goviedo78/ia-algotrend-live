@@ -50,6 +50,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
       layout: { 
         background: { color: '#0d1323' }, 
         textColor: '#9bb1d8',
+        fontSize: 14, // Enlarged global typography
       },
       grid: { vertLines: { color: '#1f2c47' }, horzLines: { color: '#1f2c47' } },
       crosshair: { mode: 1 },
@@ -143,16 +144,22 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         const prob = resultAtEntry 
           ? (t.direction === 'LONG' ? resultAtEntry.probUp : resultAtEntry.probDown) * 100 
           : null
-        const probText = prob !== null ? `(${prob.toFixed(1)}%)` : ''
         
-        // Offset 1: For 'BUY/SELL' label
-        const offsetLabel = t.open_price * 0.016
+        // Helper to simulate bold/large typography with Unicode
+        const toBold = (n: string) => n.split('').map(c => ({
+          '0':'𝟬','1':'𝟭','2':'𝟮','3':'𝟯','4':'𝟰','5':'𝟱','6':'𝟲','7':'𝟳','8':'𝟴','9':'𝟵','.':'·','%':'%'
+        }[c] || c)).join('');
+        
+        const probText = prob !== null ? toBold(prob.toFixed(1)) + '%' : ''
+        
+        // Offset 1: For 'BUY/SELL' label (With Bubble)
+        const offsetLabel = t.open_price * 0.012
         const labelPrice = t.direction === 'LONG' 
           ? (t.open_price) - offsetLabel 
           : (t.open_price) + offsetLabel
         
-        // Offset 2: For '% Prob' label (further away)
-        const offsetProb = t.open_price * 0.032
+        // Offset 2: For '% Prob' label (Big Bold Text)
+        const offsetProb = t.open_price * 0.024
         const probPrice = t.direction === 'LONG' 
           ? (t.open_price) - offsetProb 
           : (t.open_price) + offsetProb
@@ -176,7 +183,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
           shape: 'circle',
           color: t.direction === 'LONG' ? '#289eff' : '#b63e72',
           text: t.direction === 'LONG' ? 'BUY' : 'SELL',
-          size: 0, // Hidden shape, only text visible
+          size: 2.5, // Restored bubble
         })
 
         // 3. Probability Label Bubble (Line 2)
@@ -186,7 +193,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
           shape: 'circle',
           color: t.direction === 'LONG' ? '#289eff' : '#b63e72',
           text: probText,
-          size: 0, // Hidden shape, only text visible
+          size: 0, // Just text, no bubble
         })
         
         // Exit marker
@@ -205,18 +212,22 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
 
     // 2. Process open trade
     if (openTrade) {
-      const resultAtEntry = results.find(r => r.time === openTrade.open_time)
       const prob = resultAtEntry 
         ? (openTrade.direction === 'LONG' ? resultAtEntry.probUp : resultAtEntry.probDown) * 100 
         : null
-      const probText = prob !== null ? `(${prob.toFixed(1)}%)` : ''
+      
+      const toBold = (n: string) => n.split('').map(c => ({
+        '0':'𝟬','1':'𝟭','2':'𝟮','3':'𝟯','4':'𝟰','5':'𝟱','6':'𝟲','7':'𝟳','8':'𝟴','9':'𝟵','.':'·','%':'%'
+      }[c] || c)).join('');
 
-      const offsetLabel = openTrade.open_price * 0.016
+      const probText = prob !== null ? toBold(prob.toFixed(1)) + '%' : ''
+
+      const offsetLabel = openTrade.open_price * 0.012
       const labelPrice = openTrade.direction === 'LONG' 
         ? (openTrade.open_price) - offsetLabel 
         : (openTrade.open_price) + offsetLabel
 
-      const offsetProb = openTrade.open_price * 0.032
+      const offsetProb = openTrade.open_price * 0.024
       const probPrice = openTrade.direction === 'LONG' 
         ? (openTrade.open_price) - offsetProb 
         : (openTrade.open_price) + offsetProb
@@ -240,7 +251,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         shape: 'circle',
         color: openTrade.direction === 'LONG' ? '#289eff' : '#b63e72',
         text: openTrade.direction === 'LONG' ? 'BUY' : 'SELL',
-        size: 0,
+        size: 2.5,
       })
 
       // 3. Prob Label
