@@ -39,6 +39,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<any>(null)
   const labelMarkersRef = useRef<any>(null)
+  const probMarkersRef = useRef<any>(null)
   const slLineRef = useRef<IPriceLine | null>(null)
   const tpLineRef = useRef<IPriceLine | null>(null)
 
