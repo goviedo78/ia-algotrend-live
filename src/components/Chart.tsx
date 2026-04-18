@@ -32,6 +32,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const stBullRef = useRef<ISeriesApi<'Line'> | null>(null)
   const stBearRef = useRef<ISeriesApi<'Line'> | null>(null)
+  const arrowSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
   const labelSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
   const bubbleSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
   const probSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
@@ -39,6 +40,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
   // Track price lines and markers plugin to clean them up
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<any>(null)
+  const arrowMarkersRef = useRef<any>(null)
   const labelMarkersRef = useRef<any>(null)
   const bubbleMarkersRef = useRef<any>(null)
   const probMarkersRef = useRef<any>(null)
@@ -82,6 +84,11 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
       lastValueVisible: false, priceLineVisible: false,
     })
     
+    // Invisible series for Arrow (Line 0: Closest to vela)
+    arrowSeriesRef.current = chart.addSeries(LineSeries, {
+      color: 'transparent', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false,
+    })
+
     // Invisible series for Word (Line 1: BUY/SELL)
     labelSeriesRef.current = chart.addSeries(LineSeries, {
       color: 'transparent', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false,
@@ -118,6 +125,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
 
     const bullData: LineData[] = []
     const bearData: LineData[] = []
+    const arrowAnchorData: LineData[] = []
     const labelAnchorData: LineData[] = []
     const bubbleAnchorData: LineData[] = []
     const probAnchorData: LineData[] = []
@@ -136,6 +144,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
 
     // Build markers from actual trades
     const candleMarkers: SeriesMarker<Time>[] = []
+    const arrowMarkers: SeriesMarker<Time>[] = []
     const labelMarkers: SeriesMarker<Time>[] = []
     const bubbleMarkers: SeriesMarker<Time>[] = []
     const probMarkers: SeriesMarker<Time>[] = []
@@ -150,26 +159,34 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         
         const probText = prob !== null ? `(${prob.toFixed(1)}%)` : ''
         
+        // Base anchor from candle high/low to ensure clearance
+        const basePrice = t.direction === 'LONG' ? results.find(r => r.time === t.open_time)?.low || t.open_price : results.find(r => r.time === t.open_time)?.high || t.open_price
+        
+        // Offset 0: Arrow (Closest)
+        const offsetArrow = basePrice * 0.010
+        const arrowPrice = t.direction === 'LONG' ? basePrice - offsetArrow : basePrice + offsetArrow
+
         // Offset 1: For 'BUY/SELL' word
-        const offsetLabel = t.open_price * 0.012
-        const labelPrice = t.direction === 'LONG' ? t.open_price - offsetLabel : t.open_price + offsetLabel
+        const offsetLabel = basePrice * 0.022
+        const labelPrice = t.direction === 'LONG' ? basePrice - offsetLabel : basePrice + offsetLabel
         
         // Offset 2: For Bubble circle
-        const offsetBubble = t.open_price * 0.024
-        const bubblePrice = t.direction === 'LONG' ? t.open_price - offsetBubble : t.open_price + offsetBubble
+        const offsetBubble = basePrice * 0.034
+        const bubblePrice = t.direction === 'LONG' ? basePrice - offsetBubble : basePrice + offsetBubble
 
         // Offset 3: For % Prob
-        const offsetProb = t.open_price * 0.036
-        const probPrice = t.direction === 'LONG' ? t.open_price - offsetProb : t.open_price + offsetProb
+        const offsetProb = basePrice * 0.046
+        const probPrice = t.direction === 'LONG' ? basePrice - offsetProb : basePrice + offsetProb
         
+        arrowAnchorData.push({ time: t.open_time as Time, value: arrowPrice })
         labelAnchorData.push({ time: t.open_time as Time, value: labelPrice })
         bubbleAnchorData.push({ time: t.open_time as Time, value: bubblePrice })
         probAnchorData.push({ time: t.open_time as Time, value: probPrice })
 
-        // 1. Arrow signal on main series (No text here)
-        candleMarkers.push({
+        // 1. Arrow signal (Line 0)
+        arrowMarkers.push({
           time: t.open_time as Time,
-          position: t.direction === 'LONG' ? 'belowBar' : 'aboveBar',
+          position: 'inBar',
           shape: t.direction === 'LONG' ? 'arrowUp' : 'arrowDown',
           color: t.direction === 'LONG' ? '#289eff' : '#b63e72',
           size: 1,
@@ -228,23 +245,29 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
       
       const probText = prob !== null ? `(${prob.toFixed(1)}%)` : ''
 
-      const offsetLabel = openTrade.open_price * 0.012
-      const labelPrice = openTrade.direction === 'LONG' ? openTrade.open_price - offsetLabel : openTrade.open_price + offsetLabel
+      const basePrice = openTrade.direction === 'LONG' ? liveCandle?.low || openTrade.open_price : liveCandle?.high || openTrade.open_price
 
-      const offsetBubble = openTrade.open_price * 0.024
-      const bubblePrice = openTrade.direction === 'LONG' ? openTrade.open_price - offsetBubble : openTrade.open_price + offsetBubble
+      const offsetArrow = basePrice * 0.010
+      const arrowPrice = openTrade.direction === 'LONG' ? basePrice - offsetArrow : basePrice + offsetArrow
 
-      const offsetProb = openTrade.open_price * 0.036
-      const probPrice = openTrade.direction === 'LONG' ? openTrade.open_price - offsetProb : openTrade.open_price + offsetProb
+      const offsetLabel = basePrice * 0.022
+      const labelPrice = openTrade.direction === 'LONG' ? basePrice - offsetLabel : basePrice + offsetLabel
+
+      const offsetBubble = basePrice * 0.034
+      const bubblePrice = openTrade.direction === 'LONG' ? basePrice - offsetBubble : basePrice + offsetBubble
+
+      const offsetProb = basePrice * 0.046
+      const probPrice = openTrade.direction === 'LONG' ? basePrice - offsetProb : basePrice + offsetProb
       
+      arrowAnchorData.push({ time: openTrade.open_time as Time, value: arrowPrice })
       labelAnchorData.push({ time: openTrade.open_time as Time, value: labelPrice })
       bubbleAnchorData.push({ time: openTrade.open_time as Time, value: bubblePrice })
       probAnchorData.push({ time: openTrade.open_time as Time, value: probPrice })
 
       // 1. Arrow
-      candleMarkers.push({
+      arrowMarkers.push({
         time: openTrade.open_time as Time,
-        position: openTrade.direction === 'LONG' ? 'belowBar' : 'aboveBar',
+        position: 'inBar',
         shape: openTrade.direction === 'LONG' ? 'arrowUp' : 'arrowDown',
         color: openTrade.direction === 'LONG' ? '#289eff' : '#b63e72',
         size: 1,
@@ -312,6 +335,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
       }
     }
 
+    arrowSeriesRef.current?.setData(arrowAnchorData.sort((a, b) => (a.time as number) - (b.time as number)))
     labelSeriesRef.current?.setData(labelAnchorData.sort((a, b) => (a.time as number) - (b.time as number)))
     bubbleSeriesRef.current?.setData(bubbleAnchorData.sort((a, b) => (a.time as number) - (b.time as number)))
     probSeriesRef.current?.setData(probAnchorData.sort((a, b) => (a.time as number) - (b.time as number)))
@@ -319,6 +343,10 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
     if (markersRef.current) {
       candleRef.current?.detachPrimitive(markersRef.current)
       markersRef.current = null
+    }
+    if (arrowMarkersRef.current) {
+      arrowSeriesRef.current?.detachPrimitive(arrowMarkersRef.current)
+      arrowMarkersRef.current = null
     }
     if (labelMarkersRef.current) {
       labelSeriesRef.current?.detachPrimitive(labelMarkersRef.current)
@@ -333,9 +361,9 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
       probMarkersRef.current = null
     }
 
-    // Main candles (Arrows)
-    if (candleMarkers.length > 0 && candleRef.current) {
-        markersRef.current = createSeriesMarkers(candleRef.current, candleMarkers.sort((a, b) => (a.time as number) - (b.time as number)))
+    // Main candles (Arrows on Line 0)
+    if (arrowMarkers.length > 0 && arrowSeriesRef.current) {
+        arrowMarkersRef.current = createSeriesMarkers(arrowSeriesRef.current, arrowMarkers.sort((a, b) => (a.time as number) - (b.time as number)))
     }
     
     // Line 1: Word (BUY/SELL)
