@@ -79,8 +79,8 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
   const pnlColor = (stats?.totalPnl ?? 0) >= 0 ? 'text-[#22C55E]' : 'text-[#EF4444]'
 
   return (
-    <aside className="flex flex-col gap-4">
-      <section className="surface-panel px-5 py-5">
+    <aside className="flex flex-col gap-3 sm:gap-4">
+      <section className="surface-panel px-4 py-4 sm:px-5 sm:py-5">
         <div className="mb-4 flex items-center justify-between">
           <p className="label-eyebrow">Estado del motor</p>
           <span className={`badge inline-flex items-center gap-1.5 ${connected ? 'badge-live' : 'badge-danger'}`}>
@@ -138,7 +138,7 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
         )}
       </section>
 
-      <section className="surface-panel px-5 py-5">
+      <section className="surface-panel px-4 py-4 sm:px-5 sm:py-5">
         <p className="label-eyebrow mb-3">Rendimiento</p>
         {stats ? (
           <div className="space-y-2">
@@ -152,7 +152,7 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
         )}
       </section>
 
-      <section className="surface-panel px-5 py-5">
+      <section className="surface-panel px-4 py-4 sm:px-5 sm:py-5">
         <p className="label-eyebrow mb-3">Gestión de riesgo</p>
         <div className="space-y-2">
           <StatRow label="Stop Loss" value={`${PRESET.slPct}% (${PRESET.slMode})`} color="text-[#EF4444]" />
@@ -179,7 +179,7 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
         </div>
       </section>
 
-      <section className="surface-panel px-5 py-5">
+      <section className="surface-panel px-4 py-4 sm:px-5 sm:py-5">
         <p className="label-eyebrow mb-3">Parámetros del modelo</p>
         <div className="space-y-1 text-[11px] text-[#9CA3AF]">
           <div>ATR {PRESET.atrPeriod} · Factor {PRESET.factor} · K {PRESET.kNeighbors}</div>

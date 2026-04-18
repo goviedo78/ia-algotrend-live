@@ -345,11 +345,11 @@ export default function Dashboard() {
       : 'text-[#EF4444] value-glow'
 
   return (
-    <div className="app-shell min-h-screen px-4 py-6 text-[#E5E7EB] sm:px-6 lg:px-10">
+    <div className="app-shell min-h-screen px-3 py-4 text-[#E5E7EB] sm:px-6 sm:py-6 lg:px-10">
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-gradient-to-b from-[#111827] via-[#0B1220]/70 to-transparent" />
 
-      <div className="relative mx-auto flex max-w-[1560px] flex-col gap-5">
-        <header className="surface-panel reveal-up px-5 py-5 sm:px-6 sm:py-6">
+      <div className="relative mx-auto flex max-w-[1560px] flex-col gap-4 sm:gap-5">
+        <header className="surface-panel reveal-up px-4 py-4 sm:px-6 sm:py-6">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827] shadow-[0_8px_20px_rgba(0,0,0,0.3)] border border-[#1f2937]">
@@ -410,22 +410,25 @@ export default function Dashboard() {
         </header>
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="flex flex-col gap-4">
-            <div className="reveal-up reveal-delay-1">
-              <Chart 
-                candles={candles} 
-                results={results} 
-                liveCandle={liveCandle} 
-                trades={trades}
-                openTrade={openTrade}
-              />
-            </div>
-            <div className="reveal-up reveal-delay-2">
-              <TradeTable trades={trades} openTrade={openTrade} currentPrice={lastPrice} />
-            </div>
+          {/* Row 1, Col 1: Chart */}
+          <div className="reveal-up reveal-delay-1 xl:col-span-1 xl:row-start-1">
+            <Chart 
+              candles={candles} 
+              results={results} 
+              liveCandle={liveCandle} 
+              trades={trades}
+              openTrade={openTrade}
+            />
           </div>
-          <div className="reveal-up reveal-delay-3">
+
+          {/* Sidebar / Mobile Middle: StatsPanel (Engine, Perf, Risk, Params) */}
+          <div className="reveal-up reveal-delay-3 xl:col-start-2 xl:row-start-1 xl:row-span-2">
             <StatsPanel stats={stats} engine={lastResult} connected={connected} lastPrice={lastPrice} />
+          </div>
+
+          {/* Mobile Bottom / Desktop Below Chart: TradeTable */}
+          <div className="reveal-up reveal-delay-2 xl:col-start-1 xl:row-start-2">
+            <TradeTable trades={trades} openTrade={openTrade} currentPrice={lastPrice} />
           </div>
         </div>
 

@@ -80,6 +80,12 @@ h6 {
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
 }
 
+@media (max-width: 640px) {
+  .surface-panel {
+    border-radius: 1.15rem;
+  }
+}
+
 .surface-panel-muted {
   border: 1px solid var(--border);
   border-radius: 1.2rem;

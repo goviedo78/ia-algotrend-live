@@ -120,22 +120,34 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
           ? (t.direction === 'LONG' ? resultAtEntry.probUp : resultAtEntry.probDown) * 100 
           : null
         const probText = prob !== null ? ` (${prob.toFixed(1)}%)` : ''
-
+        
+        // Entry markers (Double approach for better visibility)
+        // 1. Arrow signal
         markers.push({
           time: t.open_time as Time,
           position: t.direction === 'LONG' ? 'belowBar' : 'aboveBar',
           shape: t.direction === 'LONG' ? 'arrowUp' : 'arrowDown',
           color: t.direction === 'LONG' ? '#289eff' : '#b63e72',
-          text: `${t.direction === 'LONG' ? 'BUY' : 'SELL'}${probText} ${t.direction}`,
-          size: 2,
+          size: 1,
         })
+        // 2. Probability "balloon"
+        markers.push({
+          time: t.open_time as Time,
+          position: t.direction === 'LONG' ? 'belowBar' : 'aboveBar',
+          shape: 'circle',
+          color: t.direction === 'LONG' ? '#289eff' : '#b63e72',
+          text: `${t.direction === 'LONG' ? 'BUY' : 'SELL'}${probText}`,
+          size: 2.5,
+        })
+        
+        // Exit marker
         if (t.close_time) {
           markers.push({
             time: t.close_time as Time,
             position: t.direction === 'LONG' ? 'aboveBar' : 'belowBar',
             shape: t.direction === 'LONG' ? 'arrowDown' : 'arrowUp',
             color: '#9CA3AF',
-            text: `Exit ${t.direction}`,
+            text: `EXIT`,
             size: 1.5,
           })
         }
@@ -148,15 +160,24 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
       const prob = resultAtEntry 
         ? (openTrade.direction === 'LONG' ? resultAtEntry.probUp : resultAtEntry.probDown) * 100 
         : null
-      const probText = prob !== null ? ` (${prob.toFixed(1)}%)` : ''
+      const probText = prob !== null ? ` ${prob.toFixed(1)}%` : ''
 
+      // 1. Arrow
       markers.push({
         time: openTrade.open_time as Time,
         position: openTrade.direction === 'LONG' ? 'belowBar' : 'aboveBar',
         shape: openTrade.direction === 'LONG' ? 'arrowUp' : 'arrowDown',
         color: openTrade.direction === 'LONG' ? '#289eff' : '#b63e72',
-        text: `BUY${probText} ${openTrade.direction} (LIVE)`,
-        size: 2,
+        size: 1,
+      })
+      // 2. Balloon
+      markers.push({
+        time: openTrade.open_time as Time,
+        position: openTrade.direction === 'LONG' ? 'belowBar' : 'aboveBar',
+        shape: 'circle',
+        color: openTrade.direction === 'LONG' ? '#289eff' : '#b63e72',
+        text: `BUY${probText} (LIVE)`,
+        size: 2.5,
       })
 
       if (candleRef.current) {

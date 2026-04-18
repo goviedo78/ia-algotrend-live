@@ -36,17 +36,17 @@ export default function TradeTable({ trades: tradesProp, openTrade, currentPrice
 
   return (
     <div className="surface-panel overflow-hidden">
-      <div className="flex items-center justify-between border-b border-[#1F2937] px-5 py-4">
+      <div className="flex items-center justify-between border-b border-[#1F2937] px-4 py-3 sm:px-5 sm:py-4">
         <div>
           <p className="label-eyebrow">Historial de operaciones</p>
-          <p className="mt-1 text-xs text-[#9CA3AF]">Últimas operaciones del backtest y posición abierta en vivo.</p>
+          <p className="mt-1 text-[10px] sm:text-xs text-[#9CA3AF]">Últimas operaciones del backtest y posición abierta en vivo.</p>
         </div>
-        <span className="badge">{closedTrades.length} cerradas</span>
+        <span className="badge text-[10px] sm:text-xs">{closedTrades.length} cerradas</span>
       </div>
 
       {openTrade && (
         <div
-          className={`flex items-center justify-between border-b border-[#1F2937] px-5 py-3 ${
+          className={`flex items-center justify-between border-b border-[#1F2937] px-4 py-2.5 sm:px-5 sm:py-3 ${
             openTrade.direction === 'LONG' ? 'bg-[#0f2a1f]' : 'bg-[#2a1218]'
           }`}
         >
