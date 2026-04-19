@@ -8,7 +8,7 @@ export const maxDuration = 30
 
 const PAIR = 'btcusd'
 const STEP = 3600
-const HISTORY_BATCHES = 5
+const HISTORY_BATCHES = 12
 
 interface BitstampOhlcEntry {
   timestamp: string; open: string; high: string; low: string; close: string; volume: string
