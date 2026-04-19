@@ -263,7 +263,8 @@ function calcRsi(closes: number[], period: number): number[] {
   return out
 }
 
-// CHOP index: 100 * log10(sum(TR, len) / (highest_high - lowest_low)) / log10(len)
+// CHOP index: Pine formula includes close[1] in range calculation
+// 100 * log10(sum(TR, len) / (max(highest_high, close[1]) - min(lowest_low, close[1]))) / log10(len)
 function calcChop(candles: Candle[], period: number): number[] {
   const n = candles.length
   const out: number[] = new Array(n).fill(NaN)
@@ -282,7 +283,11 @@ function calcChop(candles: Candle[], period: number): number[] {
       hiHigh = Math.max(hiHigh, candles[i - j].high)
       loLow = Math.min(loLow, candles[i - j].low)
     }
-    const range = hiHigh - loLow
+    // Pine: max(ta.highest(high, len), close[1]) - min(ta.lowest(low, len), close[1])
+    const prevClose = i > 0 ? candles[i - 1].close : candles[i].close
+    const rangeHigh = Math.max(hiHigh, prevClose)
+    const rangeLow = Math.min(loLow, prevClose)
+    const range = rangeHigh - rangeLow
     if (range > 0 && sumTr > 0) {
       out[i] = 100 * Math.log10(sumTr / range) / Math.log10(period)
     }
@@ -290,23 +295,24 @@ function calcChop(candles: Candle[], period: number): number[] {
   return out
 }
 
-// Rolling mean (same as SMA, over previous period values ending at i-1, then normalizes i)
-// Pine: normalize(src, len) uses ta.sma(src[1], len) — so mean/std of the PREVIOUS len values
-// In JS: for bar i, mean = average of data[i-len .. i-1]
+// Pine: normalize(src, len) => (src - ta.sma(src[1], len)) / max(ta.stdev(src[1], len), 0.00001)
+// ta.stdev uses: sqrt(sma(x^2, n) - sma(x, n)^2) — population stdev via E[X²]-E[X]²
+// We use the same formula for numerical parity with Pine
 function normalizeArr(data: number[], len: number): number[] {
   const out: number[] = new Array(data.length).fill(NaN)
   for (let i = len; i < data.length; i++) {
-    // mean/stdev of data[i-len .. i-1] (exactly len values, NOT including i)
-    let sum = 0, valid = true
+    // mean and stdev of data[i-len .. i-1] (exactly len values, NOT including i)
+    let sumX = 0, sumX2 = 0, valid = true
     for (let j = 1; j <= len; j++) {
       if (isNaN(data[i - j])) { valid = false; break }
-      sum += data[i - j]
+      sumX += data[i - j]
+      sumX2 += data[i - j] * data[i - j]
     }
     if (!valid) continue
-    const mean = sum / len
-    let variance = 0
-    for (let j = 1; j <= len; j++) variance += (data[i - j] - mean) ** 2
-    const std = Math.sqrt(variance / len)
+    const mean = sumX / len
+    // Pine ta.stdev formula: sqrt(sma(x^2, n) - sma(x, n)^2)
+    const variance = sumX2 / len - mean * mean
+    const std = Math.sqrt(Math.max(0, variance))
     if (isNaN(data[i])) continue
     out[i] = (data[i] - mean) / Math.max(std, 0.00001)
   }
