@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { runAlgoTrend, type Candle } from '@/lib/algotrend'
 import { openTrade, closeTrade, getOpenTrade, updateOpenTradeRisk } from '@/lib/db'
 import { notifyOpen, notifyClose } from '@/lib/telegram'
+import { emailOpen, emailClose } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -129,6 +130,7 @@ export async function GET(req: NextRequest) {
           body: `Precio: $${trade.close_price?.toLocaleString('en-US')} | PnL: ${trade.pnl_pct?.toFixed(2)}% (${trade.close_reason})`,
           tag: `close-${trade.id}`
         })
+        await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
         closed = true
         actions.push(`closed_${firstHit.hit}`)
       } else {
@@ -141,6 +143,7 @@ export async function GET(req: NextRequest) {
             body: `Precio: $${trade.close_price?.toLocaleString('en-US')} | PnL: ${trade.pnl_pct?.toFixed(2)}% (${trade.close_reason})`,
             tag: `close-${trade.id}`
           })
+          await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
           closed = true
           actions.push(`closed_${secondHit.hit}`)
         } else {
@@ -174,6 +177,7 @@ export async function GET(req: NextRequest) {
               body: `Precio: $${trade.close_price?.toLocaleString('en-US')} | PnL: ${trade.pnl_pct?.toFixed(2)}% (${trade.close_reason})`,
               tag: `close-${trade.id}`
             })
+            await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
             closed = true
             actions.push(`closed_${closeHit}`)
           } else if (stopLoss !== existingTrade.stop_loss || takeProfit !== existingTrade.take_profit) {
@@ -207,6 +211,8 @@ export async function GET(req: NextRequest) {
         body: `Entrada: $${last.close.toLocaleString('en-US')} | SL: $${stop.toLocaleString('en-US')} | TP: ${tp ? '$' + tp.toLocaleString('en-US') : 'Trailing'}`,
         tag: `signal-${last.time}`,
       })
+
+      await emailOpen(signal, last.close, stop, tp, prob)
 
       actions.push(`opened_${signal}`)
     }
