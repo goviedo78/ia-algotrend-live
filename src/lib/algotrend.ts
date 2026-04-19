@@ -49,7 +49,7 @@ const PRESET = {
   kNeighbors: 20,
   samplingWindowSize: 1000,
   momentumWindow: 10,
-  probThreshold: 0.845,
+  probThreshold: 0.85,
   maType: 'EMA' as MaType,
   rsiLen: 25,
   maLen: 100,
