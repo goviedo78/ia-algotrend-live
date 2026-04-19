@@ -67,9 +67,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const candles = await fetchCandles()
+    let candles = await fetchCandles()
     if (candles.length === 0) {
       return NextResponse.json({ ok: true, action: 'no_candles' })
+    }
+
+    // Strip the current OPEN candle — Bitstamp includes it as the last entry.
+    // We only analyze CLOSED candles, just like TradingView/Pine Script.
+    const nowHour = Math.floor(Date.now() / 1000 / STEP) * STEP
+    if (candles[candles.length - 1].time >= nowHour) {
+      candles = candles.slice(0, -1)
+    }
+    if (candles.length === 0) {
+      return NextResponse.json({ ok: true, action: 'no_closed_candles' })
     }
 
     const results = runAlgoTrend(candles)
