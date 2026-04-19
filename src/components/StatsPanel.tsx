@@ -140,14 +140,31 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
 
       <section className="surface-panel px-4 py-4 sm:px-5 sm:py-5">
         <p className="label-eyebrow mb-3">Rendimiento</p>
-        {stats ? (
+        {stats ? (() => {
+          const initialCapital = 10000
+          const returnPct = ((stats.balance - initialCapital) / initialCapital) * 100
+          const returnColor = returnPct >= 0 ? 'text-[#22C55E]' : 'text-[#EF4444]'
+          const avgPnl = stats.total > 0 ? (stats.totalPnl / stats.total) : 0
+          const avgColor = avgPnl >= 0 ? 'text-[#22C55E]' : 'text-[#EF4444]'
+          return (
           <div className="space-y-2">
-            <StatRow label="Balance" value={`$${(stats.balance ?? 10000).toLocaleString('es-MX', { maximumFractionDigits: 0 })}`} />
+            {/* Highlight: Return % */}
+            <div className="rounded-2xl border border-[#1F2937] bg-gradient-to-br from-[#0F172A] to-[#111827] px-4 py-3 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">Rendimiento total</p>
+              <p className={`mt-1 font-mono text-2xl font-bold ${returnColor}`}>
+                {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%
+              </p>
+              <p className="mt-0.5 text-[11px] text-[#6B7280]">
+                Capital: <span className="text-[#E5E7EB]">${stats.balance.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</span> (base $10,000)
+              </p>
+            </div>
             <StatRow label="PnL total" value={`${(stats.totalPnl ?? 0) >= 0 ? '+' : ''}$${(stats.totalPnl ?? 0).toFixed(2)}`} color={pnlColor} />
+            <StatRow label="Promedio por trade" value={`${avgPnl >= 0 ? '+' : ''}$${avgPnl.toFixed(2)}`} color={avgColor} />
             <StatRow label="Tasa de acierto" value={`${(stats.winRate ?? 0).toFixed(1)}%`} color={(stats.winRate ?? 0) >= 50 ? 'text-[#22C55E]' : 'text-[#EF4444]'} />
             <StatRow label="Operaciones" value={`${stats.wins ?? 0}G / ${(stats.total ?? 0) - (stats.wins ?? 0)}P / ${stats.total ?? 0}T`} />
           </div>
-        ) : (
+          )
+        })() : (
           <div className="rounded-xl border border-[#1F2937] bg-[#0F172A] px-3 py-4 text-center text-xs text-[#9CA3AF]">Aún no hay operaciones</div>
         )}
       </section>
