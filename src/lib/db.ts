@@ -99,11 +99,21 @@ export async function getAllTrades(limit = 200): Promise<Trade[]> {
 }
 
 export async function getStats() {
-  const { data } = await supabase.from(TABLE).select().eq('status', 'CLOSED')
+  const { data } = await supabase.from(TABLE).select().eq('status', 'CLOSED').order('id', { ascending: true })
   const closed   = (data ?? []) as Trade[]
   const total    = closed.length
   const wins     = closed.filter(t => (t.pnl_usd ?? 0) > 0).length
-  const totalPnl = closed.reduce((s, t) => s + (t.pnl_usd ?? 0), 0)
   const winRate  = total > 0 ? wins / total * 100 : 0
-  return { total, wins, winRate, totalPnl, balance: 10000 + totalPnl }
+
+  // Compound returns: multiply (1 + pnl%) for each trade
+  let balance = 10000
+  let totalPnlPct = 0
+  for (const t of closed) {
+    const pct = t.pnl_pct ?? 0
+    balance *= (1 + pct / 100)
+  }
+  const totalPnl = balance - 10000
+  totalPnlPct = (balance / 10000 - 1) * 100
+
+  return { total, wins, winRate, totalPnl, balance, totalPnlPct }
 }
