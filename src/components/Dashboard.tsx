@@ -9,6 +9,7 @@ import StatsPanel from './StatsPanel'
 import TradeTable from './TradeTable'
 import NotificationBell from './NotificationBell'
 import InstallButton from './InstallButton'
+import SponsorBanner from './SponsorBanner'
 
 const Chart = dynamic(() => import('./Chart'), { ssr: false })
 
@@ -412,8 +413,9 @@ export default function Dashboard() {
         </header>
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-          {/* Row 1, Col 1: Chart */}
-          <div className="reveal-up reveal-delay-1 xl:col-span-1 xl:row-start-1">
+          {/* Row 1, Col 1: Chart & Sponsor */}
+          <div className="reveal-up reveal-delay-1 xl:col-span-1 xl:row-start-1 flex flex-col gap-4">
+            <SponsorBanner />
             <Chart 
               candles={candles} 
               results={results} 

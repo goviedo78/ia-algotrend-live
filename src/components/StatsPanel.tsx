@@ -1,7 +1,6 @@
 'use client'
 
 import { PRESET } from '@/lib/algotrend'
-import SponsorBanner from './SponsorBanner'
 
 interface Stats {
   total: number
@@ -205,9 +204,6 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
           <div>RSI {PRESET.rsiLen} · CHOP {PRESET.chopLen} · p={PRESET.pParam} w={PRESET.wParam}</div>
         </div>
       </section>
-
-      {/* Tarjeta Premium de Patrocinador (Broker Oficial) */}
-      <SponsorBanner />
     </aside>
   )
 }
