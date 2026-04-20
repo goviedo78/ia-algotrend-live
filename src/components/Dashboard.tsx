@@ -8,6 +8,7 @@ import type { Trade } from '@/lib/db'
 import StatsPanel from './StatsPanel'
 import TradeTable from './TradeTable'
 import NotificationBell from './NotificationBell'
+import InstallButton from './InstallButton'
 
 const Chart = dynamic(() => import('./Chart'), { ssr: false })
 
@@ -381,6 +382,7 @@ export default function Dashboard() {
                   <span className="badge">
                     Algoritmo: Probabilidad IA
                   </span>
+                  <InstallButton />
                   <NotificationBell />
                 </div>
               </div>
