@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     const { error } = await supabase
       .from(TABLE)
       .upsert(
-        { endpoint, p256dh, auth, scope: SCOPE },
+        { endpoint, p256dh, auth, scope: SCOPE, tenant_id: 'algotrend' },
         { onConflict: 'endpoint' }
       )
 
