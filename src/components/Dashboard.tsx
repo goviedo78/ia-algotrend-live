@@ -355,7 +355,7 @@ export default function Dashboard() {
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827] shadow-[0_8px_20px_rgba(0,0,0,0.3)] border border-[#1f2937] overflow-hidden">
-                <img src="/logo-algotrend.png" alt="IA AlgoTrend" className="h-9 w-9 object-contain" />
+                <Image src="/logo-algotrend.png" alt="IA AlgoTrend" className="h-9 w-9 object-contain" width={36} height={36} />
               </div>
 
               <div className="flex flex-col">

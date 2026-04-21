@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { openTrade, closeTrade, getOpenTrade, updateOpenTradeRisk, type Trade } from '@/lib/db'
+import { openTrade, closeTrade, getOpenTrade, updateOpenTradeRisk } from '@/lib/db'
 import { notifyOpen, notifyClose } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
