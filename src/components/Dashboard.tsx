@@ -147,6 +147,18 @@ export default function Dashboard() {
   const candlesRef = useRef<Candle[]>([])
   // Accumulate live candle from trades
   const liveCandleRef = useRef<Candle | null>(null)
+  const headerRef = useRef<HTMLElement>(null)
+
+  // Scroll-collapse: shrink header after 60px scroll
+  useEffect(() => {
+    const onScroll = () => {
+      if (headerRef.current) {
+        headerRef.current.dataset.scrolled = window.scrollY > 60 ? 'true' : 'false'
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   // Load engine module
   useEffect(() => {
@@ -351,10 +363,10 @@ export default function Dashboard() {
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-gradient-to-b from-[#111827] via-[#0B1220]/70 to-transparent" />
 
       <div className="relative mx-auto flex max-w-[1560px] flex-col gap-4 sm:gap-5">
-        <header className="glass-header reveal-up rounded-2xl px-4 py-4 sm:px-6 sm:py-6">
+        <header ref={headerRef} className="glass-header reveal-up rounded-2xl px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827] shadow-[0_8px_20px_rgba(0,0,0,0.3)] border border-[#1f2937] overflow-hidden">
+              <div className="header-logo flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827] shadow-[0_8px_20px_rgba(0,0,0,0.3)] border border-[#1f2937] overflow-hidden">
                 <img src="/logo-algotrend.png" alt="IA AlgoTrend" className="h-9 w-9 object-contain" />
               </div>
 
@@ -363,10 +375,10 @@ export default function Dashboard() {
                   <span className="flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#289eff]" />
                   <p className="label-eyebrow">🧠 IA AlgoTrend en Vivo</p>
                 </div>
-                <h1 className="text-[1.65rem] leading-tight text-[#E5E7EB] sm:text-[2rem]">
+                <h1 className="header-title text-[1.65rem] leading-tight text-[#E5E7EB] sm:text-[2rem]">
                   Mesa de Trading BTC 1H
                 </h1>
-                <p className="max-w-2xl text-sm text-[#9CA3AF] sm:text-[0.95rem]">
+                <p className="header-description max-w-2xl text-sm text-[#9CA3AF] sm:text-[0.95rem]">
                   Monitor de ejecución de Algoritmos Inteligentes con stream en vivo de Bitstamp e historial automático de operaciones.
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -389,7 +401,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1.25fr_repeat(3,minmax(110px,1fr))]">
+            <div className="header-stats-grid grid grid-cols-1 gap-3 sm:grid-cols-[1.25fr_repeat(3,minmax(110px,1fr))]">
               <div className="surface-panel-muted min-w-[150px] px-4 py-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">Precio BTC</p>
                 <p className="mt-1 font-mono text-[1.75rem] font-semibold text-[#E5E7EB] value-glow">
