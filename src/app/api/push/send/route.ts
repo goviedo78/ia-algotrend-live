@@ -9,7 +9,7 @@ const supabase = createClient(
 )
 
 const TABLE = 'push_subscriptions'
-const SCOPE = 'algotrend'
+const SCOPE = 'customer'
 
 // Send push to all AlgoTrend subscribers
 export async function POST(req: NextRequest) {
@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     const { data: subs } = await supabase
       .from(TABLE)
       .select('endpoint, p256dh, auth')
+      .eq('tenant_id', 'algotrend')
       .eq('scope', SCOPE)
 
     if (!subs || subs.length === 0) {

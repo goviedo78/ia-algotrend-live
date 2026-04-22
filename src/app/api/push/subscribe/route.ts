@@ -9,7 +9,7 @@ const supabase = createClient(
 )
 
 const TABLE = 'push_subscriptions'
-const SCOPE = 'algotrend'
+const SCOPE = 'customer'
 
 // Subscribe: store the push subscription in Supabase
 // Existing table has columns: id, endpoint, p256dh, auth, scope, created_at
