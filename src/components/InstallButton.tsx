@@ -46,8 +46,8 @@ export default function InstallButton() {
   // Already installed or not available
   if (installed) {
     return (
-      <span className="badge inline-flex items-center gap-1.5" style={{ opacity: 0.6 }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <span className="glass-btn opacity-50 cursor-default" style={{ pointerEvents: 'none' }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 6L9 17l-5-5" />
         </svg>
         Instalada
@@ -61,10 +61,10 @@ export default function InstallButton() {
     if (isIOS) {
       return (
         <button
-          className="badge badge-live inline-flex items-center gap-1.5 cursor-pointer hover:brightness-125 transition-all"
+          className="glass-btn glass-btn-primary glass-live"
           onClick={() => alert('Para instalar:\n\n1. Toca el botón de Compartir (📤)\n2. Selecciona "Agregar a pantalla de inicio"\n3. Confirma con "Agregar"')}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
@@ -79,10 +79,9 @@ export default function InstallButton() {
   return (
     <button
       onClick={handleInstall}
-      className="badge badge-live inline-flex items-center gap-1.5 cursor-pointer hover:brightness-125 transition-all animate-pulse"
-      style={{ animationDuration: '2s' }}
+      className="glass-btn glass-btn-primary glass-live"
     >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
         <polyline points="7 10 12 15 17 10" />
         <line x1="12" y1="15" x2="12" y2="3" />

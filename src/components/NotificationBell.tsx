@@ -97,12 +97,12 @@ export default function NotificationBell() {
     <button
       onClick={isSubscribed ? unsubscribe : subscribe}
       disabled={loading || permState === 'denied'}
-      className={`
-        badge inline-flex items-center gap-1.5 cursor-pointer transition-all duration-200
-        ${isSubscribed ? 'badge-live' : 'hover:border-[#3B82F6] hover:text-[#3B82F6]'}
-        ${permState === 'denied' ? 'opacity-40 cursor-not-allowed' : ''}
-        ${loading ? 'animate-pulse' : ''}
-      `}
+      className={[
+        'glass-btn',
+        isSubscribed ? 'glass-btn-success' : 'glass-btn-primary',
+        permState === 'denied' ? 'opacity-40 !cursor-not-allowed' : '',
+        loading ? 'animate-pulse' : ''
+      ].join(' ')}
       title={
         permState === 'denied'
           ? 'Las notificaciones están bloqueadas en tu navegador'
@@ -112,7 +112,7 @@ export default function NotificationBell() {
       }
     >
       <span className="text-base leading-none">{isSubscribed ? '🔔' : '🔕'}</span>
-      {isSubscribed ? 'Notificaciones activas' : 'Activar alertas'}
+      {isSubscribed ? 'Alertas activas' : 'Activar alertas'}
     </button>
   )
 }
