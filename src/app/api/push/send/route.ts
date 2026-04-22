@@ -26,9 +26,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, sent: 0 })
     }
 
-    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-    const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
-    const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:admin@algotrend.app'
+    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim()
+    const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY?.trim()
+    const vapidSubject = process.env.VAPID_SUBJECT?.trim() || 'mailto:admin@algotrend.app'
 
     if (!vapidPublicKey || !vapidPrivateKey) {
       return NextResponse.json({ ok: false, error: 'VAPID keys not configured', sent: 0 })
