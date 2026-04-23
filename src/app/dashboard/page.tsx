@@ -82,6 +82,12 @@ function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // Push composer state
+  const [pushTitle, setPushTitle] = useState('')
+  const [pushBody, setPushBody] = useState('')
+  const [pushSending, setPushSending] = useState(false)
+  const [pushResult, setPushResult] = useState<{ ok: boolean; sent: number; error?: string } | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
   const fetchData = useCallback(async () => {
@@ -243,6 +249,75 @@ function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* ── Push Composer ──────────────────────────────────── */}
+        <div
+          className="rounded-xl border border-[#1F2937] p-5 space-y-4"
+          style={{ background: 'rgba(17,24,39,0.6)' }}
+        >
+          <p className="text-xs uppercase tracking-wider text-[#6B7280] flex items-center gap-2">
+            <span className="text-base">📣</span> Enviar notificación push manual
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs text-[#6B7280]">Título</label>
+              <input
+                type="text"
+                value={pushTitle}
+                onChange={(e) => setPushTitle(e.target.value)}
+                placeholder="🔔 AlgoTrend — Aviso"
+                className="w-full rounded-lg bg-[#0B1220] border border-[#1F2937] px-3 py-2.5 text-sm text-white placeholder:text-[#4B5563] focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-colors"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-[#6B7280]">Mensaje</label>
+              <input
+                type="text"
+                value={pushBody}
+                onChange={(e) => setPushBody(e.target.value)}
+                placeholder="Texto del mensaje…"
+                className="w-full rounded-lg bg-[#0B1220] border border-[#1F2937] px-3 py-2.5 text-sm text-white placeholder:text-[#4B5563] focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-colors"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              disabled={pushSending || !pushTitle.trim() || !pushBody.trim()}
+              onClick={async () => {
+                setPushSending(true)
+                setPushResult(null)
+                try {
+                  const res = await fetch('/api/push/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: pushTitle, body: pushBody, tag: 'manual-' + Date.now() }),
+                  })
+                  const json = await res.json()
+                  setPushResult(json)
+                  if (json.ok) {
+                    setPushTitle('')
+                    setPushBody('')
+                    // Refresh stats to show the new push in the log
+                    setTimeout(fetchData, 2000)
+                  }
+                } catch (err) {
+                  setPushResult({ ok: false, sent: 0, error: String(err) })
+                }
+                setPushSending(false)
+              }}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#3B82F6] text-white text-sm font-semibold hover:from-[#1D4ED8] hover:to-[#2563EB] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg hover:shadow-blue-500/25"
+            >
+              {pushSending ? '⟳ Enviando…' : '📤 Enviar Push'}
+            </button>
+            {pushResult && (
+              <span className={`text-sm font-mono ${pushResult.ok ? 'text-green-400' : 'text-red-400'}`}>
+                {pushResult.ok
+                  ? `✅ Enviado a ${pushResult.sent} dispositivo${pushResult.sent !== 1 ? 's' : ''}`
+                  : `❌ ${pushResult.error || 'Error'}`}
+              </span>
+            )}
+          </div>
+        </div>
       </Section>
 
       {/* ── 3. Audiencia ──────────────────────────────────────── */}
