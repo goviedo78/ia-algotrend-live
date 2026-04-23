@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { logEvent } from '@/lib/analytics'
 
 let _resend: Resend | null = null
 function getResend(): Resend | null {
@@ -38,8 +39,10 @@ export async function sendEmail(subject: string, body: string) {
       `,
     })
     console.log('[email] Sent:', subject)
+    await logEvent('email_sent', { subject })
   } catch (err) {
     console.error('[email] Error:', err)
+    await logEvent('email_fail', { subject, error: String(err) })
   }
 }
 

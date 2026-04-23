@@ -149,6 +149,15 @@ export default function Dashboard() {
   const liveCandleRef = useRef<Candle | null>(null)
   const headerRef = useRef<HTMLElement>(null)
 
+  // Analytics: track pageview on mount
+  useEffect(() => {
+    fetch('/api/analytics/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: '/', referrer: document.referrer || '' }),
+    }).catch(() => {})
+  }, [])
+
   // Scroll-collapse: shrink header after 60px scroll
   useEffect(() => {
     const onScroll = () => {

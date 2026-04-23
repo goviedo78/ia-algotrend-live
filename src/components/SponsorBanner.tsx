@@ -1,4 +1,6 @@
-import Image from 'next/image'
+'use client'
+
+import { useEffect, useRef } from 'react'
 
 export default function SponsorBanner() {
   const sponsor = {
@@ -9,11 +11,39 @@ export default function SponsorBanner() {
     cta: 'Abrir cuenta con bono'
   }
 
+  const tracked = useRef(false)
+
+  // Track impression once
+  useEffect(() => {
+    if (tracked.current) return
+    tracked.current = true
+    fetch('/api/analytics/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: '/sponsor/impression' }),
+    }).catch(() => {})
+    // Also log event server-side
+    fetch('/api/analytics/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'sponsor_impression' }),
+    }).catch(() => {})
+  }, [])
+
+  const handleClick = () => {
+    fetch('/api/analytics/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'sponsor_click' }),
+    }).catch(() => {})
+  }
+
   return (
     <a 
       href={sponsor.url} 
       target="_blank" 
       rel="noopener noreferrer"
+      onClick={handleClick}
       className="block surface-panel overflow-hidden group cursor-pointer border border-[#1F2937] hover:border-[#3B82F6]/50 transition-all duration-300 relative w-full mb-4 xl:mb-0"
     >
       <div className="absolute top-0 right-0 bg-[#3B82F6]/10 px-2.5 py-1 rounded-bl-lg border-b border-l border-[#3B82F6]/20 z-10">

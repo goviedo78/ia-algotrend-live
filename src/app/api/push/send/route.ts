@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logEvent } from '@/lib/analytics'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,6 +62,10 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+
+    // Log push event for analytics dashboard
+    const failed = subs.length - sent
+    await logEvent('push_sent', { title, sent, failed, total: subs.length })
 
     return NextResponse.json({ ok: true, sent })
   } catch (err) {
