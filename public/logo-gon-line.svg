@@ -1,0 +1,32 @@
+<!--
+  GON · Line variant
+  Versión line-art ultra-fina del emblema. Para watermarks, marca de agua,
+  papelería delicada, fondos donde el logo lleno sería demasiado dominante.
+  Mantiene la silueta circular y la división tripartita pero como contornos
+  abiertos. Stroke proporcional al diámetro.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-label="GON"
+     fill="none"
+     stroke="var(--logo-fg, currentColor)"
+     stroke-width="20"
+     stroke-linecap="butt"
+     stroke-linejoin="miter">
+  <!-- Outer ring -->
+  <circle cx="500" cy="500" r="470"/>
+
+  <!-- Y-divider Mercedes style: from center to ring at 3 angles -->
+  <line x1="500" y1="500" x2="500" y2="30"/>
+  <line x1="500" y1="500" x2="92.94" y2="735"/>
+  <line x1="500" y1="500" x2="907.06" y2="735"/>
+
+  <!-- G hint: short horizontal stroke in top-left wedge -->
+  <line x1="180" y1="380" x2="380" y2="380"/>
+  <!-- G hint: short vertical stroke connecting to tongue -->
+  <line x1="380" y1="280" x2="380" y2="380"/>
+
+  <!-- O hint: arc in top-right wedge (smaller concentric arc) -->
+  <path d="M 620 250 A 280 280 0 0 1 800 380"/>
+
+  <!-- N hint: diagonal stroke crossing the bottom wedge -->
+  <line x1="280" y1="640" x2="720" y2="850"/>
+</svg>

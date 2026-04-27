@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GON · Sistema de marca</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Paleta principal */
+    --ink:    oklch(15% 0.012 60);
+    --bone:   oklch(96% 0.008 80);
+    --bronze: oklch(58% 0.085 65);
+    --pulse:  oklch(62% 0.18  28);
+
+    /* Rampas funcionales */
+    --ink-100: oklch(96% 0.005 60);
+    --ink-80:  oklch(78% 0.008 60);
+    --ink-60:  oklch(55% 0.010 60);
+    --ink-40:  oklch(35% 0.011 60);
+    --ink-20:  oklch(22% 0.012 60);
+
+    --bone-90: oklch(92% 0.009 80);
+    --bone-80: oklch(86% 0.010 80);
+
+    /* Tipografía */
+    --display: 'Space Grotesk', system-ui, sans-serif;
+    --text:    'Inter', system-ui, sans-serif;
+    --mono:    'JetBrains Mono', ui-monospace, monospace;
+
+    /* Spacing */
+    --s-1: 8px;  --s-2: 16px; --s-3: 24px; --s-4: 40px;
+    --s-5: 64px; --s-6: 104px; --s-7: 168px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--text);
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--ink);
+    background: var(--bone);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection { background: var(--pulse); color: var(--bone); }
+
+  /* Navegación lateral fija */
+  nav.toc {
+    position: fixed;
+    top: var(--s-4);
+    left: var(--s-4);
+    z-index: 10;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 2;
+    color: var(--ink-60);
+  }
+  nav.toc a {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    transition: color 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  nav.toc a:hover { color: var(--ink); }
+  nav.toc .badge {
+    display: inline-block;
+    padding: 2px 6px;
+    background: var(--ink);
+    color: var(--bone);
+    margin-bottom: var(--s-2);
+    letter-spacing: 0.08em;
+  }
+  @media (max-width: 1100px) { nav.toc { display: none; } }
+
+  main { max-width: 1100px; margin: 0 auto; padding: var(--s-7) var(--s-4); }
+
+  /* Tipografía estructural */
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    margin-bottom: var(--s-2);
+  }
+  .eyebrow::before {
+    content: '';
+    display: inline-block;
+    width: 24px;
+    height: 1px;
+    background: var(--ink-40);
+    vertical-align: middle;
+    margin-right: var(--s-2);
+  }
+  h1, h2, h3 {
+    font-family: var(--display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+  h1 { font-size: clamp(48px, 8vw, 104px); }
+  h2 { font-size: clamp(32px, 5vw, 56px); margin-bottom: var(--s-3); }
+  h3 { font-size: 22px; font-weight: 500; margin-bottom: var(--s-2); }
+  p  { max-width: 65ch; color: var(--ink-80); }
+  p + p { margin-top: var(--s-2); }
+  hr {
+    border: 0;
+    border-top: 1px solid var(--ink-40);
+    opacity: 0.3;
+    margin: var(--s-6) 0;
+  }
+  .lede { font-size: 20px; color: var(--ink); max-width: 60ch; }
+  .mono { font-family: var(--mono); font-size: 13px; }
+  code { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+
+  section { margin-bottom: var(--s-7); scroll-margin-top: var(--s-4); }
+  section header { margin-bottom: var(--s-4); }
+
+  /* HERO */
+  .hero {
+    min-height: 92vh;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: var(--s-5);
+    align-items: center;
+    padding-top: var(--s-5);
+  }
+  .hero-mark {
+    aspect-ratio: 1;
+    width: 100%;
+    max-width: 460px;
+    justify-self: end;
+    --logo-bg: transparent;
+    --logo-fg: var(--ink);
+  }
+  .hero h1 .pulse { color: var(--pulse); }
+  .hero .meta {
+    margin-top: var(--s-4);
+    display: flex;
+    gap: var(--s-4);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-60);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  @media (max-width: 800px) {
+    .hero { grid-template-columns: 1fr; min-height: auto; }
+    .hero-mark { justify-self: start; max-width: 280px; }
+  }
+
+  /* PALETA */
+  .palette { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--ink-40); border: 1px solid var(--ink-40); }
+  .swatch {
+    aspect-ratio: 1;
+    padding: var(--s-3);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .swatch .name { font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: -0.01em; }
+  .swatch .value { font-family: var(--mono); font-size: 11px; line-height: 1.4; opacity: 0.7; }
+  .swatch.ink    { background: var(--ink);    color: var(--bone); }
+  .swatch.bone   { background: var(--bone);   color: var(--ink); }
+  .swatch.bronze { background: var(--bronze); color: var(--ink); }
+  .swatch.pulse  { background: var(--pulse);  color: var(--bone); }
+  @media (max-width: 700px) { .palette { grid-template-columns: repeat(2, 1fr); } }
+
+  .ramp { display: flex; margin-top: var(--s-3); height: 64px; border: 1px solid var(--ink-40); }
+  .ramp > div { flex: 1; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-family: var(--mono); font-size: 10px; }
+
+  /* TIPOGRAFÍA */
+  .type-spec {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: var(--s-4);
+    padding: var(--s-4) 0;
+    border-bottom: 1px solid var(--ink-40);
+  }
+  .type-spec:first-of-type { border-top: 1px solid var(--ink-40); }
+  .type-spec .label {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-60);
+    padding-top: 8px;
+  }
+  .type-spec .sample-display { font-family: var(--display); font-weight: 700; font-size: 64px; letter-spacing: -0.02em; line-height: 1; }
+  .type-spec .sample-text    { font-family: var(--text); font-size: 20px; line-height: 1.5; max-width: 50ch; }
+  .type-spec .sample-mono    { font-family: var(--mono); font-size: 16px; }
+  .type-spec .meta { font-family: var(--mono); font-size: 11px; color: var(--ink-60); margin-top: var(--s-2); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* MODOS DE FONDO */
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); }
+  .mode {
+    aspect-ratio: 4/5;
+    padding: var(--s-3);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+  }
+  .mode .emblem { width: 60%; aspect-ratio: 1; align-self: center; margin: auto; }
+  .mode .label  { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; }
+  .mode-light  { background: var(--bone);   color: var(--ink); }
+  .mode-light  .emblem { --logo-bg: transparent; --logo-fg: var(--ink); }
+  .mode-dark   { background: var(--ink);    color: var(--bone); }
+  .mode-dark   .emblem { --logo-bg: transparent; --logo-fg: var(--bone); }
+  .mode-premium{ background: var(--bronze); color: var(--ink); }
+  .mode-premium .emblem { --logo-bg: transparent; --logo-fg: var(--ink); }
+  @media (max-width: 700px) { .modes { grid-template-columns: 1fr; } }
+
+  /* PATRONES */
+  .patterns { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-3); }
+  .pattern {
+    aspect-ratio: 1;
+    background: var(--ink);
+    color: var(--bone);
+    padding: var(--s-3);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .pattern .label { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; z-index: 2; }
+  .pattern .desc  { font-family: var(--text); font-size: 13px; color: var(--ink-80); margin-top: 4px; max-width: 32ch; z-index: 2; }
+
+  /* P1 Tripartición */
+  .p1 svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  /* P2 Anillo contenedor */
+  .p2 .ring-shape {
+    position: absolute;
+    top: 30%; left: 30%;
+    width: 40%; aspect-ratio: 1;
+    border-radius: 50%;
+    border: 14px solid var(--bone);
+    background: var(--ink);
+  }
+  /* P3 Concéntricas */
+  .p3 svg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.15; }
+  /* P4 Diagonal */
+  .p4::before {
+    content: '';
+    position: absolute;
+    top: -10%; left: 30%;
+    width: 14px; height: 140%;
+    background: var(--bone);
+    transform: rotate(-22deg);
+    opacity: 0.9;
+  }
+
+  /* ICONOGRAFÍA */
+  .icons {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: var(--s-2);
+    padding: var(--s-3);
+    border: 1px solid var(--ink-40);
+  }
+  .icons svg {
+    width: 100%;
+    aspect-ratio: 1;
+    stroke: var(--ink);
+    stroke-width: 2.5;
+    fill: none;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+  }
+  @media (max-width: 700px) { .icons { grid-template-columns: repeat(4, 1fr); } }
+
+  /* COMPOSICIONES */
+  .comps { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-3); }
+  .comp { background: var(--bone-90); padding: var(--s-2); }
+  .comp .surface { aspect-ratio: 16/9; padding: var(--s-3); position: relative; overflow: hidden; }
+  .comp .label { font-family: var(--mono); font-size: 10px; color: var(--ink-60); text-transform: uppercase; letter-spacing: 0.1em; padding: var(--s-2) 0 0; display: flex; justify-content: space-between; }
+
+  /* Comp 1: web hero */
+  .comp-hero .surface {
+    background: var(--ink);
+    color: var(--bone);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    aspect-ratio: 16/10;
+  }
+  .comp-hero .emblem { width: 22%; aspect-ratio: 1; --logo-bg: transparent; --logo-fg: var(--bone); }
+  .comp-hero h4 { font-family: var(--display); font-weight: 700; font-size: 22px; letter-spacing: -0.02em; margin-top: var(--s-2); text-transform: uppercase; }
+  .comp-hero .sub { font-family: var(--text); font-size: 12px; color: var(--ink-80); margin-top: 6px; }
+  .comp-hero .cta { font-family: var(--text); font-size: 11px; color: var(--pulse); margin-top: var(--s-2); border-bottom: 1px solid currentColor; padding-bottom: 1px; }
+
+  /* Comp 2: thumbnail YouTube */
+  .comp-thumb .surface {
+    background: var(--ink);
+    color: var(--bone);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    aspect-ratio: 16/9;
+    padding: var(--s-3);
+  }
+  .comp-thumb h4 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 30px;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+    max-width: 75%;
+  }
+  .comp-thumb h4 .pulse { color: var(--pulse); }
+  .comp-thumb .footer { display: flex; justify-content: space-between; align-items: flex-end; }
+  .comp-thumb .author {
+    width: 56px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--bronze);
+    border: 2px solid var(--bone);
+  }
+  .comp-thumb .emblem { width: 36px; aspect-ratio: 1; --logo-bg: transparent; --logo-fg: var(--bone); opacity: 0.7; }
+
+  /* Comp 3: cover editorial */
+  .comp-cover .surface {
+    background: var(--bone);
+    color: var(--ink);
+    aspect-ratio: 4/5;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: var(--s-4);
+  }
+  .comp-cover .top { display: flex; justify-content: space-between; align-items: center; }
+  .comp-cover .top .emblem { width: 32px; aspect-ratio: 1; --logo-bg: transparent; --logo-fg: var(--ink); }
+  .comp-cover .top .meta { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-60); }
+  .comp-cover h4 { font-family: var(--display); font-weight: 700; font-size: 44px; line-height: 0.95; letter-spacing: -0.025em; text-transform: uppercase; align-self: end; }
+  .comp-cover .bottom { font-family: var(--text); font-size: 12px; color: var(--ink-60); border-top: 1px solid var(--ink-40); padding-top: var(--s-1); margin-top: var(--s-2); }
+
+  /* Comp 4: feed redes */
+  .comp-social .surface {
+    background: var(--bronze);
+    color: var(--ink);
+    aspect-ratio: 1;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: var(--s-3);
+  }
+  .comp-social .top .emblem { width: 32px; aspect-ratio: 1; --logo-bg: transparent; --logo-fg: var(--ink); }
+  .comp-social .center { display: flex; align-items: center; padding: var(--s-2) 0; }
+  .comp-social h4 { font-family: var(--display); font-weight: 700; font-size: 32px; line-height: 1; letter-spacing: -0.02em; text-transform: uppercase; }
+  .comp-social .num { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; }
+
+  /* MATRIZ DE USO */
+  .matrix { width: 100%; border-collapse: collapse; font-family: var(--text); font-size: 14px; }
+  .matrix th, .matrix td { padding: var(--s-2) var(--s-3); text-align: left; border-bottom: 1px solid var(--ink-40); }
+  .matrix th { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-60); font-weight: 500; padding-bottom: var(--s-1); border-bottom: 1px solid var(--ink); }
+  .matrix tr:hover td { background: var(--bone-90); }
+
+  /* PROHIBICIONES */
+  .bans { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-3); }
+  .ban {
+    border: 1px solid var(--ink-40);
+    padding: var(--s-3);
+    position: relative;
+  }
+  .ban .num {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 48px;
+    color: var(--pulse);
+    line-height: 1;
+    margin-bottom: var(--s-2);
+  }
+  .ban h4 { font-family: var(--display); font-weight: 700; font-size: 16px; margin-bottom: var(--s-1); text-transform: uppercase; letter-spacing: -0.01em; }
+  .ban p { font-size: 13px; color: var(--ink-80); }
+  @media (max-width: 700px) { .bans { grid-template-columns: 1fr; } }
+
+  /* FOOTER */
+  footer {
+    background: var(--ink);
+    color: var(--bone);
+    padding: var(--s-6) var(--s-4);
+    margin-top: var(--s-7);
+  }
+  footer .inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: var(--s-4); align-items: end; }
+  footer .emblem { width: 64px; aspect-ratio: 1; --logo-bg: transparent; --logo-fg: var(--bone); }
+  footer .meta { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-80); }
+  footer .meta span { color: var(--bone); }
+</style>
+</head>
+<body>
+
+<nav class="toc" aria-label="Índice">
+  <span class="badge">GON · v0.1</span>
+  <a href="#paleta">01 · Paleta</a>
+  <a href="#tipografia">02 · Tipografía</a>
+  <a href="#modos">03 · Modos</a>
+  <a href="#patrones">04 · Patrones</a>
+  <a href="#iconos">05 · Iconos</a>
+  <a href="#composicion">06 · Composición</a>
+  <a href="#matriz">07 · Matriz</a>
+  <a href="#prohibido">08 · Prohibido</a>
+</nav>
+
+<main>
+
+  <!-- HERO -->
+  <section class="hero" id="top">
+    <div>
+      <div class="eyebrow">Sistema de marca · 2026</div>
+      <h1>GON<span class="pulse">.</span></h1>
+      <p class="lede" style="margin-top: var(--s-3);">
+        Identidad personal construida sobre un emblema circular tripartito.
+        Estética minimal en estado de reposo. Firma cinética en movimiento.
+      </p>
+      <div class="meta">
+        <span>v0.1.0</span>
+        <span>Ink · Bone · Bronze · Pulse</span>
+        <span>Space Grotesk + Inter + JetBrains Mono</span>
+      </div>
+    </div>
+    <img class="hero-mark" src="logo-gon.svg" alt="Emblema GON" />
+  </section>
+
+  <hr/>
+
+  <!-- 01 PALETA -->
+  <section id="paleta">
+    <header>
+      <div class="eyebrow">01 · Paleta</div>
+      <h2>Cuatro colores. Ni uno más.</h2>
+      <p>Sistema binario por composición. Ink+Bone es la base. Bronze o Pulse, nunca los dos a la vez. Pulse vive solo en momentos cinéticos, links y estados activos. Nunca <code>#000</code> ni <code>#fff</code>.</p>
+    </header>
+
+    <div class="palette">
+      <div class="swatch ink">
+        <span class="name">Ink</span>
+        <span class="value">oklch(15% 0.012 60)<br/>#1A1814<br/>Tinta cálida</span>
+      </div>
+      <div class="swatch bone">
+        <span class="name">Bone</span>
+        <span class="value">oklch(96% 0.008 80)<br/>#F4F1EA<br/>Hueso cálido</span>
+      </div>
+      <div class="swatch bronze">
+        <span class="name">Bronze</span>
+        <span class="value">oklch(58% 0.085 65)<br/>#A07A4C<br/>Acento premium</span>
+      </div>
+      <div class="swatch pulse">
+        <span class="name">Pulse</span>
+        <span class="value">oklch(62% 0.18 28)<br/>#D8503C<br/>Señal cinética</span>
+      </div>
+    </div>
+
+    <h3 style="margin-top: var(--s-5);">Rampa Ink (UI dark + texto)</h3>
+    <div class="ramp" style="margin-bottom: var(--s-3);">
+      <div style="background: var(--ink-100); color: var(--ink);">100</div>
+      <div style="background: var(--ink-80);  color: var(--ink);">80</div>
+      <div style="background: var(--ink-60);  color: var(--bone);">60</div>
+      <div style="background: var(--ink-40);  color: var(--bone);">40</div>
+      <div style="background: var(--ink-20);  color: var(--bone);">20</div>
+      <div style="background: var(--ink);     color: var(--bone);">base</div>
+    </div>
+
+    <h3>Rampa Bone (UI light)</h3>
+    <div class="ramp">
+      <div style="background: var(--bone);    color: var(--ink);">base</div>
+      <div style="background: var(--bone-90); color: var(--ink);">90</div>
+      <div style="background: var(--bone-80); color: var(--ink);">80</div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- 02 TIPOGRAFÍA -->
+  <section id="tipografia">
+    <header>
+      <div class="eyebrow">02 · Tipografía</div>
+      <h2>Tres familias. Cada una su contexto.</h2>
+      <p>Vía libre por defecto. Vía premium futura: GT America Extended/Standard + Berkeley Mono. Display en mayúsculas para titulares cortos con tracking <code>-0.02em</code>. Body 16–18px, line-height 1.55, máx 65–70ch. Mono solo para datos, código, IDs, timestamps.</p>
+    </header>
+
+    <div class="type-spec">
+      <div class="label">Display</div>
+      <div>
+        <div class="sample-display">FIRMA CINÉTICA</div>
+        <div class="meta">Space Grotesk · Bold · -0.02em tracking · uppercase</div>
+      </div>
+    </div>
+
+    <div class="type-spec">
+      <div class="label">Texto</div>
+      <div>
+        <div class="sample-text">El emblema vive plano siempre. La profundidad la dan los materiales (deboss, foil, troquel), no los filtros. La marca que dejas es la disciplina geométrica, no el ruido.</div>
+        <div class="meta">Inter · Regular/Medium · 16–18px · line-height 1.55</div>
+      </div>
+    </div>
+
+    <div class="type-spec">
+      <div class="label">Mono</div>
+      <div>
+        <div class="sample-mono">SPX 5,247.31  +0.42%  ·  14:32:08 UTC  ·  v0.1.0</div>
+        <div class="meta">JetBrains Mono · Regular · solo datos / código / IDs / timestamps</div>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- 03 MODOS DE FONDO -->
+  <section id="modos">
+    <header>
+      <div class="eyebrow">03 · Modos</div>
+      <h2>Tres modos canónicos. Nada más.</h2>
+      <p>Light por defecto editorial. Dark por defecto en hero y momentos cinéticos. Premium como excepción, una pieza por proyecto. Sobre fotografía: prohibido por defecto. Sobre transparente: el emblema porta su color, nunca depende del fondo.</p>
+    </header>
+
+    <div class="modes">
+      <div class="mode mode-light">
+        <span class="label">Light · Bone + Ink</span>
+        <img class="emblem" src="logo-gon.svg" alt="" />
+        <span class="label" style="opacity: 0.6;">Default editorial</span>
+      </div>
+      <div class="mode mode-dark">
+        <span class="label">Dark · Ink + Bone</span>
+        <img class="emblem" src="logo-gon.svg" alt="" />
+        <span class="label" style="opacity: 0.6;">Hero · Cinético · Video</span>
+      </div>
+      <div class="mode mode-premium">
+        <span class="label">Premium · Bronze + Ink</span>
+        <img class="emblem" src="logo-gon.svg" alt="" />
+        <span class="label" style="opacity: 0.6;">Una pieza por proyecto</span>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- 04 PATRONES -->
+  <section id="patrones">
+    <header>
+      <div class="eyebrow">04 · Patrones</div>
+      <h2>Cuatro patrones. Todos del logo.</h2>
+      <p>Ningún ornamento añadido. Cada patrón se deriva de un elemento geométrico del emblema: la división tripartita, el anillo, los anillos concéntricos implícitos, la diagonal de la N.</p>
+    </header>
+
+    <div class="patterns">
+      <div class="pattern p1">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+          <line x1="50" y1="0"  x2="50" y2="50" stroke="rgb(244,241,234)" stroke-width="1" opacity="0.3" />
+          <line x1="50" y1="50" x2="6.7" y2="75" stroke="rgb(244,241,234)" stroke-width="1" opacity="0.3" />
+          <line x1="50" y1="50" x2="93.3" y2="75" stroke="rgb(244,241,234)" stroke-width="1" opacity="0.3" />
+        </svg>
+        <span class="label">P1 · Tripartición</span>
+        <span class="desc">Grid de composición de tres sectores asimétricos para portadas.</span>
+      </div>
+
+      <div class="pattern p2">
+        <div class="ring-shape"></div>
+        <span class="label">P2 · Anillo contenedor</span>
+        <span class="desc">Marco circular para fotos, números, sellos. Nunca decorativo.</span>
+      </div>
+
+      <div class="pattern p3">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+          <g fill="none" stroke="rgb(244,241,234)" stroke-width="0.5">
+            <circle cx="50" cy="50" r="8" />
+            <circle cx="50" cy="50" r="16" />
+            <circle cx="50" cy="50" r="24" />
+            <circle cx="50" cy="50" r="32" />
+            <circle cx="50" cy="50" r="40" />
+            <circle cx="50" cy="50" r="48" />
+          </g>
+        </svg>
+        <span class="label">P3 · Concéntricas</span>
+        <span class="desc">Textura de hero muy vacío. 3% sobre Ink, 6% sobre Bone.</span>
+      </div>
+
+      <div class="pattern p4">
+        <span class="label">P4 · Diagonal única</span>
+        <span class="desc">Divisor heredado de la N. Nunca dos diagonales juntas, nunca decorativa.</span>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- 05 ICONOGRAFÍA -->
+  <section id="iconos">
+    <header>
+      <div class="eyebrow">05 · Iconografía</div>
+      <h2>Vocabulario primitivo cerrado.</h2>
+      <p>Cinco primitivas: círculo, semicírculo, línea horizontal, línea vertical, diagonal 45°. Stroke 2.5px constante, terminaciones a 90°, ángulos vivos, outline only. Esto produce un set que se reconoce a 12px como familia GON.</p>
+    </header>
+
+    <div class="icons">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M3 12 A9 9 0 0 1 21 12"/></svg>
+      <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/></svg>
+      <svg viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="21"/></svg>
+      <svg viewBox="0 0 24 24"><line x1="4" y1="20" x2="20" y2="4"/></svg>
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M4 20 L4 4 L20 20 L20 4"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M4 12 L10 18 L20 6"/></svg>
+      <svg viewBox="0 0 24 24"><line x1="4" y1="4" x2="20" y2="4"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
+      <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+      <svg viewBox="0 0 24 24"><polyline points="4,8 12,16 20,8"/></svg>
+      <svg viewBox="0 0 24 24"><polyline points="8,4 16,12 8,20"/></svg>
+      <svg viewBox="0 0 24 24"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
+      <svg viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- 06 COMPOSICIÓN -->
+  <section id="composicion">
+    <header>
+      <div class="eyebrow">06 · Composición</div>
+      <h2>Cuatro superficies. Cuatro reglas.</h2>
+      <p>Hero web, thumbnail YouTube, cover editorial, feed redes. Cada superficie tiene su matriz (modo, posición del emblema, tipo de copy). Aquí están vivas.</p>
+    </header>
+
+    <div class="comps">
+
+      <div class="comp comp-hero">
+        <div class="surface">
+          <img class="emblem" src="logo-gon.svg" alt="" />
+          <h4>Sistemas que<br/>operan solos</h4>
+          <p class="sub">Trading systems · Pine Script · Web3 backend</p>
+          <a class="cta">Ver casos</a>
+        </div>
+        <div class="label"><span>Web hero</span><span>16:10 · Dark</span></div>
+      </div>
+
+      <div class="comp comp-thumb">
+        <div class="surface">
+          <h4>Por qué tu indicador<br/><span class="pulse">no funciona</span> en vivo</h4>
+          <div class="footer">
+            <div class="author"></div>
+            <img class="emblem" src="logo-gon.svg" alt="" />
+          </div>
+        </div>
+        <div class="label"><span>Thumbnail YouTube</span><span>16:9 · Dark</span></div>
+      </div>
+
+      <div class="comp comp-cover">
+        <div class="surface">
+          <div class="top">
+            <img class="emblem" src="logo-gon.svg" alt="" />
+            <span class="meta">Ensayo · 04 · 2026</span>
+          </div>
+          <h4>El sistema<br/>importa más<br/>que la idea</h4>
+          <div class="bottom">
+            Lecciones de seis años construyendo herramientas de trading
+          </div>
+        </div>
+        <div class="label"><span>Cover editorial</span><span>4:5 · Light</span></div>
+      </div>
+
+      <div class="comp comp-social">
+        <div class="surface">
+          <div class="top"><img class="emblem" src="logo-gon.svg" alt="" /></div>
+          <div class="center"><h4>Disciplina ><br/>inspiración</h4></div>
+          <div class="num">Idea · 12</div>
+        </div>
+        <div class="label"><span>Feed redes</span><span>1:1 · Premium</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- 07 MATRIZ DE USO -->
+  <section id="matriz">
+    <header>
+      <div class="eyebrow">07 · Matriz</div>
+      <h2>Dónde vive cada cosa.</h2>
+    </header>
+
+    <table class="matrix">
+      <thead>
+        <tr><th>Contexto</th><th>Fondo</th><th>Emblema</th><th>Tipo de copy</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Hero web</td><td>Ink</td><td>Bone, animado</td><td>Display Extended Black</td></tr>
+        <tr><td>Footer web</td><td>Ink</td><td>Bone, estático</td><td>Texto Regular</td></tr>
+        <tr><td>Documento PDF</td><td>Bone</td><td>Ink</td><td>Display + Texto</td></tr>
+        <tr><td>Slide deck</td><td>Ink</td><td>Bone</td><td>Display Extended Black mayús.</td></tr>
+        <tr><td>Email firma</td><td>Bone</td><td>Ink, micro 32px</td><td>Texto Medium</td></tr>
+        <tr><td>Avatar redes</td><td>Bronze o Ink</td><td>Ink o Bone</td><td>—</td></tr>
+        <tr><td>Favicon 16px</td><td>Transparente</td><td>Variante micro</td><td>—</td></tr>
+        <tr><td>Watermark video</td><td>Transparente</td><td>Bone @ 40% opacidad</td><td>—</td></tr>
+        <tr><td>Packaging / tarjeta</td><td>Bone con deboss Ink</td><td>Foil bronce</td><td>Display</td></tr>
+        <tr><td>Stencil / merch</td><td>Material crudo</td><td>Pulse o Bone</td><td>Display Extended Black</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <hr/>
+
+  <!-- 08 PROHIBICIONES -->
+  <section id="prohibido">
+    <header>
+      <div class="eyebrow">08 · Prohibido</div>
+      <h2>Tres cosas que matan el sistema.</h2>
+    </header>
+
+    <div class="bans">
+      <div class="ban">
+        <div class="num">01</div>
+        <h4>Más de dos colores</h4>
+        <p>Ink+Bone+(Bronze o Pulse). Nunca los cuatro juntos. La binaridad es lo que hace que el emblema lea desde 16px.</p>
+      </div>
+      <div class="ban">
+        <div class="num">02</div>
+        <h4>Emblema en perspectiva</h4>
+        <p>Vive plano siempre. La profundidad la dan los materiales (deboss, foil, troquel), no los filtros. Cero bevel, cero glow 3D.</p>
+      </div>
+      <div class="ban">
+        <div class="num">03</div>
+        <h4>Display + Mono mezclados</h4>
+        <p>Cada tipografía manda en su contexto. Mezclarlas en un mismo bloque mata la jerarquía. Display narra. Mono mide.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="inner">
+    <div>
+      <img class="emblem" src="logo-gon.svg" alt="" />
+      <div class="meta" style="margin-top: var(--s-3);">
+        <span>GON</span> · Sistema de marca v0.1.0 · 2026
+      </div>
+    </div>
+    <div class="meta" style="text-align: right;">
+      <div>Ink · Bone · Bronze · Pulse</div>
+      <div>Space Grotesk + Inter + JetBrains Mono</div>
+      <div>Premium Minimal + Motion First</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

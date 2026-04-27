@@ -10,6 +10,7 @@ import TradeTable from './TradeTable'
 import NotificationBell from './NotificationBell'
 import InstallButton from './InstallButton'
 import SponsorBanner from './SponsorBanner'
+import GonSignature from './brand/GonSignature'
 
 const Chart = dynamic(() => import('./Chart'), { ssr: false })
 
@@ -462,6 +463,10 @@ export default function Dashboard() {
             Inicializando motor de IA...
           </div>
         )}
+
+        <footer className="mt-6 flex justify-end pb-4 pr-1">
+          <GonSignature />
+        </footer>
       </div>
     </div>
   )

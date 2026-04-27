@@ -1,0 +1,174 @@
+/**
+ * GON · Design tokens
+ * v0.1.0 · 2026
+ *
+ * Sistema de marca extraído del brand-system.html.
+ * Importar desde globals.css o desde cualquier layout/componente.
+ *
+ * Reglas no negociables:
+ *   - Nunca usar #000 ni #fff. Tintar siempre.
+ *   - Nunca mezclar más de 2 colores principales en una composición.
+ *   - Pulse solo en momentos cinéticos / links / estado activo. Máx 5% del área.
+ */
+
+:root {
+  /* =====================================================================
+     PALETA PRINCIPAL — 4 colores, ni uno más
+     ===================================================================== */
+  --gon-ink:    oklch(15% 0.012 60);   /* tinta cálida — fondo dark, texto sobre claro */
+  --gon-bone:   oklch(96% 0.008 80);   /* hueso cálido — fondo light, emblema sobre oscuro */
+  --gon-bronze: oklch(58% 0.085 65);   /* acento premium — una superficie por composición */
+  --gon-pulse:  oklch(62% 0.18  28);   /* señal cinética — links, hover, momento vivo */
+
+  /* Hex equivalentes para contextos sin OKLCH (correos, SVG legacy) */
+  --gon-ink-hex:    #1A1814;
+  --gon-bone-hex:   #F4F1EA;
+  --gon-bronze-hex: #A07A4C;
+  --gon-pulse-hex:  #D8503C;
+
+  /* =====================================================================
+     RAMPAS FUNCIONALES — derivadas matemáticamente, no son colores nuevos
+     ===================================================================== */
+  --gon-ink-100: oklch(96% 0.005 60);
+  --gon-ink-80:  oklch(78% 0.008 60);
+  --gon-ink-60:  oklch(55% 0.010 60);
+  --gon-ink-40:  oklch(35% 0.011 60);
+  --gon-ink-20:  oklch(22% 0.012 60);
+
+  --gon-bone-90: oklch(92% 0.009 80);
+  --gon-bone-80: oklch(86% 0.010 80);
+
+  /* =====================================================================
+     TIPOGRAFÍA — vía libre. Premium futura: GT America + Berkeley Mono.
+     ===================================================================== */
+  --gon-font-display: 'Space Grotesk', 'Inter Display', system-ui, -apple-system, sans-serif;
+  --gon-font-text:    'Inter', system-ui, -apple-system, sans-serif;
+  --gon-font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Tracking estándar para titulares uppercase */
+  --gon-tracking-display: -0.02em;
+  --gon-tracking-mono:     0.10em;
+
+  /* Escala tipográfica (ratio 1.333, cuarta justa) */
+  --gon-text-xs:  11px;
+  --gon-text-sm:  13px;
+  --gon-text-md:  16px;
+  --gon-text-lg:  20px;
+  --gon-text-xl:  28px;
+  --gon-text-2xl: 40px;
+  --gon-text-3xl: 56px;
+  --gon-text-4xl: 80px;
+  --gon-text-5xl: 112px;
+
+  --gon-leading-tight: 1.05;
+  --gon-leading-body:  1.55;
+
+  /* =====================================================================
+     SPACING — múltiplos de 8px, ritmo Fibonacci-ish
+     ===================================================================== */
+  --gon-s-1: 8px;
+  --gon-s-2: 16px;
+  --gon-s-3: 24px;
+  --gon-s-4: 40px;
+  --gon-s-5: 64px;
+  --gon-s-6: 104px;
+  --gon-s-7: 168px;
+
+  /* =====================================================================
+     EMBLEMA — variables de control del SVG (logo-gon.svg las consume)
+     ===================================================================== */
+  --logo-bg: transparent;
+  --logo-fg: var(--gon-ink);
+
+  /* Clear space mínimo: 1.5R donde R = grosor del anillo (~14% del diámetro) */
+  --gon-emblem-clearspace: 21%;
+
+  /* Tamaños canónicos */
+  --gon-emblem-micro:  32px;  /* min digital, debajo usar variante reforzada */
+  --gon-emblem-small:  64px;  /* footer, firma email */
+  --gon-emblem-md:    128px;  /* avatar, sello */
+  --gon-emblem-lg:    240px;  /* portada, hero secundario */
+  --gon-emblem-hero:  35vmin; /* hero principal, máximo permitido */
+
+  /* =====================================================================
+     RADII — el sistema es geométrico, casi sin redondeo
+     ===================================================================== */
+  --gon-radius-0:   0px;
+  --gon-radius-sm:  2px;       /* solo controles muy pequeños */
+  --gon-radius-md:  4px;       /* botones, inputs */
+  --gon-radius-icon: 22%;      /* app icon mask iOS/Android */
+  --gon-radius-full: 9999px;
+
+  /* =====================================================================
+     ELEVACIÓN — sutil, casi imperceptible. La profundidad es del material.
+     ===================================================================== */
+  --gon-shadow-1: 0 1px 2px oklch(0% 0 0 / 0.06);
+  --gon-shadow-2: 0 4px 8px oklch(0% 0 0 / 0.04), 0 1px 2px oklch(0% 0 0 / 0.06);
+  --gon-shadow-contact: 0 8px 24px oklch(0% 0 0 / 0.12);
+
+  /* =====================================================================
+     BORDES — siempre 1px, opacidad sutil
+     ===================================================================== */
+  --gon-border:        1px solid var(--gon-ink-40);
+  --gon-border-strong: 1px solid var(--gon-ink);
+  --gon-border-soft:   1px solid var(--gon-bone-80);
+
+  /* =====================================================================
+     MOTION — curvas y duraciones canónicas
+     ===================================================================== */
+  --gon-ease-out:      cubic-bezier(0.16, 1, 0.3, 1);   /* ease-out-quint, default */
+  --gon-ease-out-fast: cubic-bezier(0.22, 1, 0.36, 1);  /* ease-out-quart, agresivo */
+  --gon-ease-in-out:   cubic-bezier(0.45, 0, 0.55, 1);  /* simétrico, breath/loop */
+  --gon-ease-cinema:   cubic-bezier(0.83, 0, 0.17, 1);  /* lento, dramático */
+
+  --gon-dur-fast:    200ms;
+  --gon-dur-base:    400ms;
+  --gon-dur-medium:  800ms;
+  --gon-dur-slow:   1400ms;
+  --gon-dur-cinema: 2400ms;
+}
+
+/* =====================================================================
+   MODO DARK — invertir ink/bone como surface roles
+   Aplicar en <html data-theme="dark"> o en una sección puntual.
+   ===================================================================== */
+[data-theme='dark'] {
+  --logo-bg: transparent;
+  --logo-fg: var(--gon-bone);
+  --gon-surface:        var(--gon-ink);
+  --gon-surface-raised: var(--gon-ink-20);
+  --gon-text:           var(--gon-bone);
+  --gon-text-muted:     var(--gon-ink-80);
+  --gon-text-faint:     var(--gon-ink-60);
+  --gon-divider:        var(--gon-ink-40);
+}
+
+[data-theme='light'], :root {
+  --gon-surface:        var(--gon-bone);
+  --gon-surface-raised: var(--gon-bone-90);
+  --gon-text:           var(--gon-ink);
+  --gon-text-muted:     var(--gon-ink-80);
+  --gon-text-faint:     var(--gon-ink-60);
+  --gon-divider:        var(--gon-ink-40);
+}
+
+/* =====================================================================
+   SELECCIÓN — Pulse como acento de interacción
+   ===================================================================== */
+::selection {
+  background: var(--gon-pulse);
+  color: var(--gon-bone);
+}
+
+/* =====================================================================
+   ACCESIBILIDAD — respetar prefers-reduced-motion
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --gon-dur-fast:    1ms;
+    --gon-dur-base:    1ms;
+    --gon-dur-medium:  1ms;
+    --gon-dur-slow:    1ms;
+    --gon-dur-cinema:  1ms;
+  }
+}

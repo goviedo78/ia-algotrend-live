@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GON · Firma cinética</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:    oklch(15% 0.012 60);
+    --bone:   oklch(96% 0.008 80);
+    --bronze: oklch(58% 0.085 65);
+    --pulse:  oklch(62% 0.18  28);
+    --display: 'Space Grotesk', system-ui, sans-serif;
+    --mono:    'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--ink);
+    color: var(--bone);
+    font-family: var(--display);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+  ::selection { background: var(--pulse); color: var(--bone); }
+
+  /* ========= STAGE ========= */
+  .stage {
+    width: min(540px, 80vw);
+    aspect-ratio: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  /* Logo wrapper */
+  .logo {
+    position: relative;
+    width: 70%;
+    aspect-ratio: 1;
+    --logo-bg: transparent;
+    --logo-fg: var(--bone);
+    /* settle scale animation */
+    transform: scale(0.96);
+    animation: settle 1400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform;
+    /* Glow cálido sutil — visible sobre fondo dark (la sombra negra no se ve
+       contra Ink, así que usamos un halo orange/bone leve para "flotar"). */
+    filter:
+      drop-shadow(0 0 36px rgba(255, 138, 60, 0.18))
+      drop-shadow(0 16px 28px rgba(0, 0, 0, 0.55));
+  }
+
+  /* Sheen interno: highlight blanco fuerte arriba-izq + sombra dura abajo-der.
+     Mascarado a la silueta del SVG para vivir DENTRO del emblema. Sin
+     mix-blend-mode: pintamos directo para máxima visibilidad sobre Bone. */
+  .logo-sheen {
+    position: absolute;
+    inset: 0;
+    background:
+      /* Highlight fuerte upper-left (luz que "pega" arriba) */
+      linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 38%),
+      /* Sombra propia bottom-right (cuts ganan profundidad) */
+      linear-gradient(135deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.55) 100%);
+    -webkit-mask-image: url('logo-gon.svg');
+            mask-image: url('logo-gon.svg');
+    -webkit-mask-size: 100% 100%;
+            mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+    pointer-events: none;
+    opacity: 0;
+    animation: sheen-fade 800ms cubic-bezier(0.16, 1, 0.3, 1) 1100ms forwards;
+  }
+  @keyframes sheen-fade {
+    to { opacity: 1; }
+  }
+
+  /* The reveal mask — conic gradient sweeping clockwise from 12 o'clock */
+  .logo-img {
+    width: 100%;
+    height: 100%;
+    /* start: 0% revealed (everything masked) */
+    -webkit-mask-image: conic-gradient(from -90deg, black var(--reveal, 0%), transparent var(--reveal, 0%));
+            mask-image: conic-gradient(from -90deg, black var(--reveal, 0%), transparent var(--reveal, 0%));
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+    animation: reveal 1200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: mask-image;
+  }
+
+  /* Center micro-pulse (the signature) */
+  .pulse-dot {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--bone);
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    pointer-events: none;
+    animation: micropulse 600ms cubic-bezier(0.16, 1, 0.3, 1) 1300ms forwards;
+  }
+
+  /* ========= ANIMATIONS ========= */
+  @keyframes reveal {
+    0%   { --reveal: 0%; }
+    100% { --reveal: 100%; }
+  }
+  @property --reveal {
+    syntax: '<percentage>';
+    inherits: false;
+    initial-value: 0%;
+  }
+  @keyframes settle {
+    0%   { transform: scale(0.96); }
+    100% { transform: scale(1); }
+  }
+  @keyframes micropulse {
+    0%   { transform: translate(-50%, -50%) scale(0);   opacity: 0; }
+    40%  { transform: translate(-50%, -50%) scale(1);   opacity: 0.6; }
+    100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+  }
+  @keyframes breath {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.015); }
+  }
+
+  /* Idle breathing on hover (after entry done) */
+  .stage.idle:hover .logo {
+    animation: breath 1800ms cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+
+  /* Loading state: pause reveal at 92%, oscillate */
+  .stage.loading .logo-img {
+    animation: revealLoading 2400ms cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+  @keyframes revealLoading {
+    0%, 100% { --reveal: 88%; }
+    50%      { --reveal: 96%; }
+  }
+  .stage.loading .pulse-dot { display: none; }
+
+  /* ========= HUD ========= */
+  .hud {
+    position: fixed;
+    top: 32px; left: 32px;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    line-height: 1.8;
+    color: oklch(78% 0.008 60);
+  }
+  .hud .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--bone);
+    color: var(--ink);
+    margin-bottom: 12px;
+    letter-spacing: 0.12em;
+  }
+  .hud .row { display: flex; align-items: center; gap: 8px; }
+  .hud .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pulse); animation: blink 1.4s ease-in-out infinite; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .controls {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 1px;
+    background: oklch(35% 0.011 60);
+    border: 1px solid oklch(35% 0.011 60);
+  }
+  .controls button {
+    background: var(--ink);
+    color: var(--bone);
+    border: 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background 200ms ease, color 200ms ease;
+  }
+  .controls button:hover { background: var(--bone); color: var(--ink); }
+  .controls button.active { background: var(--pulse); color: var(--bone); }
+
+  .caption {
+    margin-top: 56px;
+    text-align: center;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: oklch(78% 0.008 60);
+  }
+  .caption .pulse-c { color: var(--pulse); }
+
+  .footer-meta {
+    position: fixed;
+    bottom: 32px; right: 32px;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: oklch(55% 0.010 60);
+    text-align: right;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <span class="badge">GON · Concepto A</span>
+  <div>Inscripción</div>
+  <div>1400ms · ease-out-quint</div>
+  <div class="row" style="margin-top: 8px;">
+    <span class="dot"></span>
+    <span id="state">Reposo</span>
+  </div>
+</div>
+
+<div class="stage idle" id="stage" tabindex="0">
+  <div class="logo" id="logo">
+    <img class="logo-img" src="logo-gon.svg" alt="GON" />
+    <div class="logo-sheen"></div>
+    <div class="pulse-dot"></div>
+  </div>
+</div>
+
+<div class="caption">
+  Pasá el cursor para ver la <span class="pulse-c">respiración</span> idle
+</div>
+
+<div class="controls">
+  <button id="btn-replay" class="active">Replay</button>
+  <button id="btn-loading">Loading</button>
+  <button id="btn-idle">Idle</button>
+</div>
+
+<div class="footer-meta">
+  Standalone preview<br/>
+  Vanilla CSS · Sin build · Sin dev server
+</div>
+
+<script>
+  const stage = document.getElementById('stage');
+  const logo  = document.getElementById('logo');
+  const img   = logo.querySelector('.logo-img');
+  const dot   = logo.querySelector('.pulse-dot');
+  const state = document.getElementById('state');
+
+  function setMode(mode) {
+    stage.classList.remove('idle', 'loading');
+    stage.classList.add(mode);
+    state.textContent = mode === 'loading' ? 'Cargando…' : 'Reposo';
+
+    document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-' + mode).classList.add('active');
+  }
+
+  function replay() {
+    // Force reflow to restart CSS animations
+    logo.style.animation = 'none';
+    img.style.animation  = 'none';
+    dot.style.animation  = 'none';
+    void logo.offsetWidth;
+    logo.style.animation = '';
+    img.style.animation  = '';
+    dot.style.animation  = '';
+
+    setMode('idle');
+    document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-replay').classList.add('active');
+  }
+
+  document.getElementById('btn-replay').addEventListener('click', replay);
+  document.getElementById('btn-loading').addEventListener('click', () => setMode('loading'));
+  document.getElementById('btn-idle').addEventListener('click', () => setMode('idle'));
+
+  stage.addEventListener('click', replay);
+</script>
+
+</body>
+</html>

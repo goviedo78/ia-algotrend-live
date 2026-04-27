@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GON · Materia · Hero 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:    oklch(15% 0.012 60);
+    --bone:   oklch(96% 0.008 80);
+    --bronze: oklch(58% 0.085 65);
+    --pulse:  oklch(62% 0.18  28);
+    --display: 'Space Grotesk', system-ui, sans-serif;
+    --mono:    'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body {
+    background: var(--ink);
+    color: var(--bone);
+    font-family: var(--display);
+  }
+  #stage { width: 100vw; height: 100vh; display: block; cursor: crosshair; }
+
+  .hud {
+    position: fixed;
+    top: 32px; left: 32px;
+    z-index: 10;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    line-height: 1.8;
+    color: oklch(78% 0.008 60);
+    pointer-events: none;
+  }
+  .hud .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--bone);
+    color: var(--ink);
+    margin-bottom: 12px;
+    letter-spacing: 0.12em;
+  }
+  .hud .row { display: flex; align-items: center; gap: 8px; }
+  .hud .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pulse); animation: blink 1.4s ease-in-out infinite; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .caption {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: oklch(78% 0.008 60);
+    pointer-events: none;
+  }
+  .caption .pulse { color: var(--pulse); }
+
+  .footer-meta {
+    position: fixed;
+    bottom: 32px; right: 32px;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: oklch(55% 0.010 60);
+    text-align: right;
+    line-height: 1.6;
+    pointer-events: none;
+  }
+
+  .fps {
+    position: fixed;
+    top: 32px; right: 32px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: oklch(55% 0.010 60);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    pointer-events: none;
+  }
+  .fps strong { color: var(--bone); margin-left: 6px; }
+
+  .fallback {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 32px;
+    background: var(--ink);
+    color: var(--bone);
+    font-family: var(--display);
+    text-align: center;
+    padding: 40px;
+  }
+  .fallback img { width: min(360px, 60vw); aspect-ratio: 1; --logo-bg: transparent; --logo-fg: var(--bone); }
+  .fallback p { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: oklch(78% 0.008 60); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <span class="badge">GON · Concepto 3</span>
+  <div>Materia</div>
+  <div>Three.js · MeshPhysicalMaterial · noise displacement</div>
+  <div class="row" style="margin-top: 8px;">
+    <span class="dot"></span>
+    <span id="state">Iniciando</span>
+  </div>
+</div>
+
+<div class="fps">FPS<strong id="fps">--</strong></div>
+
+<canvas id="stage"></canvas>
+
+<div class="caption">
+  Mové el cursor para girar y perturbar la <span class="pulse">materia</span>.
+  Click sostenido la calma. Rueda para zoom.
+</div>
+
+<div class="footer-meta">
+  Standalone preview · Three.js r160<br/>
+  Sin build · Sin dev server
+</div>
+
+<div class="fallback" id="fallback">
+  <img src="logo-gon.svg" alt="GON" />
+  <p>Tu dispositivo no soporta WebGL avanzado<br/>Modo estático activado</p>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// ---------- WebGL availability check ----------
+function hasWebGL2() {
+  try {
+    const c = document.createElement('canvas');
+    return !!c.getContext('webgl2');
+  } catch (_) { return false; }
+}
+if (!hasWebGL2()) {
+  document.getElementById('fallback').style.display = 'flex';
+  document.getElementById('stage').style.display = 'none';
+  document.getElementById('state').textContent = 'Fallback';
+  throw new Error('WebGL2 unavailable');
+}
+
+// ---------- SVG inline (only the dark structure, no bg circle) ----------
+const SVG_DATA = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <g transform="translate(21.5 20) scale(1.175)">
+    <g transform="translate(-82.096261 908.543383) scale(0.1 -0.1)" fill="#000000">
+      <path d="M4639 9080 c-864 -64 -1632 -362 -2289 -886 -147 -118 -462 -426 -582 -569 -522 -626 -816 -1325 -928 -2209 -19 -147 -21 -204 -17 -464 3 -270 7 -317 36 -512 50 -336 113 -590 212 -855 201 -541 498 -1007 909 -1429 508 -522 1054 -852 1760 -1065 218 -65 582 -135 839 -161 307 -30 755 1 1143 81 904 184 1704 668 2313 1396 233 279 491 713 633 1063 395 981 399 2062 10 3040 -303 763 -847 1433 -1538 1895 -561 374 -1127 577 -1850 660 -166 19 -495 27 -651 15z m56 -767 c8 -148 2 -497 -10 -525 -4 -11 -24 -18 -68 -23 -123 -13 -345 -55 -468 -89 -353 -97 -702 -275 -989 -503 -116 -93 -322 -298 -414 -413 -300 -376 -509 -840 -587 -1305 -27 -159 -35 -439 -20 -626 14 -167 37 -348 45 -356 6 -7 107 48 326 177 190 111 734 427 1185 687 l310 179 3 332 c1 183 0 332 -3 332 -21 0 -241 -125 -797 -454 -353 -208 -532 -305 -544 -294 -13 14 16 151 62 288 99 298 330 691 456 778 24 16 104 63 180 105 75 42 270 154 435 250 399 233 765 443 835 478 l58 29 0 -1120 0 -1120 -68 -34 c-89 -45 -427 -237 -782 -446 -250 -147 -1557 -906 -1854 -1077 -117 -67 -173 -90 -185 -77 -5 5 -18 38 -31 74 -13 36 -44 110 -68 165 -67 152 -100 247 -137 390 -222 855 -135 1680 259 2460 191 378 360 610 653 896 349 340 761 604 1201 771 294 110 712 203 938 207 l72 1 7 -137z m606 127 c708 -71 1471 -442 2010 -980 193 -193 298 -321 454 -555 306 -460 474 -927 547 -1525 20 -161 16 -612 -6 -785 -48 -379 -140 -704 -295 -1038 l-40 -88 -73 37 c-40 20 -120 65 -178 99 -58 35 -647 376 -1310 758 -663 383 -1231 711 -1262 731 l-58 35 0 1661 0 1660 54 0 c30 0 100 -5 157 -10z m-316 -3722 c39 -23 259 -150 490 -283 380 -219 420 -245 417 -266 -4 -32 -142 -356 -430 -1004 -266 -602 -382 -867 -382 -879 0 -21 215 45 430 131 502 201 1033 594 1361 1008 53 66 103 126 113 134 21 18 40 10 296 -137 360 -205 470 -272 470 -288 0 -84 -292 -430 -589 -701 -134 -121 -358 -287 -511 -378 -220 -130 -558 -279 -795 -349 -522 -154 -1105 -183 -1630 -80 -276 54 -657 177 -716 230 -11 9 -19 29 -19 43 0 30 -10 4 323 776 277 643 383 902 375 911 -9 8 -42 -11 -358 -199 -793 -473 -1395 -817 -1432 -817 -22 0 -352 410 -389 482 l-19 37 30 25 c17 14 77 51 133 82 115 64 1359 785 1687 978 661 390 1026 594 1050 589 14 -2 57 -23 95 -45z"/>
+      <path d="M5742 6587 l3 -1082 155 -91 c631 -370 1542 -895 1642 -945 l77 -38 5 27 c44 213 57 729 23 957 -51 340 -131 596 -273 876 -159 314 -410 625 -702 870 -235 199 -674 447 -870 493 l-62 14 2 -1081z"/>
+    </g>
+  </g>
+</svg>`;
+
+// ---------- Scene ----------
+const canvas = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: true,
+  alpha: false,
+  powerPreference: 'high-performance',
+});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.55;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14120E); // Ink
+
+// Environment for PBR reflections
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 1.0;
+
+const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 5000);
+const REST_CAM   = new THREE.Vector3(0, 0, 1500);  // más alejada por defecto
+const ENTRY_CAM  = new THREE.Vector3(900, 200, 1100); // mismo offset relativo
+const MIN_ZOOM   = 600;
+const MAX_ZOOM   = 3000;
+const TILT_MAX_Y = THREE.MathUtils.degToRad(15);
+const TILT_MAX_X = THREE.MathUtils.degToRad(10);
+// Bias permanente: por defecto el top está tilteado hacia atrás, para que el
+// key catch el bevel superior y produzca el look plateado por defecto.
+const TILT_REST_BIAS_Y = -0.6;
+camera.position.copy(ENTRY_CAM);
+camera.lookAt(0, 0, 0);
+
+// ---------- Lights ----------
+// Iluminación BRILLANTE por defecto, top-lighting natural.
+// El "shadow" lo aporta el cursor (modulación en fragment shader).
+// Ambient alto: ningún punto queda apagado en reposo
+const ambient = new THREE.AmbientLight(0x3a342a, 0.85);
+scene.add(ambient);
+
+// Key (cálida fuerte) desde arriba-izq
+const key = new THREE.DirectionalLight(0xfff5e8, 2.6);
+key.position.set(-300, 400, 600);
+scene.add(key);
+
+// Fill (fría) desde la derecha
+const fill = new THREE.DirectionalLight(0xc8d0e0, 0.9);
+fill.position.set(500, -100, 200);
+scene.add(fill);
+
+// Rim naranja sutil detrás (acento cálido en bordes, no protagonista)
+const rim = new THREE.DirectionalLight(0xff8a3d, 1.4);
+rim.position.set(0, 100, -500);
+scene.add(rim);
+
+const rim2 = new THREE.DirectionalLight(0xff8a3d, 0.5);
+rim2.position.set(-400, 200, -200);
+scene.add(rim2);
+
+// ---------- Build geometry from SVG ----------
+const loader = new SVGLoader();
+const svgData = loader.parse(SVG_DATA);
+
+// Outer group: solo aplica tilt rotation (cursor follow).
+// Inner group: SVG flip (scale.y=-1) + centering. Separar las capas evita
+// que rotación y reflejo se peleen entre sí.
+const tiltGroup = new THREE.Group();
+// Rotation X inicial = bias permanente. Evita "salto" cuando el tilt arranca
+// post-entry: durante toda la entrada el grupo ya está en su posición final.
+tiltGroup.rotation.x = TILT_REST_BIAS_Y * TILT_MAX_X;
+const group     = new THREE.Group();
+tiltGroup.add(group);
+const meshes = [];
+
+// Material: viscous Ink with clearcoat
+const material = new THREE.MeshPhysicalMaterial({
+  color: 0x1A1814,
+  roughness: 0.18,
+  metalness: 0.0,
+  clearcoat: 1.0,
+  clearcoatRoughness: 0.08,
+  reflectivity: 0.4,
+});
+
+// Inject noise displacement into the vertex shader via onBeforeCompile
+material.userData.uniforms = {
+  uTime:          { value: 0 },
+  uMouse:         { value: new THREE.Vector2(0.5, 0.5) },
+  uMouseStrength: { value: 0 },
+  uCalm:          { value: 0 }, // 0 alive, 1 still
+};
+
+material.onBeforeCompile = (shader) => {
+  shader.uniforms.uTime          = material.userData.uniforms.uTime;
+  shader.uniforms.uMouse         = material.userData.uniforms.uMouse;
+  shader.uniforms.uMouseStrength = material.userData.uniforms.uMouseStrength;
+  shader.uniforms.uCalm          = material.userData.uniforms.uCalm;
+
+  const noiseGLSL = `
+    // Simplex 3D noise — ashima/webgl-noise
+    vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+    vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+    vec4 permute(vec4 x) { return mod289(((x * 34.0) + 1.0) * x); }
+    vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+    float snoise(vec3 v) {
+      const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+      const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+      vec3 i  = floor(v + dot(v, C.yyy));
+      vec3 x0 = v - i + dot(i, C.xxx);
+      vec3 g = step(x0.yzx, x0.xyz);
+      vec3 l = 1.0 - g;
+      vec3 i1 = min(g.xyz, l.zxy);
+      vec3 i2 = max(g.xyz, l.zxy);
+      vec3 x1 = x0 - i1 + C.xxx;
+      vec3 x2 = x0 - i2 + C.yyy;
+      vec3 x3 = x0 - D.yyy;
+      i = mod289(i);
+      vec4 p = permute(permute(permute(
+                 i.z + vec4(0.0, i1.z, i2.z, 1.0))
+               + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+               + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+      float n_ = 0.142857142857;
+      vec3 ns = n_ * D.wyz - D.xzx;
+      vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+      vec4 x_ = floor(j * ns.z);
+      vec4 y_ = floor(j - 7.0 * x_);
+      vec4 x = x_ * ns.x + ns.yyyy;
+      vec4 y = y_ * ns.x + ns.yyyy;
+      vec4 h = 1.0 - abs(x) - abs(y);
+      vec4 b0 = vec4(x.xy, y.xy);
+      vec4 b1 = vec4(x.zw, y.zw);
+      vec4 s0 = floor(b0) * 2.0 + 1.0;
+      vec4 s1 = floor(b1) * 2.0 + 1.0;
+      vec4 sh = -step(h, vec4(0.0));
+      vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
+      vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
+      vec3 p0 = vec3(a0.xy, h.x);
+      vec3 p1 = vec3(a0.zw, h.y);
+      vec3 p2 = vec3(a1.xy, h.z);
+      vec3 p3 = vec3(a1.zw, h.w);
+      vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+      p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+      vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+      m = m * m;
+      return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
+    }
+  `;
+
+  shader.vertexShader = shader.vertexShader
+    .replace(
+      '#include <common>',
+      `#include <common>
+       uniform float uTime;
+       uniform vec2  uMouse;
+       uniform float uMouseStrength;
+       uniform float uCalm;
+       varying vec2  vGonUV;
+       varying float vGonHeat;
+       ${noiseGLSL}`
+    )
+    .replace(
+      '#include <begin_vertex>',
+      `
+      vec3 transformed = vec3(position);
+
+      // Front-face only: normal.z near +1
+      float frontFactor = smoothstep(0.5, 1.0, normal.z);
+
+      // Local UV in logo bounding-box space (logo lives ~ -500..500 on x,y after centering)
+      vec2 localUV = (position.xy + 500.0) / 1000.0;
+      vGonUV = localUV;
+
+      // Base flowing wave
+      float n = snoise(vec3(position.x * 0.004, position.y * 0.004, uTime * 0.25)) * 0.5
+              + snoise(vec3(position.x * 0.012, position.y * 0.012, uTime * 0.4)) * 0.25;
+
+      // Mouse perturbation falloff
+      float dist = distance(localUV, uMouse);
+      float mouseAmp = smoothstep(0.28, 0.0, dist) * uMouseStrength;
+      vGonHeat = mouseAmp * frontFactor; // pass to fragment for copper tint
+
+      // Calm interpolation: when calm, freeze noise
+      float aliveAmp = mix(8.0, 0.0, uCalm);
+
+      // Mouse displacement aumentado a 60 para picos más altos y walls visibles
+      transformed += normal * (n * aliveAmp + mouseAmp * 60.0) * frontFactor;
+      `
+    );
+
+  // Fragment shader: cursor-shadow + copper tint en peaks.
+  shader.fragmentShader = shader.fragmentShader
+    .replace(
+      '#include <common>',
+      `#include <common>
+       uniform vec2  uMouse;
+       uniform float uMouseStrength;
+       varying vec2  vGonUV;
+       varying float vGonHeat;`
+    )
+    .replace(
+      '#include <color_fragment>',
+      `#include <color_fragment>
+       // 1) Sombra sutil bajo el cursor (no apaga los peaks)
+       float gonCursorDist = distance(vGonUV, uMouse);
+       float gonShadow = smoothstep(0.0, 0.40, gonCursorDist);
+       gonShadow = mix(1.0, gonShadow, uMouseStrength * 0.45);
+       diffuseColor.rgb *= gonShadow;
+       // 2) Tint copper-orange profundo en peaks (las walls "brillan" desde dentro)
+       vec3 gonHeatColor = vec3(0.88, 0.30, 0.05); // ~ #E04D0D — burnt orange saturado
+       diffuseColor.rgb = mix(diffuseColor.rgb, gonHeatColor, vGonHeat * 0.95);`
+    );
+};
+
+// Build extruded meshes from each SVG path
+svgData.paths.forEach((path) => {
+  const shapes = SVGLoader.createShapes(path);
+  shapes.forEach((shape) => {
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+      depth: 80,
+      bevelEnabled: true,
+      bevelThickness: 4,
+      bevelSize: 3,
+      bevelOffset: 0,
+      bevelSegments: 3,
+      curveSegments: 64,
+      steps: 1,
+    });
+    geometry.computeVertexNormals();
+    const mesh = new THREE.Mesh(geometry, material);
+    group.add(mesh);
+    meshes.push(mesh);
+  });
+});
+
+// SVGLoader uses inverted Y. Flip and center.
+group.scale.y = -1;
+
+// Compute bounding box and center (en world space, con flip aplicado)
+const bbox = new THREE.Box3().setFromObject(group);
+const center = bbox.getCenter(new THREE.Vector3());
+group.position.sub(center);
+
+scene.add(tiltGroup); // añadir el outer al scene
+
+// ---------- Mouse interaction ----------
+const raycaster = new THREE.Raycaster();
+const mouseNDC = new THREE.Vector2(0, 0);
+const targetMouseUV = new THREE.Vector2(0.5, 0.5);
+const currentMouseUV = new THREE.Vector2(0.5, 0.5);
+const tiltTarget   = new THREE.Vector2(0, 0); // -1..1 NDC para tilt
+const tiltCurrent  = new THREE.Vector2(0, 0);
+let targetStrength = 0;
+let mouseDown = false;
+let calmTarget = 0;
+let targetZ   = REST_CAM.z; // zoom target, lerpeable
+
+window.addEventListener('pointermove', (e) => {
+  mouseNDC.x = (e.clientX / window.innerWidth)  * 2 - 1;
+  mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  // Tilt target = NDC del cursor (siempre, esté o no sobre el mesh)
+  tiltTarget.set(mouseNDC.x, mouseNDC.y);
+
+  // Perturbación local: solo si el rayo pega en algún mesh
+  raycaster.setFromCamera(mouseNDC, camera);
+  const hit = raycaster.intersectObjects(meshes, false)[0];
+  if (hit) {
+    // Convertir hit world point a coords locales del inner group (donde están las geometrías)
+    const local = group.worldToLocal(hit.point.clone());
+    targetMouseUV.set(
+      (local.x + 500) / 1000,
+      (local.y + 500) / 1000
+    );
+    targetStrength = 1.0;
+  } else {
+    targetStrength = 0;
+  }
+});
+
+canvas.addEventListener('pointerdown', () => { mouseDown = true; calmTarget = 1; });
+window.addEventListener('pointerup',   () => { mouseDown = false; calmTarget = 0; });
+
+// Zoom con rueda del mouse — solo después de la entrada
+canvas.addEventListener('wheel', (e) => {
+  if (!entryDone) return;
+  e.preventDefault();
+  targetZ = THREE.MathUtils.clamp(targetZ + e.deltaY * 1.5, MIN_ZOOM, MAX_ZOOM);
+}, { passive: false });
+
+// ---------- Resize ----------
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+// ---------- Loop ----------
+const clock = new THREE.Clock();
+let entryProgress = 0;
+const ENTRY_DURATION = 1.8;
+let frame = 0;
+let fpsAccum = 0;
+let fpsTimer = 0;
+const fpsEl = document.getElementById('fps');
+const stateEl = document.getElementById('state');
+let entryDone = false;
+
+function ease(t) { return 1 - Math.pow(1 - t, 5); } // ease-out-quint
+
+function animate() {
+  const dt = clock.getDelta();
+  const t  = clock.getElapsedTime();
+
+  // Camera entry sequence
+  if (entryProgress < 1) {
+    entryProgress = Math.min(1, entryProgress + dt / ENTRY_DURATION);
+    const e = ease(entryProgress);
+    camera.position.lerpVectors(ENTRY_CAM, REST_CAM, e);
+    camera.lookAt(0, 0, 0);
+    if (entryProgress >= 1 && !entryDone) {
+      entryDone = true;
+      targetZ = camera.position.z; // sync zoom target con posición final
+      stateEl.textContent = 'Materia viva';
+    }
+  } else {
+    // Después de la entrada: tilt hacia cursor + zoom suave
+    tiltCurrent.lerp(tiltTarget, 0.06);
+    tiltGroup.rotation.y = -tiltCurrent.x * TILT_MAX_Y;
+    // Bias permanente del eje X para que el look plateado sea default
+    tiltGroup.rotation.x = (tiltCurrent.y + TILT_REST_BIAS_Y) * TILT_MAX_X;
+
+    // Lerp del zoom hacia targetZ (rueda del mouse modifica targetZ)
+    camera.position.z += (targetZ - camera.position.z) * 0.12;
+    camera.lookAt(0, 0, 0);
+  }
+
+  // Smooth mouse uv + strength
+  currentMouseUV.lerp(targetMouseUV, 0.12);
+  const u = material.userData.uniforms;
+  u.uMouse.value.copy(currentMouseUV);
+  u.uMouseStrength.value += (targetStrength - u.uMouseStrength.value) * 0.08;
+  u.uCalm.value           += (calmTarget       - u.uCalm.value)           * 0.02;
+  u.uTime.value = t;
+
+  renderer.render(scene, camera);
+
+  // FPS
+  frame++;
+  fpsTimer += dt;
+  if (fpsTimer >= 0.5) {
+    const fps = Math.round(frame / fpsTimer);
+    fpsEl.textContent = fps;
+    frame = 0;
+    fpsTimer = 0;
+  }
+
+  requestAnimationFrame(animate);
+}
+
+stateEl.textContent = 'Entrando';
+animate();
+</script>
+
+</body>
+</html>
