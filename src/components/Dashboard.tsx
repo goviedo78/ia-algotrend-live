@@ -465,7 +465,9 @@ export default function Dashboard() {
         )}
 
         <footer className="mt-6 flex justify-end pb-4 pr-1">
-          <GonSignature />
+          {/* href={null} = sello visual sin link, las rutas /brand quedan
+              accesibles solo si alguien teclea la URL directamente. */}
+          <GonSignature href={null} />
         </footer>
       </div>
     </div>

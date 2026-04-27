@@ -51,6 +51,12 @@ export interface MateriaLogoProps {
   minZoom?: number
   /** Distancia máxima de zoom (más lejos). Default 3000 */
   maxZoom?: number
+  /** Auto-rotación cuando no hay input por unos segundos. Default true */
+  autoRotateIdle?: boolean
+  /** Segundos de inactividad antes de empezar auto-rotación. Default 3 */
+  idleDelay?: number
+  /** Permitir tilt por giroscopio del dispositivo (mobile). Default true */
+  gyroscope?: boolean
   /** Class CSS opcional para el wrapper */
   className?: string
   /** Estilo CSS opcional para el wrapper */
@@ -71,6 +77,13 @@ const ZOOM_LERP    = 0.12
 // hacia atrás, para que la luz del key catch el bevel superior y produzca el
 // look plateado. Equivalente a tener el cursor al 60% hacia abajo siempre.
 const TILT_REST_BIAS_Y = -0.6
+// Auto-idle: después de N segundos sin input, blendea hacia rotación automática
+// suave (necesario en mobile donde no existe hover y la página queda "muerta").
+const IDLE_RAMP_DUR = 2.0     // segundos para entrar full en auto-rotation
+const AUTO_ROT_AMP_Y = THREE.MathUtils.degToRad(8) // ±8° auto-rotación horizontal
+const AUTO_ROT_AMP_X = THREE.MathUtils.degToRad(2.5) // ±2.5° auto-rotación vertical
+const AUTO_ROT_FREQ_Y = 0.30  // Hz
+const AUTO_ROT_FREQ_X = 0.20  // Hz
 
 const easeOutQuint = (t: number) => 1 - Math.pow(1 - t, 5)
 
@@ -144,14 +157,27 @@ interface MateriaMeshProps {
   baseColor: number
   amplitude: number
   cursorTilt: boolean
+  autoRotateIdle: boolean
+  idleDelay: number
+  gyroscope: boolean
   entryDoneRef: React.MutableRefObject<boolean>
 }
 
-function MateriaMesh({ svgUrl, baseColor, amplitude, cursorTilt, entryDoneRef }: MateriaMeshProps) {
+function MateriaMesh({
+  svgUrl,
+  baseColor,
+  amplitude,
+  cursorTilt,
+  autoRotateIdle,
+  idleDelay,
+  gyroscope,
+  entryDoneRef,
+}: MateriaMeshProps) {
   const tiltGroupRef  = useRef<THREE.Group>(null)
   const groupRef      = useRef<THREE.Group>(null)
   const tiltTarget    = useRef(new THREE.Vector2(0, 0))
   const tiltCurrent   = useRef(new THREE.Vector2(0, 0))
+  const lastInputRef  = useRef<number>(0)  // último tiempo (clock.elapsedTime) con input
 
   // Uniforms compartidos entre material y useFrame
   const uniformsRef = useRef({
@@ -293,6 +319,12 @@ function MateriaMesh({ svgUrl, baseColor, amplitude, cursorTilt, entryDoneRef }:
     uniformsRef.current.uAmp.value = amplitude
   }, [amplitude])
 
+  // Inicializar el "último input" al mount para que el auto-rotate arranque
+  // tras idleDelay segundos desde la carga (no inmediatamente).
+  useEffect(() => {
+    lastInputRef.current = performance.now() / 1000
+  }, [])
+
   // Tracking del cursor a nivel ventana (no solo sobre el mesh) para tilt.
   // Coords normalizadas -1..1 en ambos ejes. NDC standard.
   useEffect(() => {
@@ -302,10 +334,72 @@ function MateriaMesh({ svgUrl, baseColor, amplitude, cursorTilt, entryDoneRef }:
         (e.clientX / window.innerWidth)  * 2 - 1,
         -((e.clientY / window.innerHeight) * 2 - 1)
       )
+      // Marcar como input reciente — corta el auto-rotate
+      lastInputRef.current = performance.now() / 1000
     }
     window.addEventListener('pointermove', onMove)
     return () => window.removeEventListener('pointermove', onMove)
   }, [cursorTilt])
+
+  // Gyroscope (mobile): tilt por orientación del dispositivo. iOS ≥13 requiere
+  // permiso explícito en respuesta a un gesto del usuario.
+  useEffect(() => {
+    if (!gyroscope || typeof window === 'undefined') return
+
+    const onOrientation = (e: DeviceOrientationEvent) => {
+      if (e.beta === null || e.gamma === null) return
+      // gamma: -90..90 (left-right tilt) → mapeo a x ±1
+      // beta: -180..180 (front-back tilt) → asumimos posición de uso ~30° → mapeo a y ±1
+      const x = THREE.MathUtils.clamp(e.gamma / 30, -1, 1)
+      const y = THREE.MathUtils.clamp((e.beta - 30) / 30, -1, 1)
+      tiltTarget.current.set(x, -y) // negate Y para que match con la convención NDC
+      lastInputRef.current = performance.now() / 1000
+    }
+
+    type OrientationCtor = typeof DeviceOrientationEvent & {
+      requestPermission?: () => Promise<'granted' | 'denied'>
+    }
+    const Ctor = (typeof DeviceOrientationEvent !== 'undefined'
+      ? DeviceOrientationEvent
+      : null) as OrientationCtor | null
+
+    let attached = false
+    const attach = () => {
+      if (attached || !Ctor) return
+      window.addEventListener('deviceorientation', onOrientation)
+      attached = true
+    }
+
+    // iOS 13+ requiere permiso vía gesto del usuario
+    const requestPermission = () => {
+      if (Ctor?.requestPermission) {
+        Ctor.requestPermission().then((res) => {
+          if (res === 'granted') attach()
+        }).catch(() => {})
+      } else {
+        // Android/desktop browsers: no requiere permiso
+        attach()
+      }
+    }
+
+    // Pedir permiso en el primer touch (iOS lo exige)
+    const onFirstTouch = () => {
+      requestPermission()
+      window.removeEventListener('touchstart', onFirstTouch)
+      window.removeEventListener('pointerdown', onFirstTouch)
+    }
+    window.addEventListener('touchstart', onFirstTouch, { once: true, passive: true })
+    window.addEventListener('pointerdown', onFirstTouch, { once: true, passive: true })
+
+    // Si no es iOS (no hay requestPermission), intenta attach directamente
+    if (Ctor && !Ctor.requestPermission) attach()
+
+    return () => {
+      window.removeEventListener('deviceorientation', onOrientation)
+      window.removeEventListener('touchstart', onFirstTouch)
+      window.removeEventListener('pointerdown', onFirstTouch)
+    }
+  }, [gyroscope])
 
   // Loop por frame
   useFrame((state) => {
@@ -322,14 +416,32 @@ function MateriaMesh({ svgUrl, baseColor, amplitude, cursorTilt, entryDoneRef }:
     const targetCalm = mouseDownRef.current ? 1 : 0
     u.uCalm.value += (targetCalm - u.uCalm.value) * 0.02
 
-    // Cursor tilt: solo después de la entrada, rotación sutil hacia el cursor.
-    // Negate Y (rotation.y) para que el lado que apunta al cursor "venga hacia"
-    // el viewer, no se aleje. El eje X tiene bias permanente para que el look
-    // plateado del bevel superior sea el default (sin tener que bajar el cursor).
+    // Cursor tilt + auto-idle blend
     if (cursorTilt && entryDoneRef.current && tiltGroupRef.current) {
       tiltCurrent.current.lerp(tiltTarget.current, TILT_LERP)
-      tiltGroupRef.current.rotation.y = -tiltCurrent.current.x * TILT_MAX_Y
-      tiltGroupRef.current.rotation.x = (tiltCurrent.current.y + TILT_REST_BIAS_Y) * TILT_MAX_X
+
+      // Manual rotation desde el cursor/gyroscope
+      let rotY = -tiltCurrent.current.x * TILT_MAX_Y
+      let rotX = (tiltCurrent.current.y + TILT_REST_BIAS_Y) * TILT_MAX_X
+
+      // Si no hubo input por idleDelay segundos, blendear hacia auto-rotation.
+      // En mobile (sin hover) es lo que evita que la página se sienta muerta.
+      if (autoRotateIdle) {
+        const now = performance.now() / 1000
+        const idleTime = now - lastInputRef.current
+        if (idleTime > idleDelay) {
+          const t = state.clock.elapsedTime
+          const idleFactor = Math.min((idleTime - idleDelay) / IDLE_RAMP_DUR, 1)
+          const autoY = Math.sin(t * AUTO_ROT_FREQ_Y * Math.PI * 2) * AUTO_ROT_AMP_Y
+          const autoX = Math.sin(t * AUTO_ROT_FREQ_X * Math.PI * 2 + 1.5) * AUTO_ROT_AMP_X
+                      + TILT_REST_BIAS_Y * TILT_MAX_X
+          rotY = THREE.MathUtils.lerp(rotY, autoY, idleFactor)
+          rotX = THREE.MathUtils.lerp(rotX, autoX, idleFactor)
+        }
+      }
+
+      tiltGroupRef.current.rotation.y = rotY
+      tiltGroupRef.current.rotation.x = rotX
     }
   })
 
@@ -416,40 +528,74 @@ function CameraEntry({ enabled, restDistance, doneRef }: CameraEntryProps) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Zoom con rueda del mouse (solo se activa después de la entrada)
+// Zoom — rueda del mouse (desktop) + pinch (mobile, 2 dedos)
 // ──────────────────────────────────────────────────────────────────────────────
-interface WheelZoomProps {
+interface ZoomControlProps {
   enabled: boolean
   minZ: number
   maxZ: number
   doneRef: React.MutableRefObject<boolean>
 }
 
-function WheelZoom({ enabled, minZ, maxZ, doneRef }: WheelZoomProps) {
+function ZoomControl({ enabled, minZ, maxZ, doneRef }: ZoomControlProps) {
   const { camera, gl } = useThree()
   const targetZ = useRef(camera.position.z)
+  const lastPinchDist = useRef(0)
 
   // Sincronizar target inicial con la posición actual (post-entry)
   useEffect(() => {
     targetZ.current = camera.position.z
   }, [camera])
 
-  // Wheel listener sobre el canvas. preventDefault evita scroll de página.
+  // Listeners de wheel (desktop) y touch pinch (mobile)
   useEffect(() => {
     if (!enabled) return
     const dom = gl.domElement
+
     const onWheel = (e: WheelEvent) => {
-      if (!doneRef.current) return // ignorar durante entry
+      if (!doneRef.current) return
       e.preventDefault()
-      const next = THREE.MathUtils.clamp(
+      targetZ.current = THREE.MathUtils.clamp(
         targetZ.current + e.deltaY * 1.5,
         minZ,
         maxZ
       )
-      targetZ.current = next
     }
+
+    // Pinch: medimos distancia entre 2 dedos. Diferencia = delta de zoom.
+    const distance = (t: TouchList) =>
+      Math.hypot(
+        t[1].clientX - t[0].clientX,
+        t[1].clientY - t[0].clientY
+      )
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        lastPinchDist.current = distance(e.touches)
+      }
+    }
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!doneRef.current || e.touches.length !== 2) return
+      e.preventDefault()
+      const dist = distance(e.touches)
+      const delta = lastPinchDist.current - dist // pinch in (acercar dedos) = alejar cámara
+      targetZ.current = THREE.MathUtils.clamp(
+        targetZ.current + delta * 4,
+        minZ,
+        maxZ
+      )
+      lastPinchDist.current = dist
+    }
+
     dom.addEventListener('wheel', onWheel, { passive: false })
-    return () => dom.removeEventListener('wheel', onWheel)
+    dom.addEventListener('touchstart', onTouchStart, { passive: true })
+    dom.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => {
+      dom.removeEventListener('wheel', onWheel)
+      dom.removeEventListener('touchstart', onTouchStart)
+      dom.removeEventListener('touchmove', onTouchMove)
+    }
   }, [enabled, gl, minZ, maxZ, doneRef])
 
   // Lerp suave de la posición Z hacia el target
@@ -521,6 +667,9 @@ export function MateriaLogo({
   enableZoom     = true,
   minZoom        = 600,
   maxZoom        = 3000,
+  autoRotateIdle = true,
+  idleDelay      = 3,
+  gyroscope      = true,
   className,
   style,
 }: MateriaLogoProps) {
@@ -595,7 +744,7 @@ export function MateriaLogo({
           restDistance={cameraDistance}
           doneRef={entryDoneRef}
         />
-        <WheelZoom
+        <ZoomControl
           enabled={enableZoom}
           minZ={minZoom}
           maxZ={maxZoom}
@@ -608,6 +757,9 @@ export function MateriaLogo({
             baseColor={baseColor}
             amplitude={amplitude}
             cursorTilt={cursorTilt}
+            autoRotateIdle={autoRotateIdle}
+            idleDelay={idleDelay}
+            gyroscope={gyroscope}
             entryDoneRef={entryDoneRef}
           />
         </Suspense>

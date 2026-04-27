@@ -209,6 +209,13 @@ const TILT_MAX_X = THREE.MathUtils.degToRad(10);
 // Bias permanente: por defecto el top está tilteado hacia atrás, para que el
 // key catch el bevel superior y produzca el look plateado por defecto.
 const TILT_REST_BIAS_Y = -0.6;
+// Auto-idle: tras N segundos sin input, blendea hacia auto-rotación suave
+const IDLE_DELAY        = 3.0;
+const IDLE_RAMP_DUR     = 2.0;
+const AUTO_ROT_AMP_Y    = THREE.MathUtils.degToRad(8);
+const AUTO_ROT_AMP_X    = THREE.MathUtils.degToRad(2.5);
+const AUTO_ROT_FREQ_Y   = 0.30;
+const AUTO_ROT_FREQ_X   = 0.20;
 camera.position.copy(ENTRY_CAM);
 camera.lookAt(0, 0, 0);
 
@@ -433,40 +440,82 @@ const tiltCurrent  = new THREE.Vector2(0, 0);
 let targetStrength = 0;
 let mouseDown = false;
 let calmTarget = 0;
-let targetZ   = REST_CAM.z; // zoom target, lerpeable
+let targetZ   = REST_CAM.z;     // zoom target, lerpeable
+let lastInput = performance.now() / 1000; // último input (segundos)
+let lastPinchDist = 0;          // pinch zoom mobile
+
+function markInput() { lastInput = performance.now() / 1000; }
 
 window.addEventListener('pointermove', (e) => {
   mouseNDC.x = (e.clientX / window.innerWidth)  * 2 - 1;
   mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
-  // Tilt target = NDC del cursor (siempre, esté o no sobre el mesh)
   tiltTarget.set(mouseNDC.x, mouseNDC.y);
+  markInput();
 
-  // Perturbación local: solo si el rayo pega en algún mesh
   raycaster.setFromCamera(mouseNDC, camera);
   const hit = raycaster.intersectObjects(meshes, false)[0];
   if (hit) {
-    // Convertir hit world point a coords locales del inner group (donde están las geometrías)
     const local = group.worldToLocal(hit.point.clone());
-    targetMouseUV.set(
-      (local.x + 500) / 1000,
-      (local.y + 500) / 1000
-    );
+    targetMouseUV.set((local.x + 500) / 1000, (local.y + 500) / 1000);
     targetStrength = 1.0;
   } else {
     targetStrength = 0;
   }
 });
 
-canvas.addEventListener('pointerdown', () => { mouseDown = true; calmTarget = 1; });
+canvas.addEventListener('pointerdown', () => { mouseDown = true; calmTarget = 1; markInput(); });
 window.addEventListener('pointerup',   () => { mouseDown = false; calmTarget = 0; });
 
-// Zoom con rueda del mouse — solo después de la entrada
+// Zoom con rueda del mouse (desktop) — solo después de la entrada
 canvas.addEventListener('wheel', (e) => {
   if (!entryDone) return;
   e.preventDefault();
   targetZ = THREE.MathUtils.clamp(targetZ + e.deltaY * 1.5, MIN_ZOOM, MAX_ZOOM);
+  markInput();
 }, { passive: false });
+
+// Pinch zoom (mobile, 2 dedos)
+function pinchDistance(touches) {
+  return Math.hypot(touches[1].clientX - touches[0].clientX,
+                    touches[1].clientY - touches[0].clientY);
+}
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) lastPinchDist = pinchDistance(e.touches);
+}, { passive: true });
+canvas.addEventListener('touchmove', (e) => {
+  if (!entryDone || e.touches.length !== 2) return;
+  e.preventDefault();
+  const dist = pinchDistance(e.touches);
+  const delta = lastPinchDist - dist;
+  targetZ = THREE.MathUtils.clamp(targetZ + delta * 4, MIN_ZOOM, MAX_ZOOM);
+  lastPinchDist = dist;
+  markInput();
+}, { passive: false });
+
+// Gyroscope (mobile): tilt por orientación del dispositivo
+function attachGyro() {
+  window.addEventListener('deviceorientation', (e) => {
+    if (e.beta === null || e.gamma === null) return;
+    const x = THREE.MathUtils.clamp(e.gamma / 30, -1, 1);
+    const y = THREE.MathUtils.clamp((e.beta - 30) / 30, -1, 1);
+    tiltTarget.set(x, -y);
+    markInput();
+  });
+}
+if (typeof DeviceOrientationEvent !== 'undefined') {
+  // iOS 13+ requiere permiso vía gesto del usuario
+  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    window.addEventListener('touchstart', function onFirstTouch() {
+      DeviceOrientationEvent.requestPermission()
+        .then((res) => { if (res === 'granted') attachGyro(); })
+        .catch(() => {});
+      window.removeEventListener('touchstart', onFirstTouch);
+    }, { once: true, passive: true });
+  } else {
+    // Android / desktop con sensores: attach directo
+    attachGyro();
+  }
+}
 
 // ---------- Resize ----------
 window.addEventListener('resize', () => {
@@ -504,13 +553,29 @@ function animate() {
       stateEl.textContent = 'Materia viva';
     }
   } else {
-    // Después de la entrada: tilt hacia cursor + zoom suave
+    // Después de la entrada: tilt hacia cursor + zoom suave + auto-idle
     tiltCurrent.lerp(tiltTarget, 0.06);
-    tiltGroup.rotation.y = -tiltCurrent.x * TILT_MAX_Y;
-    // Bias permanente del eje X para que el look plateado sea default
-    tiltGroup.rotation.x = (tiltCurrent.y + TILT_REST_BIAS_Y) * TILT_MAX_X;
 
-    // Lerp del zoom hacia targetZ (rueda del mouse modifica targetZ)
+    let rotY = -tiltCurrent.x * TILT_MAX_Y;
+    let rotX = (tiltCurrent.y + TILT_REST_BIAS_Y) * TILT_MAX_X;
+
+    // Auto-rotation idle: tras IDLE_DELAY sin input, blendea hacia movimiento auto.
+    // Critical en mobile donde no hay hover y la página queda muerta.
+    const now = performance.now() / 1000;
+    const idleTime = now - lastInput;
+    if (idleTime > IDLE_DELAY) {
+      const idleFactor = Math.min((idleTime - IDLE_DELAY) / IDLE_RAMP_DUR, 1);
+      const autoY = Math.sin(t * AUTO_ROT_FREQ_Y * Math.PI * 2) * AUTO_ROT_AMP_Y;
+      const autoX = Math.sin(t * AUTO_ROT_FREQ_X * Math.PI * 2 + 1.5) * AUTO_ROT_AMP_X
+                  + TILT_REST_BIAS_Y * TILT_MAX_X;
+      rotY = THREE.MathUtils.lerp(rotY, autoY, idleFactor);
+      rotX = THREE.MathUtils.lerp(rotX, autoX, idleFactor);
+    }
+
+    tiltGroup.rotation.y = rotY;
+    tiltGroup.rotation.x = rotX;
+
+    // Lerp del zoom hacia targetZ (rueda del mouse / pinch modifican targetZ)
     camera.position.z += (targetZ - camera.position.z) * 0.12;
     camera.lookAt(0, 0, 0);
   }
