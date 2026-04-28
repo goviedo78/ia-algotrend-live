@@ -48,12 +48,36 @@
   .lede {
     color: oklch(78% 0.008 60);
     font-size: 16px;
-    max-width: 60ch;
+    max-width: 65ch;
+  }
+
+  .section { max-width: 1280px; margin: 0 auto 56px; }
+  .section h2 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: var(--bone);
+    margin-bottom: 6px;
+  }
+  .section .subtitle {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: oklch(55% 0.010 60);
+    margin-bottom: 24px;
+  }
+  .section .subtitle .pulse-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    background: var(--pulse);
+    color: var(--bone);
+    margin-right: 6px;
   }
 
   .grid {
-    max-width: 1280px;
-    margin: 0 auto;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 16px;
@@ -122,7 +146,7 @@
 
   footer {
     max-width: 1280px;
-    margin: 64px auto 0;
+    margin: 32px auto 0;
     text-align: center;
     font-family: var(--mono);
     font-size: 11px;
@@ -136,99 +160,138 @@
 
 <header>
   <span class="badge">GON · Renders</span>
-  <h1>Mismo logo,<br/>8 tratamientos</h1>
+  <h1>Mismo logo,<br/>tratamientos distintos</h1>
   <p class="lede">
-    Misma geometría intacta del emblema GON, presentado con materiales,
-    gradients y filtros distintos. Renders SVG estáticos a 2048px.
+    Misma geometría intacta del emblema GON. Dos colecciones: capturas reales
+    del WebGL 3D (con materiales PBR, luces, glow real) y renders SVG estáticos
+    con gradients y filtros.
   </p>
 </header>
 
-<section class="grid">
+<!-- ─────────── 3D real ─────────── -->
+<section class="section">
+  <h2>Capturas del 3D real</h2>
+  <div class="subtitle">
+    <span class="pulse-tag">Lo nuevo</span>
+    Screenshots del WebGL · MeshPhysicalMaterial + bloom + 3 luces · 2048×2048
+  </div>
 
-  <article class="card">
-    <div class="img-wrap"><img src="01-plateado.png" alt="Plateado"></div>
-    <div class="meta">
-      <div class="num">01</div>
-      <div class="name">Plateado</div>
-      <div class="desc">Chrome metálico con gradient vertical de luz a sombra. Reflejo industrial premium.</div>
-    </div>
-    <a href="01-plateado.png" download>Descargar PNG</a>
-  </article>
+  <div class="grid">
+    <article class="card">
+      <div class="img-wrap"><img src="3d-brasa.png" alt="Brasa 3D"></div>
+      <div class="meta">
+        <div class="num">3D</div>
+        <div class="name">Brasa</div>
+        <div class="desc">Material Ink oscuro + emissive naranja brasa #6B1F05 con bloom. El que elegiste.</div>
+      </div>
+      <a href="3d-brasa.png" download>Descargar PNG</a>
+    </article>
 
-  <article class="card">
-    <div class="img-wrap"><img src="02-cobre.png" alt="Cobre"></div>
-    <div class="meta">
-      <div class="num">02</div>
-      <div class="name">Cobre</div>
-      <div class="desc">Metal cálido naranja-rojizo. Sensación de joyería contemporánea, presencia material.</div>
-    </div>
-    <a href="02-cobre.png" download>Descargar PNG</a>
-  </article>
+    <article class="card">
+      <div class="img-wrap"><img src="3d-plata.png" alt="Plata 3D"></div>
+      <div class="meta">
+        <div class="num">3D</div>
+        <div class="name">Plata</div>
+        <div class="desc">Chrome metálico full reflectivo. Frío y técnico, alto brillo.</div>
+      </div>
+      <a href="3d-plata.png" download>Descargar PNG</a>
+    </article>
 
-  <article class="card">
-    <div class="img-wrap"><img src="03-bronce.png" alt="Bronce"></div>
-    <div class="meta">
-      <div class="num">03</div>
-      <div class="name">Bronce</div>
-      <div class="desc">Bronce antiguo, dorado apagado. Heirloom, archivo, autoridad clásica.</div>
-    </div>
-    <a href="03-bronce.png" download>Descargar PNG</a>
-  </article>
+    <article class="card">
+      <div class="img-wrap"><img src="3d-cobre.png" alt="Cobre 3D"></div>
+      <div class="meta">
+        <div class="num">3D</div>
+        <div class="name">Cobre</div>
+        <div class="desc">Metal cálido full metallic con reflejos cobrizos. Joyería contemporánea.</div>
+      </div>
+      <a href="3d-cobre.png" download>Descargar PNG</a>
+    </article>
 
-  <article class="card">
-    <div class="img-wrap"><img src="04-obsidiana.png" alt="Obsidiana"></div>
-    <div class="meta">
-      <div class="num">04</div>
-      <div class="name">Obsidiana</div>
-      <div class="desc">Negro profundo gloss con halo cyan-azul eléctrico. Tech, electrónico, misterioso.</div>
-    </div>
-    <a href="04-obsidiana.png" download>Descargar PNG</a>
-  </article>
+    <article class="card">
+      <div class="img-wrap"><img src="3d-obsidiana.png" alt="Obsidiana 3D"></div>
+      <div class="meta">
+        <div class="num">3D</div>
+        <div class="name">Obsidiana</div>
+        <div class="desc">Negro profundo gloss con halo cyan eléctrico. Tech, electrónico.</div>
+      </div>
+      <a href="3d-obsidiana.png" download>Descargar PNG</a>
+    </article>
 
-  <article class="card">
-    <div class="img-wrap"><img src="05-brasa.png" alt="Brasa"></div>
-    <div class="meta">
-      <div class="num">05</div>
-      <div class="name">Brasa</div>
-      <div class="desc">Naranja quemado sólido (#6B1F05) con halo glow ardiente. El color que elegiste.</div>
-    </div>
-    <a href="05-brasa.png" download>Descargar PNG</a>
-  </article>
+    <article class="card">
+      <div class="img-wrap"><img src="3d-magma.png" alt="Magma 3D"></div>
+      <div class="meta">
+        <div class="num">3D</div>
+        <div class="name">Magma</div>
+        <div class="desc">Dark mate con núcleo rojo lava intenso, emissive 3.0. Agresivo, hot.</div>
+      </div>
+      <a href="3d-magma.png" download>Descargar PNG</a>
+    </article>
 
-  <article class="card">
-    <div class="img-wrap"><img src="06-hielo.png" alt="Hielo"></div>
-    <div class="meta">
-      <div class="num">06</div>
-      <div class="name">Hielo</div>
-      <div class="desc">Pale azul-blanco frosted con gradient. Limpio, ethereal, tech premium.</div>
-    </div>
-    <a href="06-hielo.png" download>Descargar PNG</a>
-  </article>
+    <article class="card">
+      <div class="img-wrap"><img src="3d-hielo.png" alt="Hielo 3D"></div>
+      <div class="meta">
+        <div class="num">3D</div>
+        <div class="name">Hielo</div>
+        <div class="desc">Frosted azul-blanco, clearcoat alto. Premium tech, ethereal.</div>
+      </div>
+      <a href="3d-hielo.png" download>Descargar PNG</a>
+    </article>
+  </div>
+</section>
 
-  <article class="card">
-    <div class="img-wrap"><img src="07-pulse.png" alt="Pulse"></div>
-    <div class="meta">
-      <div class="num">07</div>
-      <div class="name">Pulse</div>
-      <div class="desc">Rojo señal sólido con halo cálido. Energía, alerta, presencia.</div>
-    </div>
-    <a href="07-pulse.png" download>Descargar PNG</a>
-  </article>
+<!-- ─────────── SVG estáticos ─────────── -->
+<section class="section">
+  <h2>Renders SVG estáticos</h2>
+  <div class="subtitle">
+    Gradients verticales + filtros · ligeros, escalables · 2048×2048
+  </div>
 
-  <article class="card">
-    <div class="img-wrap"><img src="08-bone.png" alt="Bone"></div>
-    <div class="meta">
-      <div class="num">08</div>
-      <div class="name">Bone</div>
-      <div class="desc">Crema cálido sólido sobre Ink. Editorial puro, papel, archivo limpio.</div>
-    </div>
-    <a href="08-bone.png" download>Descargar PNG</a>
-  </article>
-
+  <div class="grid">
+    <article class="card">
+      <div class="img-wrap"><img src="01-plateado.png" alt="Plateado"></div>
+      <div class="meta"><div class="num">01</div><div class="name">Plateado</div><div class="desc">Gradient chrome vertical estático.</div></div>
+      <a href="01-plateado.png" download>Descargar PNG</a>
+    </article>
+    <article class="card">
+      <div class="img-wrap"><img src="02-cobre.png" alt="Cobre"></div>
+      <div class="meta"><div class="num">02</div><div class="name">Cobre</div><div class="desc">Metal cálido naranja-rojizo.</div></div>
+      <a href="02-cobre.png" download>Descargar PNG</a>
+    </article>
+    <article class="card">
+      <div class="img-wrap"><img src="03-bronce.png" alt="Bronce"></div>
+      <div class="meta"><div class="num">03</div><div class="name">Bronce</div><div class="desc">Bronce antiguo dorado apagado.</div></div>
+      <a href="03-bronce.png" download>Descargar PNG</a>
+    </article>
+    <article class="card">
+      <div class="img-wrap"><img src="04-obsidiana.png" alt="Obsidiana"></div>
+      <div class="meta"><div class="num">04</div><div class="name">Obsidiana</div><div class="desc">Negro gloss con halo cyan.</div></div>
+      <a href="04-obsidiana.png" download>Descargar PNG</a>
+    </article>
+    <article class="card">
+      <div class="img-wrap"><img src="05-brasa.png" alt="Brasa"></div>
+      <div class="meta"><div class="num">05</div><div class="name">Brasa</div><div class="desc">Naranja sólido con halo glow.</div></div>
+      <a href="05-brasa.png" download>Descargar PNG</a>
+    </article>
+    <article class="card">
+      <div class="img-wrap"><img src="06-hielo.png" alt="Hielo"></div>
+      <div class="meta"><div class="num">06</div><div class="name">Hielo</div><div class="desc">Pale azul-blanco frosted.</div></div>
+      <a href="06-hielo.png" download>Descargar PNG</a>
+    </article>
+    <article class="card">
+      <div class="img-wrap"><img src="07-pulse.png" alt="Pulse"></div>
+      <div class="meta"><div class="num">07</div><div class="name">Pulse</div><div class="desc">Rojo señal con halo cálido.</div></div>
+      <a href="07-pulse.png" download>Descargar PNG</a>
+    </article>
+    <article class="card">
+      <div class="img-wrap"><img src="08-bone.png" alt="Bone"></div>
+      <div class="meta"><div class="num">08</div><div class="name">Bone</div><div class="desc">Crema cálido sólido sobre Ink.</div></div>
+      <a href="08-bone.png" download>Descargar PNG</a>
+    </article>
+  </div>
 </section>
 
 <footer>
-  Mismo logo · 8 SVG renders · 2048×2048 PNG · /public/logo-alternatives/
+  6 capturas 3D reales + 8 renders SVG · /public/logo-alternatives/
 </footer>
 
 </body>
