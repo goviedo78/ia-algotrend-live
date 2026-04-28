@@ -21,6 +21,7 @@
 
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { Environment } from '@react-three/drei'
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import * as THREE from 'three'
 import { SVGLoader, type SVGResult } from 'three/examples/jsm/loaders/SVGLoader.js'
@@ -57,11 +58,48 @@ export interface MateriaLogoProps {
   idleDelay?: number
   /** Permitir tilt por giroscopio del dispositivo (mobile). Default true */
   gyroscope?: boolean
+  /** PBR del material. Override individual sobre el preset. */
+  material?: Partial<MaterialConfig>
+  /** Color del tint en peaks (RGB 0-1). Default brasa apagada. */
+  heatColor?: [number, number, number]
+  /** Color del emissive boost en peaks (RGB 0-1). */
+  heatEmissive?: [number, number, number]
+  /** Multiplicador del emissive en peaks. Default 1.6. */
+  heatEmissiveStrength?: number
+  /** Configuración de luces. Si se pasa, reemplaza el setup default. */
+  lights?: LightConfig[]
+  /** Exposición del tone mapping. Default 1.55. */
+  toneMappingExposure?: number
+  /** Intensidad del environment map para reflejos PBR. Default 1.0. */
+  environmentIntensity?: number
+  /** Aplica un preset completo. Las props individuales lo sobrescriben. */
+  preset?: PresetName
+  /** Habilitar bloom postprocessing (halo difuso alrededor del glow). Default true. */
+  bloom?: boolean
+  /** Intensidad del bloom. Default 0.7. */
+  bloomIntensity?: number
   /** Class CSS opcional para el wrapper */
   className?: string
   /** Estilo CSS opcional para el wrapper */
   style?: CSSProperties
 }
+
+export interface MaterialConfig {
+  roughness: number
+  metalness: number
+  clearcoat: number
+  clearcoatRoughness: number
+  reflectivity: number
+}
+
+export interface LightConfig {
+  type: 'ambient' | 'directional'
+  color: number
+  intensity: number
+  position?: [number, number, number]
+}
+
+export type PresetName = 'brasa' | 'plata' | 'cobre' | 'obsidiana' | 'magma' | 'hielo'
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Constantes y utilidades
@@ -77,6 +115,132 @@ const ZOOM_LERP    = 0.12
 // hacia atrás, para que la luz del key catch el bevel superior y produzca el
 // look plateado. Equivalente a tener el cursor al 60% hacia abajo siempre.
 const TILT_REST_BIAS_Y = -0.6
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Presets — bundles de material + luces + heat para distintas atmósferas
+// ──────────────────────────────────────────────────────────────────────────────
+interface PresetConfig {
+  baseColor: number
+  background: number
+  material: MaterialConfig
+  lights: LightConfig[]
+  heatColor: [number, number, number]
+  heatEmissive: [number, number, number]
+  heatEmissiveStrength: number
+  toneMappingExposure: number
+  environmentIntensity: number
+}
+
+export const PRESETS: Record<PresetName, PresetConfig> = {
+  // Brasa — naranja quemado glowing (el actual default)
+  brasa: {
+    baseColor: 0x1A1814,
+    background: 0x14120E,
+    material: { roughness: 0.18, metalness: 0.0, clearcoat: 1.0, clearcoatRoughness: 0.08, reflectivity: 0.4 },
+    lights: [
+      { type: 'ambient',     color: 0x3a342a, intensity: 0.85 },
+      { type: 'directional', color: 0xfff5e8, intensity: 2.6, position: [-300, 400, 600] },
+      { type: 'directional', color: 0xc8d0e0, intensity: 0.9, position: [500, -100, 200] },
+      { type: 'directional', color: 0xff8a3d, intensity: 1.4, position: [0, 100, -500] },
+      { type: 'directional', color: 0xff8a3d, intensity: 0.5, position: [-400, 200, -200] },
+    ],
+    heatColor: [0.42, 0.12, 0.02], // #6B1F05
+    heatEmissive: [0.95, 0.28, 0.04],
+    heatEmissiveStrength: 1.6,
+    toneMappingExposure: 1.55,
+    environmentIntensity: 1.0,
+  },
+  // Plata — chrome/silver, frío y técnico
+  plata: {
+    baseColor: 0xC8D0DA,
+    background: 0x14161A,
+    material: { roughness: 0.05, metalness: 1.0, clearcoat: 0.5, clearcoatRoughness: 0.10, reflectivity: 1.0 },
+    lights: [
+      { type: 'ambient',     color: 0x202428, intensity: 0.5 },
+      { type: 'directional', color: 0xffffff, intensity: 2.2, position: [-300, 400, 600] },
+      { type: 'directional', color: 0xa0b0c8, intensity: 1.2, position: [500, -100, 200] },
+      { type: 'directional', color: 0xddddff, intensity: 1.2, position: [0, 100, -500] },
+      { type: 'directional', color: 0x88aaff, intensity: 0.5, position: [-400, 200, -200] },
+    ],
+    heatColor: [0.85, 0.95, 1.0],
+    heatEmissive: [1.0, 1.0, 1.0],
+    heatEmissiveStrength: 1.4,
+    toneMappingExposure: 1.4,
+    environmentIntensity: 1.4,
+  },
+  // Cobre — metal cálido clásico
+  cobre: {
+    baseColor: 0xB87333,
+    background: 0x18120A,
+    material: { roughness: 0.25, metalness: 1.0, clearcoat: 0.6, clearcoatRoughness: 0.15, reflectivity: 0.8 },
+    lights: [
+      { type: 'ambient',     color: 0x281e10, intensity: 0.7 },
+      { type: 'directional', color: 0xfff0d8, intensity: 2.4, position: [-300, 400, 600] },
+      { type: 'directional', color: 0xffd0a0, intensity: 1.0, position: [500, -100, 200] },
+      { type: 'directional', color: 0xffaa55, intensity: 1.2, position: [0, 100, -500] },
+      { type: 'directional', color: 0xffc878, intensity: 0.5, position: [-400, 200, -200] },
+    ],
+    heatColor: [0.95, 0.55, 0.10],
+    heatEmissive: [1.0, 0.6, 0.15],
+    heatEmissiveStrength: 1.5,
+    toneMappingExposure: 1.5,
+    environmentIntensity: 1.0,
+  },
+  // Obsidiana — negro profundo con rim azul eléctrico
+  obsidiana: {
+    baseColor: 0x080810,
+    background: 0x06060C,
+    material: { roughness: 0.10, metalness: 0.0, clearcoat: 1.0, clearcoatRoughness: 0.03, reflectivity: 0.5 },
+    lights: [
+      { type: 'ambient',     color: 0x101820, intensity: 0.4 },
+      { type: 'directional', color: 0xeef0ff, intensity: 2.0, position: [-300, 400, 600] },
+      { type: 'directional', color: 0x8090a8, intensity: 0.7, position: [500, -100, 200] },
+      { type: 'directional', color: 0x4080ff, intensity: 1.8, position: [0, 100, -500] },
+      { type: 'directional', color: 0x60a0ff, intensity: 0.6, position: [-400, 200, -200] },
+    ],
+    heatColor: [0.30, 0.50, 0.90],
+    heatEmissive: [0.40, 0.70, 1.0],
+    heatEmissiveStrength: 2.0,
+    toneMappingExposure: 1.5,
+    environmentIntensity: 0.7,
+  },
+  // Magma — lava agresiva, casi negro con núcleo rojo intenso
+  magma: {
+    baseColor: 0x100808,
+    background: 0x0A0606,
+    material: { roughness: 0.30, metalness: 0.0, clearcoat: 0.7, clearcoatRoughness: 0.20, reflectivity: 0.3 },
+    lights: [
+      { type: 'ambient',     color: 0x180806, intensity: 0.3 },
+      { type: 'directional', color: 0xffd0b0, intensity: 1.6, position: [-300, 400, 600] },
+      { type: 'directional', color: 0xff8050, intensity: 1.2, position: [500, -100, 200] },
+      { type: 'directional', color: 0xff4020, intensity: 2.4, position: [0, 100, -500] },
+      { type: 'directional', color: 0xff6030, intensity: 1.0, position: [-400, 200, -200] },
+    ],
+    heatColor: [0.85, 0.20, 0.00],
+    heatEmissive: [1.0, 0.50, 0.0],
+    heatEmissiveStrength: 3.0,
+    toneMappingExposure: 1.6,
+    environmentIntensity: 0.8,
+  },
+  // Hielo — frosted azul-blanco
+  hielo: {
+    baseColor: 0xC8E0E8,
+    background: 0x101820,
+    material: { roughness: 0.40, metalness: 0.0, clearcoat: 1.0, clearcoatRoughness: 0.5, reflectivity: 0.8 },
+    lights: [
+      { type: 'ambient',     color: 0x182838, intensity: 0.7 },
+      { type: 'directional', color: 0xffffff, intensity: 2.4, position: [-300, 400, 600] },
+      { type: 'directional', color: 0xb0c8e0, intensity: 1.4, position: [500, -100, 200] },
+      { type: 'directional', color: 0xddeeff, intensity: 1.0, position: [0, 100, -500] },
+      { type: 'directional', color: 0xa0c0e0, intensity: 0.5, position: [-400, 200, -200] },
+    ],
+    heatColor: [1.0, 1.0, 1.0],
+    heatEmissive: [0.7, 0.85, 1.0],
+    heatEmissiveStrength: 1.8,
+    toneMappingExposure: 1.4,
+    environmentIntensity: 1.2,
+  },
+}
 // Auto-idle: después de N segundos sin input, blendea hacia rotación automática
 // suave (necesario en mobile donde no existe hover y la página queda "muerta").
 const IDLE_RAMP_DUR = 2.0     // segundos para entrar full en auto-rotation
@@ -160,6 +324,10 @@ interface MateriaMeshProps {
   autoRotateIdle: boolean
   idleDelay: number
   gyroscope: boolean
+  material: MaterialConfig
+  heatColor: [number, number, number]
+  heatEmissive: [number, number, number]
+  heatEmissiveStrength: number
   entryDoneRef: React.MutableRefObject<boolean>
 }
 
@@ -171,6 +339,10 @@ function MateriaMesh({
   autoRotateIdle,
   idleDelay,
   gyroscope,
+  material: matCfg,
+  heatColor,
+  heatEmissive,
+  heatEmissiveStrength,
   entryDoneRef,
 }: MateriaMeshProps) {
   const tiltGroupRef  = useRef<THREE.Group>(null)
@@ -181,11 +353,14 @@ function MateriaMesh({
 
   // Uniforms compartidos entre material y useFrame
   const uniformsRef = useRef({
-    uTime:          { value: 0 },
-    uMouse:         { value: new THREE.Vector2(0.5, 0.5) },
-    uMouseStrength: { value: 0 },
-    uCalm:          { value: 0 },
-    uAmp:           { value: amplitude },
+    uTime:                 { value: 0 },
+    uMouse:                { value: new THREE.Vector2(0.5, 0.5) },
+    uMouseStrength:        { value: 0 },
+    uCalm:                 { value: 0 },
+    uAmp:                  { value: amplitude },
+    uHeatColor:            { value: new THREE.Color(...heatColor) },
+    uHeatEmissive:         { value: new THREE.Color(...heatEmissive) },
+    uHeatEmissiveStrength: { value: heatEmissiveStrength },
   })
 
   // Estado del puntero
@@ -219,24 +394,27 @@ function MateriaMesh({
     return geoms
   }, [svgData])
 
-  // Material: PBR Ink viscoso con clearcoat + noise injection
+  // Material: PBR config-driven con noise injection + heat tint via uniforms
   const material = useMemo(() => {
     const mat = new THREE.MeshPhysicalMaterial({
       color: baseColor,
-      roughness: 0.18,
-      metalness: 0.0,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.08,
-      reflectivity: 0.4,
+      roughness:           matCfg.roughness,
+      metalness:           matCfg.metalness,
+      clearcoat:           matCfg.clearcoat,
+      clearcoatRoughness:  matCfg.clearcoatRoughness,
+      reflectivity:        matCfg.reflectivity,
     })
 
     mat.onBeforeCompile = (shader) => {
       const u = uniformsRef.current
-      shader.uniforms.uTime          = u.uTime
-      shader.uniforms.uMouse         = u.uMouse
-      shader.uniforms.uMouseStrength = u.uMouseStrength
-      shader.uniforms.uCalm          = u.uCalm
-      shader.uniforms.uAmp           = u.uAmp
+      shader.uniforms.uTime                 = u.uTime
+      shader.uniforms.uMouse                = u.uMouse
+      shader.uniforms.uMouseStrength        = u.uMouseStrength
+      shader.uniforms.uCalm                 = u.uCalm
+      shader.uniforms.uAmp                  = u.uAmp
+      shader.uniforms.uHeatColor            = u.uHeatColor
+      shader.uniforms.uHeatEmissive         = u.uHeatEmissive
+      shader.uniforms.uHeatEmissiveStrength = u.uHeatEmissiveStrength
 
       shader.vertexShader = shader.vertexShader
         .replace(
@@ -276,16 +454,17 @@ function MateriaMesh({
           `
         )
 
-      // Fragment shader: cursor-shadow + copper tint en peaks.
-      // - Shadow sutil bajo el cursor (no anula el peak)
-      // - Tint copper-orange en zonas displaceadas: las walls de los picos
-      //   adquieren el color del rim light "desde dentro" del material.
+      // Fragment shader: cursor-shadow + heat tint + emissive glow en peaks.
+      // Colores del heat vienen via uniforms → swappable por preset sin recompilar.
       shader.fragmentShader = shader.fragmentShader
         .replace(
           '#include <common>',
           `#include <common>
            uniform vec2  uMouse;
            uniform float uMouseStrength;
+           uniform vec3  uHeatColor;
+           uniform vec3  uHeatEmissive;
+           uniform float uHeatEmissiveStrength;
            varying vec2  vGonUV;
            varying float vGonHeat;`
         )
@@ -297,14 +476,20 @@ function MateriaMesh({
            float gonShadow = smoothstep(0.0, 0.40, gonCursorDist);
            gonShadow = mix(1.0, gonShadow, uMouseStrength * 0.45);
            diffuseColor.rgb *= gonShadow;
-           // 2) Tint copper-orange profundo en peaks (las walls "brillan" desde dentro)
-           vec3 gonHeatColor = vec3(0.88, 0.30, 0.05); // ~ #E04D0D — burnt orange saturado
-           diffuseColor.rgb = mix(diffuseColor.rgb, gonHeatColor, vGonHeat * 0.95);`
+           // 2) Tint del heat color en peaks
+           diffuseColor.rgb = mix(diffuseColor.rgb, uHeatColor, vGonHeat);`
+        )
+        .replace(
+          '#include <emissivemap_fragment>',
+          `#include <emissivemap_fragment>
+           // 3) Emissive glow en peaks: el área desplazada EMITE luz propia
+           totalEmissiveRadiance += uHeatEmissive * vGonHeat * uHeatEmissiveStrength;`
         )
     }
 
     return mat
-  }, [baseColor])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseColor, matCfg.roughness, matCfg.metalness, matCfg.clearcoat, matCfg.clearcoatRoughness, matCfg.reflectivity])
 
   // Centrar el grupo después de cargar
   useEffect(() => {
@@ -314,10 +499,19 @@ function MateriaMesh({
     groupRef.current.position.sub(center)
   }, [geometries])
 
-  // Mantener uAmp sincronizado si cambia la prop
+  // Mantener uniforms sincronizados si cambian las props (sin recompilar shader)
   useEffect(() => {
     uniformsRef.current.uAmp.value = amplitude
   }, [amplitude])
+  useEffect(() => {
+    uniformsRef.current.uHeatColor.value.setRGB(...heatColor)
+  }, [heatColor])
+  useEffect(() => {
+    uniformsRef.current.uHeatEmissive.value.setRGB(...heatEmissive)
+  }, [heatEmissive])
+  useEffect(() => {
+    uniformsRef.current.uHeatEmissiveStrength.value = heatEmissiveStrength
+  }, [heatEmissiveStrength])
 
   // Inicializar el "último input" al mount para que el auto-rotate arranque
   // tras idleDelay segundos desde la carga (no inmediatamente).
@@ -491,10 +685,34 @@ interface CameraEntryProps {
 }
 
 function CameraEntry({ enabled, restDistance, doneRef }: CameraEntryProps) {
-  const { camera } = useThree()
+  const { camera, size } = useThree()
   const startRef = useRef<number | null>(null)
 
-  const restPos  = useMemo(() => new THREE.Vector3(0, 0, restDistance), [restDistance])
+  // Distancia responsive: en mobile (aspect < 1) calculamos la distancia mínima
+  // para que el logo entero entre en el viewport. El prop restDistance actúa
+  // como mínimo (no nos acercamos más que eso aunque haya espacio).
+  const restPos = useMemo(() => {
+    const aspect = size.width / size.height
+    const persp = camera as THREE.PerspectiveCamera
+    const fovRad = ((persp.fov ?? 35) * Math.PI) / 180
+    const targetExtent = 1200 // bbox del logo (~1000) + padding 20%
+    // En portrait el ancho es lo que limita: vertExtent = aspect-fov-extent,
+    // horExtent = aspect * vertExtent. Para que horExtent >= targetExtent:
+    const minDist = aspect >= 1
+      ? restDistance
+      : targetExtent / (aspect * 2 * Math.tan(fovRad / 2))
+    return new THREE.Vector3(0, 0, Math.max(restDistance, minDist))
+  }, [restDistance, size.width, size.height, camera])
+
+  // Si el viewport cambia después del entry (rotación de pantalla en mobile),
+  // recolocamos la cámara suavemente (snap, en este caso).
+  useEffect(() => {
+    if (doneRef.current) {
+      camera.position.copy(restPos)
+      camera.lookAt(0, 0, 0)
+    }
+  }, [restPos, camera, doneRef])
+
   const entryPos = useMemo(
     () => new THREE.Vector3().copy(restPos).add(ENTRY_OFFSET),
     [restPos]
@@ -658,8 +876,6 @@ function StaticFallback({
 export function MateriaLogo({
   height         = '100vh',
   svgUrl         = '/logo-gon-mark.svg',
-  baseColor      = 0x1A1814,
-  background     = 0x14120E,
   amplitude      = 8,
   entryAnimation = true,
   cameraDistance = 1500,
@@ -670,9 +886,34 @@ export function MateriaLogo({
   autoRotateIdle = true,
   idleDelay      = 3,
   gyroscope      = true,
+  preset         = 'brasa',
+  bloom          = true,
+  bloomIntensity = 0.7,
+  // Las siguientes props sobrescriben el preset cuando se proveen
+  baseColor:           baseColorProp,
+  background:          backgroundProp,
+  material:            materialProp,
+  heatColor:           heatColorProp,
+  heatEmissive:        heatEmissiveProp,
+  heatEmissiveStrength: heatEmissiveStrengthProp,
+  lights:              lightsProp,
+  toneMappingExposure: toneMappingExposureProp,
+  environmentIntensity: environmentIntensityProp,
   className,
   style,
 }: MateriaLogoProps) {
+  // Resolver config: preset como base, props individuales como override
+  const cfg = PRESETS[preset]
+  const baseColor            = baseColorProp            ?? cfg.baseColor
+  const background           = backgroundProp           ?? cfg.background
+  const material             = { ...cfg.material, ...(materialProp ?? {}) }
+  const heatColor            = heatColorProp            ?? cfg.heatColor
+  const heatEmissive         = heatEmissiveProp         ?? cfg.heatEmissive
+  const heatEmissiveStrength = heatEmissiveStrengthProp ?? cfg.heatEmissiveStrength
+  const lights               = lightsProp               ?? cfg.lights
+  const toneMappingExposure  = toneMappingExposureProp  ?? cfg.toneMappingExposure
+  const environmentIntensity = environmentIntensityProp ?? cfg.environmentIntensity
+
   const [supported, setSupported] = useState<boolean | null>(null)
   // Compartido entre CameraEntry, WheelZoom y MateriaMesh (para gating del tilt)
   const entryDoneRef = useRef(false)
@@ -717,27 +958,28 @@ export function MateriaLogo({
           antialias: true,
           powerPreference: 'high-performance',
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.55,
+          toneMappingExposure,
           outputColorSpace: THREE.SRGBColorSpace,
         }}
         camera={{ position: [0, 0, 1100], fov: 35, near: 0.1, far: 5000 }}
       >
         <color attach="background" args={[background]} />
 
-        {/* Iluminación: brillante por defecto, top-lighting natural.
-            El "shadow" lo aporta el cursor (modulación en fragment shader).
-            - Ambient alto: ningún punto queda apagado en reposo
-            - Key (cálida fuerte) desde arriba-izq
-            - Fill (fría) desde la derecha
-            - Rim naranja sutil detrás (acento cálido en los bordes, no protagonista) */}
-        <ambientLight intensity={0.85} color={0x3a342a} />
-        <directionalLight position={[-300, 400, 600]} intensity={2.6} color={0xfff5e8} />
-        <directionalLight position={[500, -100, 200]} intensity={0.9} color={0xc8d0e0} />
-        <directionalLight position={[0, 100, -500]}   intensity={1.4} color={0xff8a3d} />
-        <directionalLight position={[-400, 200, -200]} intensity={0.5} color={0xff8a3d} />
+        {/* Iluminación dinámica desde el preset / prop lights */}
+        {lights.map((l, i) =>
+          l.type === 'ambient' ? (
+            <ambientLight key={i} color={l.color} intensity={l.intensity} />
+          ) : (
+            <directionalLight
+              key={i}
+              color={l.color}
+              intensity={l.intensity}
+              position={l.position ?? [0, 0, 0]}
+            />
+          )
+        )}
 
-        {/* Environment para reflejos PBR — full intensity */}
-        <Environment preset="studio" environmentIntensity={1.0} />
+        <Environment preset="studio" environmentIntensity={environmentIntensity} />
 
         <CameraEntry
           enabled={entryAnimation}
@@ -760,9 +1002,27 @@ export function MateriaLogo({
             autoRotateIdle={autoRotateIdle}
             idleDelay={idleDelay}
             gyroscope={gyroscope}
+            material={material}
+            heatColor={heatColor}
+            heatEmissive={heatEmissive}
+            heatEmissiveStrength={heatEmissiveStrength}
             entryDoneRef={entryDoneRef}
           />
         </Suspense>
+
+        {/* Bloom: halo difuso alrededor de las zonas con emissive alto.
+            luminanceThreshold alto → solo los peaks brillantes (ya emisivos)
+            generan halo. El resto del logo (base PBR) no se ve afectado. */}
+        {bloom && (
+          <EffectComposer>
+            <Bloom
+              intensity={bloomIntensity}
+              luminanceThreshold={0.55}
+              luminanceSmoothing={0.25}
+              mipmapBlur
+            />
+          </EffectComposer>
+        )}
       </Canvas>
     </div>
   )

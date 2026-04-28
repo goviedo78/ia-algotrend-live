@@ -375,7 +375,7 @@ material.onBeforeCompile = (shader) => {
       `
     );
 
-  // Fragment shader: cursor-shadow + copper tint en peaks.
+  // Fragment shader: cursor-shadow + heat tint + emissive glow en peaks.
   shader.fragmentShader = shader.fragmentShader
     .replace(
       '#include <common>',
@@ -393,9 +393,16 @@ material.onBeforeCompile = (shader) => {
        float gonShadow = smoothstep(0.0, 0.40, gonCursorDist);
        gonShadow = mix(1.0, gonShadow, uMouseStrength * 0.45);
        diffuseColor.rgb *= gonShadow;
-       // 2) Tint copper-orange profundo en peaks (las walls "brillan" desde dentro)
-       vec3 gonHeatColor = vec3(0.88, 0.30, 0.05); // ~ #E04D0D — burnt orange saturado
-       diffuseColor.rgb = mix(diffuseColor.rgb, gonHeatColor, vGonHeat * 0.95);`
+       // 2) Tint naranja quemado profundo en peaks (#6B1F05 — brasa)
+       vec3 gonHeatColor = vec3(0.42, 0.12, 0.02);
+       diffuseColor.rgb = mix(diffuseColor.rgb, gonHeatColor, vGonHeat);`
+    )
+    .replace(
+      '#include <emissivemap_fragment>',
+      `#include <emissivemap_fragment>
+       // 3) Emissive boost en peaks: el área desplazada EMITE luz propia,
+       //    mismo hue pero amplificado, simulando brasa caliente glowing.
+       totalEmissiveRadiance += vec3(0.95, 0.28, 0.04) * vGonHeat * 1.6;`
     );
 };
 
