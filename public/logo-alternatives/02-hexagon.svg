@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <rect width="1000" height="1000" fill="#1A1814"/>
+  <g fill="#6B1F05" stroke="#6B1F05">
+    <!-- Hexagon outline (6 sides, pointy top) — annulus via even-odd -->
+    <path fill-rule="evenodd" stroke="none"
+          d="M 500 80 L 870 290 L 870 710 L 500 920 L 130 710 L 130 290 Z
+             M 500 200 L 770 350 L 770 650 L 500 800 L 230 650 L 230 350 Z"/>
+    <!-- Internal Y-divider from center to 3 vertices (top, bottom-left, bottom-right) -->
+    <rect x="465" y="200" width="70" height="300"/>
+    <rect x="465" y="500" width="70" height="300" transform="rotate(-60 500 500)"/>
+    <rect x="465" y="500" width="70" height="300" transform="rotate(60 500 500)"/>
+    <!-- Letters as bold geometric primitives in each section -->
+    <!-- G in top wedge: short horizontal bar -->
+    <rect x="320" y="320" width="120" height="48"/>
+    <rect x="392" y="320" width="48" height="80"/>
+    <!-- O in upper-right wedge -->
+    <circle cx="640" cy="380" r="48" fill="none" stroke-width="36"/>
+    <!-- N in lower wedge -->
+    <polygon points="380,640 432,640 620,820 568,820"/>
+  </g>
+</svg>

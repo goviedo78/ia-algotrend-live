@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GON · Alternativas de logo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:   oklch(15% 0.012 60);
+    --bone:  oklch(96% 0.008 80);
+    --pulse: oklch(62% 0.18 28);
+    --orange: #6B1F05;
+    --display: 'Space Grotesk', system-ui, sans-serif;
+    --mono:    'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--ink);
+    color: var(--bone);
+    font-family: var(--display);
+    min-height: 100vh;
+    padding: 40px 24px 80px;
+  }
+  ::selection { background: var(--pulse); color: var(--bone); }
+
+  header {
+    max-width: 1200px;
+    margin: 0 auto 48px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--bone);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(32px, 5vw, 56px);
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin-bottom: 12px;
+  }
+  .lede {
+    color: oklch(78% 0.008 60);
+    font-size: 16px;
+    max-width: 60ch;
+  }
+
+  .grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+  }
+  .card {
+    background: oklch(20% 0.012 60);
+    border: 1px solid oklch(35% 0.011 60);
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .card .img-wrap {
+    aspect-ratio: 1;
+    background: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .card.wide .img-wrap { aspect-ratio: 2 / 0.6; }
+  .card.tall .img-wrap { aspect-ratio: 1 / 1.5; }
+  .card img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  .card .meta {
+    padding: 16px 20px;
+    border-top: 1px solid oklch(35% 0.011 60);
+  }
+  .card .num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: oklch(55% 0.010 60);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .card .name {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    margin: 4px 0;
+  }
+  .card .desc {
+    font-size: 13px;
+    color: oklch(78% 0.008 60);
+    line-height: 1.5;
+  }
+  .card .tag {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 2px 8px;
+    background: var(--orange);
+    color: var(--bone);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  footer {
+    max-width: 1200px;
+    margin: 64px auto 0;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: oklch(55% 0.010 60);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="badge">GON · Logo alternatives</span>
+  <h1>5 conceptos<br/>de logo</h1>
+  <p class="lede">
+    Mismo ADN brand (geometría rotunda, paleta Ink + burnt orange) en
+    aproximaciones distintas. Cada uno es un logo SEPARADO, no una variante.
+  </p>
+</header>
+
+<section class="grid">
+
+  <article class="card">
+    <div class="img-wrap"><img src="01-circular-refined.png" alt="Circular refined"></div>
+    <div class="meta">
+      <div class="num">01</div>
+      <div class="name">Circular refined</div>
+      <div class="desc">El emblema actual reconstruido con geometría matemática perfecta. Sin las imperfecciones del trazado original.</div>
+      <span class="tag">Más cercano al actual</span>
+    </div>
+  </article>
+
+  <article class="card">
+    <div class="img-wrap"><img src="02-hexagon.png" alt="Hexagon"></div>
+    <div class="meta">
+      <div class="num">02</div>
+      <div class="name">Hexágono</div>
+      <div class="desc">Misma división tripartita pero en frame hexagonal. Lectura más técnica, industrial.</div>
+      <span class="tag">Geométrico técnico</span>
+    </div>
+  </article>
+
+  <article class="card tall">
+    <div class="img-wrap"><img src="03-stacked.png" alt="Stacked monogram"></div>
+    <div class="meta">
+      <div class="num">03</div>
+      <div class="name">Stacked monogram</div>
+      <div class="desc">G/O/N apilados verticalmente como bloques pesados, sin frame. Display Extended Black puro.</div>
+      <span class="tag">Tipográfico vertical</span>
+    </div>
+  </article>
+
+  <article class="card wide">
+    <div class="img-wrap"><img src="04-wordmark.png" alt="Wordmark horizontal"></div>
+    <div class="meta">
+      <div class="num">04</div>
+      <div class="name">Wordmark</div>
+      <div class="desc">"GON" horizontal con cortes geométricos. Ideal para header, papelería, firma email. Sin emblema.</div>
+      <span class="tag">Para texto + composición</span>
+    </div>
+  </article>
+
+  <article class="card">
+    <div class="img-wrap"><img src="05-monolith.png" alt="Monolito troquelado"></div>
+    <div class="meta">
+      <div class="num">05</div>
+      <div class="name">Monolito</div>
+      <div class="desc">Bloque sólido con G/O/N troqueladas como vacíos. Brutal, arquitectónico. Las letras se LEEN como ausencia.</div>
+      <span class="tag">Negativo / brutalista</span>
+    </div>
+  </article>
+
+</section>
+
+<footer>
+  /public/logo-alternatives/ · 5 PNG @ 1024px · paleta Ink + burnt orange #6B1F05
+</footer>
+
+</body>
+</html>
