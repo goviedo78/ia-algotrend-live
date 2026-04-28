@@ -12,6 +12,7 @@ export type CloseReason    = 'SL' | 'TP' | 'SIGNAL'
 export interface Trade {
   id: number
   direction: TradeDirection
+  signal_time: number
   open_time: number
   open_price: number
   stop_loss: number
@@ -26,24 +27,47 @@ export interface Trade {
 
 const TABLE = 'algotrend_trades'
 
+// Returns the inserted trade, or null if a trade for this signal_time already exists.
+// Idempotency is enforced by a UNIQUE index on signal_time.
 export async function openTrade(
   direction: TradeDirection,
+  signalTime: number,
   openTime: number,
   openPrice: number,
   stopLoss: number,
   takeProfit: number | null
-): Promise<Trade> {
-  // Close any open trade first
-  const open = await getOpenTrade()
-  if (open) await closeTrade(open.id, openTime, openPrice, 'SIGNAL')
-
+): Promise<Trade | null> {
   const { data, error } = await supabase
     .from(TABLE)
-    .insert({ direction, open_time: openTime, open_price: openPrice, stop_loss: stopLoss, take_profit: takeProfit, status: 'OPEN' })
+    .insert({
+      direction,
+      signal_time: signalTime,
+      open_time: openTime,
+      open_price: openPrice,
+      stop_loss: stopLoss,
+      take_profit: takeProfit,
+      status: 'OPEN',
+    })
     .select()
     .single()
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    // 23505 = unique_violation — another request already processed this signal
+    if ((error as { code?: string }).code === '23505') return null
+    throw new Error(error.message)
+  }
+
+  // Insert succeeded — close any other OPEN trade (legacy or different signal_time)
+  const { data: others } = await supabase
+    .from(TABLE)
+    .select()
+    .eq('status', 'OPEN')
+    .neq('id', data.id)
+
+  for (const other of (others ?? []) as Trade[]) {
+    await closeTrade(other.id, openTime, openPrice, 'SIGNAL')
+  }
+
   return data as Trade
 }
 

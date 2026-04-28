@@ -104,22 +104,23 @@ export async function POST(req: NextRequest) {
     }
 
     if (signal === 'LONG' || signal === 'SHORT') {
-      const trade = await openTrade(signal, time, price, stop, tp)
-      
-      // Update telegram notification with probability if available
-      const prob = signal === 'LONG' ? (probUp ?? 0) : (probDown ?? 0)
-      const probText = (prob * 100).toFixed(1) + '%'
-      
-      await notifyOpen(trade)
+      const trade = await openTrade(signal, time, time, price, stop, tp)
 
-      const emoji = signal === 'LONG' ? '🟢' : '🔴'
-      const dir = signal === 'LONG' ? 'LARGO' : 'CORTO'
-      
-      await sendPush(req, {
-        title: `${emoji} AlgoTrend — ${dir} (${probText})`,
-        body: `Entrada: $${price.toLocaleString('en-US')} | SL: $${stop.toLocaleString('en-US')} | TP: ${tp ? '$' + tp.toLocaleString('en-US') : 'Trailing'}`,
-        tag: `signal-${time}`,
-      })
+      if (trade) {
+        const prob = signal === 'LONG' ? (probUp ?? 0) : (probDown ?? 0)
+        const probText = (prob * 100).toFixed(1) + '%'
+
+        await notifyOpen(trade)
+
+        const emoji = signal === 'LONG' ? '🟢' : '🔴'
+        const dir = signal === 'LONG' ? 'LARGO' : 'CORTO'
+
+        await sendPush(req, {
+          title: `${emoji} AlgoTrend — ${dir} (${probText})`,
+          body: `Entrada: $${price.toLocaleString('en-US')} | SL: $${stop.toLocaleString('en-US')} | TP: ${tp ? '$' + tp.toLocaleString('en-US') : 'Trailing'}`,
+          tag: `signal-${time}`,
+        })
+      }
     }
 
     return NextResponse.json({ ok: true })

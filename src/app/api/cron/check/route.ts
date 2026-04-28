@@ -196,25 +196,29 @@ export async function GET(req: NextRequest) {
     if (signal === 'LONG' || signal === 'SHORT') {
       const stop = signal === 'LONG' ? last.longStop : last.shortStop
       const tp = signal === 'LONG' ? last.longTp : last.shortTp
-      const trade = await openTrade(signal, last.time, last.close, stop, tp)
+      const trade = await openTrade(signal, last.time, last.time, last.close, stop, tp)
 
-      const prob = signal === 'LONG' ? last.probUp : last.probDown
-      const probText = (prob * 100).toFixed(1) + '%'
+      if (trade) {
+        const prob = signal === 'LONG' ? last.probUp : last.probDown
+        const probText = (prob * 100).toFixed(1) + '%'
 
-      await notifyOpen(trade)
+        await notifyOpen(trade)
 
-      const emoji = signal === 'LONG' ? '🟢' : '🔴'
-      const dir = signal === 'LONG' ? 'LARGO' : 'CORTO'
+        const emoji = signal === 'LONG' ? '🟢' : '🔴'
+        const dir = signal === 'LONG' ? 'LARGO' : 'CORTO'
 
-      await sendPushDirect({
-        title: `${emoji} AlgoTrend — ${dir} (${probText})`,
-        body: `Entrada: $${last.close.toLocaleString('en-US')} | SL: $${stop.toLocaleString('en-US')} | TP: ${tp ? '$' + tp.toLocaleString('en-US') : 'Trailing'}`,
-        tag: `signal-${last.time}`,
-      })
+        await sendPushDirect({
+          title: `${emoji} AlgoTrend — ${dir} (${probText})`,
+          body: `Entrada: $${last.close.toLocaleString('en-US')} | SL: $${stop.toLocaleString('en-US')} | TP: ${tp ? '$' + tp.toLocaleString('en-US') : 'Trailing'}`,
+          tag: `signal-${last.time}`,
+        })
 
-      await emailOpen(signal, last.close, stop, tp, prob)
+        await emailOpen(signal, last.close, stop, tp, prob)
 
-      actions.push(`opened_${signal}`)
+        actions.push(`opened_${signal}`)
+      } else {
+        actions.push('signal_already_processed')
+      }
     }
 
     return NextResponse.json({
