@@ -1,26 +1,60 @@
 'use client'
 
-import { MateriaLogo } from '@/components/brand/MateriaLogo'
+import { useEffect, useState } from 'react'
+import { MateriaLogo, type PresetName } from '@/components/brand/MateriaLogo'
+
+const VALID_PRESETS: PresetName[] = ['brasa', 'plata', 'cobre', 'obsidiana', 'magma', 'hielo']
 
 export default function MateriaPage() {
+  const [preset, setPreset]         = useState<PresetName>('brasa')
+  const [renderMode, setRenderMode] = useState(false)
+  const [ready, setReady]           = useState(false)
+
+  // URL params: ?preset=plata para elegir preset, ?render=1 para modo captura
+  // (oculta HUD y desactiva interacciones, ideal para screenshot via puppeteer).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const p = params.get('preset')
+    if (p && (VALID_PRESETS as string[]).includes(p)) {
+      setPreset(p as PresetName)
+    }
+    setRenderMode(params.get('render') === '1')
+    setReady(true)
+  }, [])
+
+  if (!ready) return <main style={styles.main} />
+
   return (
     <main style={styles.main}>
-      <MateriaLogo height="100vh" />
+      <MateriaLogo
+        key={preset}
+        height="100vh"
+        preset={preset}
+        // En modo render: cero interacciones para que la pose sea estable
+        cursorTilt={!renderMode}
+        autoRotateIdle={!renderMode}
+        gyroscope={!renderMode}
+        enableZoom={!renderMode}
+      />
 
-      <header style={styles.hud}>
-        <span style={styles.badge}>GON · Concepto 3</span>
-        <div style={styles.title}>Materia</div>
-        <div style={styles.meta}>R3F · MeshPhysicalMaterial · simplex 3D</div>
-      </header>
+      {!renderMode && (
+        <>
+          <header style={styles.hud}>
+            <span style={styles.badge}>GON · Materia</span>
+            <div style={styles.title}>Preset: {preset}</div>
+            <div style={styles.meta}>R3F · MeshPhysicalMaterial · simplex 3D</div>
+          </header>
 
-      <p style={styles.caption}>
-        Mové el cursor para perturbar la <span style={styles.pulseText}>materia</span>.
-        Click sostenido la calma.
-      </p>
+          <p style={styles.caption}>
+            Mové el cursor para perturbar la <span style={styles.pulseText}>materia</span>.
+            Click sostenido la calma.
+          </p>
 
-      <aside style={styles.footer}>
-        Componente React · src/components/brand/MateriaLogo.tsx
-      </aside>
+          <aside style={styles.footer}>
+            ?preset=brasa|plata|cobre|obsidiana|magma|hielo
+          </aside>
+        </>
+      )}
     </main>
   )
 }
