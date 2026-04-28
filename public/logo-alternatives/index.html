@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>GON · Alternativas de logo</title>
+<title>GON · Renders del logo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
@@ -12,7 +12,6 @@
     --ink:   oklch(15% 0.012 60);
     --bone:  oklch(96% 0.008 80);
     --pulse: oklch(62% 0.18 28);
-    --orange: #6B1F05;
     --display: 'Space Grotesk', system-ui, sans-serif;
     --mono:    'JetBrains Mono', ui-monospace, monospace;
   }
@@ -26,10 +25,7 @@
   }
   ::selection { background: var(--pulse); color: var(--bone); }
 
-  header {
-    max-width: 1200px;
-    margin: 0 auto 48px;
-  }
+  header { max-width: 1280px; margin: 0 auto 48px; }
   .badge {
     display: inline-block;
     padding: 2px 8px;
@@ -56,37 +52,36 @@
   }
 
   .grid {
-    max-width: 1200px;
+    max-width: 1280px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
   }
   .card {
     background: oklch(20% 0.012 60);
     border: 1px solid oklch(35% 0.011 60);
-    border-radius: 4px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    transition: border-color 200ms cubic-bezier(0.16, 1, 0.3, 1);
   }
+  .card:hover { border-color: var(--pulse); }
   .card .img-wrap {
     aspect-ratio: 1;
-    background: var(--ink);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
   }
-  .card.wide .img-wrap { aspect-ratio: 2 / 0.6; }
-  .card.tall .img-wrap { aspect-ratio: 1 / 1.5; }
   .card img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
   .card .meta {
-    padding: 16px 20px;
+    padding: 14px 18px;
     border-top: 1px solid oklch(35% 0.011 60);
   }
   .card .num {
@@ -99,30 +94,34 @@
   .card .name {
     font-family: var(--display);
     font-weight: 700;
-    font-size: 18px;
+    font-size: 17px;
     letter-spacing: -0.01em;
     text-transform: uppercase;
-    margin: 4px 0;
+    margin: 4px 0 6px;
   }
   .card .desc {
-    font-size: 13px;
+    font-size: 12px;
     color: oklch(78% 0.008 60);
     line-height: 1.5;
   }
-  .card .tag {
-    display: inline-block;
-    margin-top: 10px;
-    padding: 2px 8px;
-    background: var(--orange);
-    color: var(--bone);
+  .card a {
+    display: block;
+    padding: 8px 18px;
+    background: oklch(15% 0.012 60);
+    color: oklch(78% 0.008 60);
     font-family: var(--mono);
     font-size: 10px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
+    text-decoration: none;
+    text-align: center;
+    border-top: 1px solid oklch(35% 0.011 60);
+    transition: background 200ms ease, color 200ms ease;
   }
+  .card a:hover { background: var(--pulse); color: var(--bone); }
 
   footer {
-    max-width: 1200px;
+    max-width: 1280px;
     margin: 64px auto 0;
     text-align: center;
     font-family: var(--mono);
@@ -136,70 +135,100 @@
 <body>
 
 <header>
-  <span class="badge">GON · Logo alternatives</span>
-  <h1>5 conceptos<br/>de logo</h1>
+  <span class="badge">GON · Renders</span>
+  <h1>Mismo logo,<br/>8 tratamientos</h1>
   <p class="lede">
-    Mismo ADN brand (geometría rotunda, paleta Ink + burnt orange) en
-    aproximaciones distintas. Cada uno es un logo SEPARADO, no una variante.
+    Misma geometría intacta del emblema GON, presentado con materiales,
+    gradients y filtros distintos. Renders SVG estáticos a 2048px.
   </p>
 </header>
 
 <section class="grid">
 
   <article class="card">
-    <div class="img-wrap"><img src="01-circular-refined.png" alt="Circular refined"></div>
+    <div class="img-wrap"><img src="01-plateado.png" alt="Plateado"></div>
     <div class="meta">
       <div class="num">01</div>
-      <div class="name">Circular refined</div>
-      <div class="desc">El emblema actual reconstruido con geometría matemática perfecta. Sin las imperfecciones del trazado original.</div>
-      <span class="tag">Más cercano al actual</span>
+      <div class="name">Plateado</div>
+      <div class="desc">Chrome metálico con gradient vertical de luz a sombra. Reflejo industrial premium.</div>
     </div>
+    <a href="01-plateado.png" download>Descargar PNG</a>
   </article>
 
   <article class="card">
-    <div class="img-wrap"><img src="02-hexagon.png" alt="Hexagon"></div>
+    <div class="img-wrap"><img src="02-cobre.png" alt="Cobre"></div>
     <div class="meta">
       <div class="num">02</div>
-      <div class="name">Hexágono</div>
-      <div class="desc">Misma división tripartita pero en frame hexagonal. Lectura más técnica, industrial.</div>
-      <span class="tag">Geométrico técnico</span>
+      <div class="name">Cobre</div>
+      <div class="desc">Metal cálido naranja-rojizo. Sensación de joyería contemporánea, presencia material.</div>
     </div>
-  </article>
-
-  <article class="card tall">
-    <div class="img-wrap"><img src="03-stacked.png" alt="Stacked monogram"></div>
-    <div class="meta">
-      <div class="num">03</div>
-      <div class="name">Stacked monogram</div>
-      <div class="desc">G/O/N apilados verticalmente como bloques pesados, sin frame. Display Extended Black puro.</div>
-      <span class="tag">Tipográfico vertical</span>
-    </div>
-  </article>
-
-  <article class="card wide">
-    <div class="img-wrap"><img src="04-wordmark.png" alt="Wordmark horizontal"></div>
-    <div class="meta">
-      <div class="num">04</div>
-      <div class="name">Wordmark</div>
-      <div class="desc">"GON" horizontal con cortes geométricos. Ideal para header, papelería, firma email. Sin emblema.</div>
-      <span class="tag">Para texto + composición</span>
-    </div>
+    <a href="02-cobre.png" download>Descargar PNG</a>
   </article>
 
   <article class="card">
-    <div class="img-wrap"><img src="05-monolith.png" alt="Monolito troquelado"></div>
+    <div class="img-wrap"><img src="03-bronce.png" alt="Bronce"></div>
+    <div class="meta">
+      <div class="num">03</div>
+      <div class="name">Bronce</div>
+      <div class="desc">Bronce antiguo, dorado apagado. Heirloom, archivo, autoridad clásica.</div>
+    </div>
+    <a href="03-bronce.png" download>Descargar PNG</a>
+  </article>
+
+  <article class="card">
+    <div class="img-wrap"><img src="04-obsidiana.png" alt="Obsidiana"></div>
+    <div class="meta">
+      <div class="num">04</div>
+      <div class="name">Obsidiana</div>
+      <div class="desc">Negro profundo gloss con halo cyan-azul eléctrico. Tech, electrónico, misterioso.</div>
+    </div>
+    <a href="04-obsidiana.png" download>Descargar PNG</a>
+  </article>
+
+  <article class="card">
+    <div class="img-wrap"><img src="05-brasa.png" alt="Brasa"></div>
     <div class="meta">
       <div class="num">05</div>
-      <div class="name">Monolito</div>
-      <div class="desc">Bloque sólido con G/O/N troqueladas como vacíos. Brutal, arquitectónico. Las letras se LEEN como ausencia.</div>
-      <span class="tag">Negativo / brutalista</span>
+      <div class="name">Brasa</div>
+      <div class="desc">Naranja quemado sólido (#6B1F05) con halo glow ardiente. El color que elegiste.</div>
     </div>
+    <a href="05-brasa.png" download>Descargar PNG</a>
+  </article>
+
+  <article class="card">
+    <div class="img-wrap"><img src="06-hielo.png" alt="Hielo"></div>
+    <div class="meta">
+      <div class="num">06</div>
+      <div class="name">Hielo</div>
+      <div class="desc">Pale azul-blanco frosted con gradient. Limpio, ethereal, tech premium.</div>
+    </div>
+    <a href="06-hielo.png" download>Descargar PNG</a>
+  </article>
+
+  <article class="card">
+    <div class="img-wrap"><img src="07-pulse.png" alt="Pulse"></div>
+    <div class="meta">
+      <div class="num">07</div>
+      <div class="name">Pulse</div>
+      <div class="desc">Rojo señal sólido con halo cálido. Energía, alerta, presencia.</div>
+    </div>
+    <a href="07-pulse.png" download>Descargar PNG</a>
+  </article>
+
+  <article class="card">
+    <div class="img-wrap"><img src="08-bone.png" alt="Bone"></div>
+    <div class="meta">
+      <div class="num">08</div>
+      <div class="name">Bone</div>
+      <div class="desc">Crema cálido sólido sobre Ink. Editorial puro, papel, archivo limpio.</div>
+    </div>
+    <a href="08-bone.png" download>Descargar PNG</a>
   </article>
 
 </section>
 
 <footer>
-  /public/logo-alternatives/ · 5 PNG @ 1024px · paleta Ink + burnt orange #6B1F05
+  Mismo logo · 8 SVG renders · 2048×2048 PNG · /public/logo-alternatives/
 </footer>
 
 </body>
