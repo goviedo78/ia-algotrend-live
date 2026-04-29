@@ -41,7 +41,7 @@ function ProbabilityBar(
   const isActive = value >= threshold
 
   return (
-    <div className="rounded-2xl border border-[#4F5570] bg-[#1C223A] p-3">
+    <div className="rounded-xl border border-[#4F5570] bg-[#1C223A] p-3">
       <div className="mb-2 flex items-end justify-between">
         <span className="text-[11px] uppercase tracking-[0.12em] text-[#6B7385]">{label}</span>
         <span className={`font-mono text-xl font-semibold ${isActive ? textColor : 'text-[#6B7385]'}`}>
@@ -149,7 +149,7 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
           return (
           <div className="space-y-2">
             {/* Highlight: Return % */}
-            <div className="rounded-2xl border border-[#4F5570] bg-gradient-to-br from-[#1C223A] to-[#161C30] px-4 py-3 text-center">
+            <div className="rounded-xl border border-[#C9A87A]/35 bg-gradient-to-br from-[#1C223A] to-[#11162A] px-4 py-3 text-center shadow-[inset_0_1px_0_rgba(229,212,182,0.08)]">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7385]">Rendimiento total</p>
               <p className={`mt-1 font-mono text-2xl font-bold ${returnColor}`}>
                 {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%

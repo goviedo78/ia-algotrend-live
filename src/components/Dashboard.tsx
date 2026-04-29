@@ -359,11 +359,15 @@ export default function Dashboard() {
   const lastResult = results[results.length - 1] ?? null
   const totalSignals = results.filter(r => r.longSig || r.shortSig).length
   const closedTrades = trades.filter(t => t.status === 'CLOSED').length
+  const initialCapital = 10000
+  const currentBalance = stats?.balance ?? initialCapital
+  const returnPct = ((currentBalance - initialCapital) / initialCapital) * 100
+  const returnPctColor = returnPct >= 0 ? 'text-[#4FBC72]' : 'text-[#F44E1C]'
+  const winRate = stats?.winRate ?? 0
+  const winRateColor = winRate >= 50 ? 'text-[#4FBC72]' : 'text-[#F44E1C]'
   const marketBias = lastResult
     ? lastResult.probUp >= lastResult.probDown ? 'Sesgo alcista' : 'Sesgo bajista'
     : 'Sin sesgo'
-  // GON-warmer green/red — el verde gana saturación cálida, el rojo es el Pulse GON.
-  // Se mantiene el lenguaje universal del trader sin sentirse Saas-blue genérico.
   const marketBiasColor = !lastResult
     ? 'text-[#A8AABA]'
     : lastResult.probUp >= lastResult.probDown
@@ -371,13 +375,11 @@ export default function Dashboard() {
       : 'text-[#F44E1C] value-glow'   // GON pulse
 
   return (
-    <div className="app-shell min-h-screen px-3 py-4 text-[#E5D4B6] sm:px-6 sm:py-6 lg:px-10">
-      {/* Overlay del top — warm Ink para alinear con la paleta GON */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-gradient-to-b from-[#1C223A] via-[#161C30]/70 to-transparent" />
+    <div className="app-shell min-h-screen px-3 py-4 font-sans text-[#E5D4B6] sm:px-6 sm:py-6 lg:px-10">
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[30rem] bg-[radial-gradient(circle_at_50%_0%,rgba(244,78,28,0.15),transparent_22rem),linear-gradient(180deg,#1C223A,rgba(17,22,42,0)_86%)]" />
 
       <div className="relative mx-auto flex max-w-[1560px] flex-col gap-4 sm:gap-5">
-        {/* GON eyebrow strip — frase de venta, ocupa una línea, sin restar espacio del monitor */}
-        <div className="gon-eyebrow-strip reveal-up rounded-2xl">
+        <div className="gon-eyebrow-strip reveal-up rounded-xl">
           <span>GON</span>
           <span className="sep">·</span>
           <span>ALGOTREND</span>
@@ -389,28 +391,25 @@ export default function Dashboard() {
           <span className="live-tag">LIVE</span>
         </div>
 
-        <header ref={headerRef} className="glass-header reveal-up rounded-2xl px-4 py-4 sm:px-6 sm:py-5">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-            <div className="flex items-start gap-4">
-              {/* Único emblema de marca — GON 3D respirando. Saca el algotrend png:
-                  el strip eyebrow ya dice "GON · ALGOTREND" en mono, no necesita
-                  duplicado visual. */}
+        <header ref={headerRef} className="glass-header reveal-up rounded-xl px-4 py-4 sm:px-6 sm:py-5">
+          <div className="header-shell flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div className="header-brand flex items-start gap-4">
               <div className="header-logo flex-shrink-0">
                 <GonEmblem3D size={56} />
               </div>
 
-              <div className="flex flex-col">
+              <div className="header-copy flex flex-col">
                 <div className="flex items-center gap-2">
                   <span className="flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#F44E1C]" />
                   <p className="label-eyebrow">IA AlgoTrend · en vivo</p>
                 </div>
-                <h1 className="header-title text-[1.65rem] leading-tight text-[#E5D4B6] sm:text-[2rem]">
-                  Mesa de Trading BTC 1H
+                <h1 className="header-title font-display text-[1.65rem] font-semibold leading-tight text-[#E5D4B6] sm:text-[2rem]">
+                  AlgoTrend Live Desk
                 </h1>
                 <p className="header-description max-w-2xl text-sm text-[#A8AABA] sm:text-[0.95rem]">
-                  Monitor de ejecución del algoritmo probabilístico con stream en vivo de Bitstamp e historial automático de operaciones.
+                  Monitor probabilístico BTC 1H con stream Bitstamp, señales activas e historial automático de operaciones.
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="header-actions flex flex-wrap gap-2">
                   <span className="badge">
                     Parámetros por defecto
                   </span>
@@ -430,24 +429,29 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="header-stats-grid grid grid-cols-1 gap-3 sm:grid-cols-[1.25fr_repeat(3,minmax(110px,1fr))]">
-              <div className="surface-panel-muted min-w-[150px] px-4 py-3">
+            <div className="header-stats-grid flex gap-3 overflow-x-auto pb-1 xl:grid xl:grid-cols-[1.35fr_repeat(3,minmax(120px,1fr))] xl:overflow-visible xl:pb-0">
+              <div className="header-summary-card surface-panel-muted min-w-[210px] px-4 py-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7385]">Precio BTC</p>
-                <p className="mt-1 font-mono text-[1.75rem] font-semibold text-[#E5D4B6] value-glow">
+                <p className="mt-1 font-mono text-[1.75rem] font-semibold text-[#E5D4B6]">
                   {lastPrice ? `$${lastPrice.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '...'}
                 </p>
               </div>
-              <div className="surface-panel-muted min-w-[110px] px-3 py-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7385]">Capital inicial</p>
-                <p className="mt-1 font-mono text-[1.05rem] font-semibold text-[#E5D4B6]">$10,000</p>
+              <div className="header-summary-card surface-panel-muted min-w-[132px] px-3 py-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7385]">WR</p>
+                <p className={`mt-1 font-mono text-[1.2rem] font-semibold ${winRateColor}`}>
+                  {winRate.toFixed(1)}%
+                </p>
               </div>
-              <div className="surface-panel-muted min-w-[110px] px-3 py-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7385]">Operaciones cerradas</p>
-                <p className="mt-1 font-mono text-[1.05rem] font-semibold text-[#E5D4B6]">{closedTrades}</p>
+              <div className="header-summary-card surface-panel-muted min-w-[150px] px-3 py-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7385]">Ganancia</p>
+                <p className={`mt-1 font-mono text-[1.2rem] font-semibold ${returnPctColor}`}>
+                  {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%
+                </p>
               </div>
-              <div className="surface-panel-muted min-w-[110px] px-3 py-2.5">
+              <div className="header-summary-card surface-panel-muted min-w-[170px] px-3 py-2.5">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7385]">Sesgo de mercado</p>
                 <p className={`mt-1 text-[1rem] font-semibold ${marketBiasColor}`}>{marketBias}</p>
+                <p className="mt-1 font-mono text-[10px] text-[#6B7385]">{closedTrades} cerradas</p>
               </div>
             </div>
           </div>

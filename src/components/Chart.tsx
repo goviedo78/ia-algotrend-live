@@ -54,8 +54,8 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
 
     const chart = createChart(containerRef.current, {
       layout: {
-        // GON warm palette — Ink-deep bg + bone-warm muted text
-        background: { color: '#161C30' },
+        // GON v2: navy terminal background + muted steel text.
+        background: { color: '#11162A' },
         textColor: '#A8AABA',
         fontSize: 13,
         fontFamily: '"JetBrains Mono", ui-monospace, monospace',
@@ -413,9 +413,9 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
   }, [liveCandle])
 
   return (
-    <div className="relative w-full overflow-hidden rounded-[1.45rem] border border-[#4F5570] bg-gradient-to-b from-[#20283F] to-[#161C30] shadow-[0_18px_45px_rgba(0,0,0,0.4)]">
-      <div className="pointer-events-none absolute left-4 top-3 z-10 rounded-full border border-[#4F5570] bg-[#1C223A]/85 px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-[#A8AABA]">
-        IA Algotrend
+    <div className="relative w-full overflow-hidden rounded-xl border border-[#4F5570] bg-gradient-to-b from-[#1C223A] to-[#11162A] shadow-[0_18px_45px_rgba(0,0,0,0.36)]">
+      <div className="pointer-events-none absolute left-4 top-3 z-10 rounded-full border border-[#4F5570] bg-[#11162A]/88 px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-[#C9A87A]">
+        IA AlgoTrend · BTC 1H
       </div>
       <div ref={containerRef} className="h-[500px] w-full" />
     </div>

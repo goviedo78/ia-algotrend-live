@@ -374,7 +374,9 @@ h6 {
 
 /* ── HEADER flotante de vidrio liquido ── */
 .glass-header {
-  position: relative;
+  position: sticky;
+  top: 0.75rem;
+  z-index: 30;
   background:
     linear-gradient(180deg, rgba(42, 49, 72, 0.96), rgba(28, 34, 58, 0.97));
   backdrop-filter: blur(20px) saturate(160%);
@@ -415,15 +417,20 @@ h6 {
   background: rgba(17, 22, 42, 0.94);
   border-color: rgba(79, 85, 112, 0.78);
   border-top-color: rgba(244, 78, 28, 0.24);
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
   box-shadow:
     0 1px 0 rgba(244, 78, 28, 0.08) inset,
     0 4px 24px rgba(0, 0, 0, 0.7),
     0 0 0 1px rgba(244, 78, 28, 0.06);
 }
 
-/* Oculta contenido secundario del header cuando colapsa */
+/* Oculta el copy del hero: en sticky queda solo logo + métricas mini */
+.glass-header[data-scrolled="true"] .header-copy,
 .glass-header[data-scrolled="true"] .header-description,
-.glass-header[data-scrolled="true"] .header-stats-grid {
+.glass-header[data-scrolled="true"] .header-actions {
+  width: 0;
+  max-width: 0;
   max-height: 0;
   opacity: 0;
   overflow: hidden;
@@ -432,7 +439,30 @@ h6 {
   pointer-events: none;
 }
 
+.header-shell,
+.header-brand,
+.header-copy {
+  transition:
+    gap 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease,
+    max-width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.glass-header[data-scrolled="true"] .header-shell {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.glass-header[data-scrolled="true"] .header-brand {
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 0;
+}
+
 .header-description,
+.header-actions,
 .header-stats-grid {
   max-height: 500px;
   opacity: 1;
@@ -442,16 +472,82 @@ h6 {
     margin-top 0.35s ease;
 }
 
+.header-stats-grid {
+  scrollbar-width: none;
+  transition:
+    gap 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    max-height 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease,
+    margin-top 0.35s ease;
+}
+
+.header-stats-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.header-summary-card {
+  transition:
+    padding 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    min-width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s ease,
+    background 0.25s ease;
+}
+
+.glass-header[data-scrolled="true"] .header-stats-grid {
+  display: flex !important;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 0.35rem;
+  align-items: stretch;
+  overflow-x: auto;
+  padding-bottom: 0;
+}
+
+.glass-header[data-scrolled="true"] .header-summary-card {
+  min-width: 88px;
+  padding: 0.32rem 0.48rem;
+  border-radius: 0.58rem;
+  background: rgba(17, 22, 42, 0.86);
+  border-color: rgba(79, 85, 112, 0.9);
+}
+
+.glass-header[data-scrolled="true"] .header-summary-card:first-child {
+  min-width: 132px;
+}
+
+.glass-header[data-scrolled="true"] .header-summary-card p:first-child {
+  font-size: 7.5px;
+  letter-spacing: 0.1em;
+}
+
+.glass-header[data-scrolled="true"] .header-summary-card p:nth-child(2) {
+  margin-top: 0.1rem;
+  font-size: 0.82rem;
+  line-height: 1.15;
+}
+
+.glass-header[data-scrolled="true"] .header-summary-card p:nth-child(3) {
+  display: none;
+}
+
 /* El emblema se vuelve más chico al colapsar — escala el contenido R3F */
 .glass-header[data-scrolled="true"] .header-logo {
-  transform: scale(0.66);
+  width: 30px;
+  height: 30px;
+  overflow: visible;
+  transform: scale(0.5);
   transform-origin: center left;
 }
 
 .header-logo {
+  width: 56px;
+  height: 56px;
   transform: scale(1);
   transform-origin: center left;
-  transition: transform 0.4s var(--gon-ease-expo);
+  transition:
+    width 0.4s var(--gon-ease-expo),
+    height 0.4s var(--gon-ease-expo),
+    transform 0.4s var(--gon-ease-expo);
 }
 
 /* El titulo se achica un poco */

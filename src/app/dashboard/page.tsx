@@ -90,6 +90,11 @@ function AdminDashboard() {
   const [pushResult, setPushResult] = useState<{ ok: boolean; sent: number; error?: string } | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
+  // Settings state
+  const [atrEnabled, setAtrEnabled] = useState(false)
+  const [atrThreshold, setAtrThreshold] = useState(0.40)
+  const [savingSettings, setSavingSettings] = useState(false)
+
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
@@ -111,11 +116,42 @@ function AdminDashboard() {
     setLoading(false)
   }, [])
 
+  const fetchSettings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/dashboard/settings')
+      if (res.ok) {
+        const json = await res.json()
+        setAtrEnabled(json.atr_filter_enabled)
+        setAtrThreshold(json.atr_threshold)
+      }
+    } catch (err) {
+      console.error('Failed to load settings', err)
+    }
+  }, [])
+
+  const updateSetting = async (key: 'atr_filter_enabled' | 'atr_threshold', value: boolean | number) => {
+    setSavingSettings(true)
+    try {
+      const payload = { [key]: value }
+      await fetch('/api/dashboard/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      if (key === 'atr_filter_enabled') setAtrEnabled(value as boolean)
+      if (key === 'atr_threshold') setAtrThreshold(value as number)
+    } catch (err) {
+      console.error('Failed to save setting', err)
+    }
+    setSavingSettings(false)
+  }
+
   useEffect(() => {
     fetchData()
+    fetchSettings()
     const interval = setInterval(fetchData, 60000) // Auto-refresh every 60s
     return () => clearInterval(interval)
-  }, [fetchData])
+  }, [fetchData, fetchSettings])
 
   if (loading && !data) {
     return (
@@ -207,6 +243,50 @@ function AdminDashboard() {
             />
           </div>
         )}
+      </Section>
+
+      {/* ── 1.5 Motor & Filtros ──────────────────────────────── */}
+      <Section title="Motor de Trading" icon="⚙️">
+        <div className="rounded-xl border border-[#1F2937] p-5" style={{ background: 'rgba(17,24,39,0.6)' }}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-white font-medium flex items-center gap-2">
+                Filtro de Volatilidad (ATR)
+                {savingSettings && <span className="animate-pulse text-xs text-[#3B82F6]">Guardando...</span>}
+              </h3>
+              <p className="text-sm text-[#9CA3AF] mt-1 max-w-lg">
+                Bloquea señales falsas cuando el mercado no tiene fuerza. Ignora trades si el ATR H1 es menor al umbral configurado.
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-4 bg-[#0B1220] p-2 rounded-lg border border-[#1F2937]">
+              <div className="flex items-center gap-2 px-2">
+                <span className="text-xs text-[#6B7280]">Umbral %</span>
+                <input 
+                  type="number" 
+                  step="0.05"
+                  min="0.1"
+                  max="2.0"
+                  value={atrThreshold}
+                  onChange={(e) => setAtrThreshold(parseFloat(e.target.value))}
+                  onBlur={(e) => updateSetting('atr_threshold', parseFloat(e.target.value))}
+                  disabled={savingSettings || !atrEnabled}
+                  className="w-16 bg-transparent text-white text-sm focus:outline-none disabled:opacity-50"
+                />
+              </div>
+              
+              <div className="h-6 w-px bg-[#1F2937]"></div>
+              
+              <button
+                onClick={() => updateSetting('atr_filter_enabled', !atrEnabled)}
+                disabled={savingSettings}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${atrEnabled ? 'bg-[#22C55E]' : 'bg-[#374151]'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${atrEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+          </div>
+        </div>
       </Section>
 
       {/* ── 2. Notifications ──────────────────────────────────── */}

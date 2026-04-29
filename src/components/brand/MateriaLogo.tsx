@@ -60,6 +60,8 @@ export interface MateriaLogoProps {
   baseColor?: number
   /** Color de fondo del canvas (hex). Default Ink oscuro */
   background?: number
+  /** Fondo transparente para usos embebidos como header/firma. Default false. */
+  transparentBackground?: boolean
   /** Amplitud del noise base (px de desplazamiento). Default 8 */
   amplitude?: number
   /** Habilitar entry desde 60° lateral. Default true */
@@ -904,12 +906,14 @@ function StaticFallback({
   svgUrl,
   height,
   background,
+  transparentBackground,
   className,
   style,
 }: {
   svgUrl: string
   height: string | number
   background: number
+  transparentBackground?: boolean
   className?: string
   style?: CSSProperties
 }) {
@@ -920,7 +924,7 @@ function StaticFallback({
       style={{
         width: '100%',
         height,
-        background: bgHex,
+        background: transparentBackground ? 'transparent' : bgHex,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -962,6 +966,7 @@ export function MateriaLogo({
   // Las siguientes props sobrescriben el preset cuando se proveen
   baseColor:           baseColorProp,
   background:          backgroundProp,
+  transparentBackground = false,
   material:            materialProp,
   heatColor:           heatColorProp,
   heatEmissive:        heatEmissiveProp,
@@ -1001,7 +1006,7 @@ export function MateriaLogo({
         style={{
           width: '100%',
           height,
-          background: '#' + background.toString(16).padStart(6, '0'),
+          background: transparentBackground ? 'transparent' : '#' + background.toString(16).padStart(6, '0'),
           ...style,
         }}
       />
@@ -1014,6 +1019,7 @@ export function MateriaLogo({
         svgUrl={svgUrl}
         height={height}
         background={background}
+        transparentBackground={transparentBackground}
         className={className}
         style={style}
       />
@@ -1026,6 +1032,7 @@ export function MateriaLogo({
         dpr={[1, 2]}
         gl={{
           antialias: true,
+          alpha: transparentBackground,
           powerPreference: 'high-performance',
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure,
@@ -1033,7 +1040,7 @@ export function MateriaLogo({
         }}
         camera={{ position: [0, 0, 1100], fov: 35, near: 0.1, far: 5000 }}
       >
-        <color attach="background" args={[background]} />
+        {!transparentBackground && <color attach="background" args={[background]} />}
 
         {/* Iluminación dinámica desde el preset / prop lights */}
         {lights.map((l, i) =>

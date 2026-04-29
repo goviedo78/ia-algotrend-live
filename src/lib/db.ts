@@ -25,6 +25,22 @@ export interface Trade {
   status: TradeStatus
 }
 
+// Settings are stored as the LATEST event of type 'setting_change' for each key
+export async function getSetting(key: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('algotrend_events')
+    .select('metadata')
+    .eq('event_type', 'setting_change')
+    .contains('metadata', { key })
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  if (data && data.length > 0) {
+    return (data[0].metadata as Record<string, string>).value ?? null
+  }
+  return null
+}
+
 const TABLE = 'algotrend_trades'
 
 // Returns the inserted trade, or null if a trade for this signal_time already exists.

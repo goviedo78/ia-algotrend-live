@@ -7,7 +7,7 @@ export default function SponsorBanner() {
     name: 'Broker Partner',
     tagline: 'Opera nuestras señales con comisión 0%',
     url: '#',
-    logo: '🏦',
+    logo: 'AT',
     cta: 'Abrir cuenta con bono'
   }
 
@@ -44,7 +44,7 @@ export default function SponsorBanner() {
       target="_blank"
       rel="noopener noreferrer"
       onClick={handleClick}
-      className="block surface-panel overflow-hidden group cursor-pointer border border-[#4F5570] hover:border-[#F44E1C]/50 transition-all duration-300 relative w-full mb-4 xl:mb-0"
+      className="group relative mb-4 block w-full cursor-pointer overflow-hidden rounded-xl border border-[#4F5570] bg-[#1C223A] transition-all duration-300 hover:border-[#F44E1C]/50 xl:mb-0"
     >
       <div className="absolute top-0 right-0 bg-[#F44E1C]/10 px-2.5 py-1 rounded-bl-lg border-b border-l border-[#F44E1C]/20 z-10">
         <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#F44E1C] font-medium flex items-center gap-1.5">
@@ -55,7 +55,7 @@ export default function SponsorBanner() {
 
       <div className="p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 w-full sm:w-auto">
-          <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-[#2A3148] to-[#1C223A] border border-[#4F5570] flex items-center justify-center text-2xl shadow-lg ring-4 ring-[#161C30]">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[#4F5570] bg-gradient-to-br from-[#C9A87A] to-[#9A7E54] font-display text-sm font-bold tracking-[0.08em] text-[#11162A] shadow-lg ring-4 ring-[#11162A]">
             {sponsor.logo}
           </div>
           <div className="flex-1">
@@ -68,7 +68,7 @@ export default function SponsorBanner() {
           </div>
         </div>
 
-        <div className="w-full sm:w-auto shrink-0 bg-gradient-to-r from-[#D43D10] to-[#F44E1C] hover:from-[#A82F08] hover:to-[#D43D10] text-[#E5D4B6] text-sm font-semibold px-6 py-2.5 rounded-lg text-center transition-all shadow-md hover:shadow-[0_0_24px_rgba(244,78,28,0.32)] whitespace-nowrap">
+        <div className="w-full shrink-0 whitespace-nowrap rounded-lg bg-gradient-to-r from-[#D43D10] to-[#F44E1C] px-6 py-2.5 text-center text-sm font-semibold text-[#E5D4B6] shadow-md transition-all hover:from-[#A82F08] hover:to-[#D43D10] hover:shadow-[0_0_24px_rgba(244,78,28,0.32)] sm:w-auto">
           {sponsor.cta} →
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { runAlgoTrend, type Candle } from '@/lib/algotrend'
-import { openTrade, closeTrade, getOpenTrade, updateOpenTradeRisk } from '@/lib/db'
+import { openTrade, closeTrade, getOpenTrade, updateOpenTradeRisk, getSetting } from '@/lib/db'
 import { notifyOpen, notifyClose } from '@/lib/telegram'
 import { emailOpen, emailClose } from '@/lib/email'
 import { logEvent } from '@/lib/analytics'
@@ -195,13 +195,16 @@ export async function GET(req: NextRequest) {
 
     // ── 2. Open new trade if signal detected ──
     if (signal === 'LONG' || signal === 'SHORT') {
-      // ── ATR Filter (opt-in via env var, motor original intacto si no se activa) ──
-      const atrFilterOn = process.env.ATR_FILTER_ENABLED === 'true'
+      // ── ATR Filter (opt-in via env var OR db setting) ──
+      const dbEnabled = await getSetting('atr_filter_enabled')
+      const envEnabled = process.env.ATR_FILTER_ENABLED === 'true'
+      const atrFilterOn = dbEnabled === 'true' || envEnabled
       let atrBlocked = false
 
       if (atrFilterOn) {
         const ATR_PERIOD = 14
-        const ATR_THRESHOLD = parseFloat(process.env.ATR_THRESHOLD || '0.40')
+        const dbThreshold = await getSetting('atr_threshold')
+        const ATR_THRESHOLD = parseFloat(dbThreshold || process.env.ATR_THRESHOLD || '0.40')
         const recentCandles = candles.slice(-ATR_PERIOD - 1)
 
         if (recentCandles.length >= 2) {

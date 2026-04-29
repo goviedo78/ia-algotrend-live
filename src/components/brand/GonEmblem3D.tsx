@@ -103,6 +103,7 @@ export function GonEmblem3D({ size = 40, enable3D = true, className }: GonEmblem
         gyroscope={false}
         enableZoom={false}
         bloom={false}
+        transparentBackground
       />
     </div>
   )
