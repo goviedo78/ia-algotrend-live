@@ -2,20 +2,22 @@
 @import "../styles/brand-tokens.css";
 
 :root {
-  --background: #0b1220;
-  --foreground: #e5e7eb;
-  --surface: #111827;
-  --surface-soft: rgba(17, 24, 39, 0.72);
-  --border: #1f2937;
-  --ink-muted: #9ca3af;
-  --ink-dim: #6b7280;
-  --primary: #3b82f6;
-  --cyan: #22d3ee;
-  --magenta: #f472b6;
-  --good: #22c55e;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --radius-xl: 1.5rem;
+  /* Re-tinted al sistema GON warm — todas las clases base que consumen estas
+     variables (surface-panel, badge, value-glow, etc) heredan automáticamente. */
+  --background:   #0E0C09;                   /* gon-ink-deep */
+  --foreground:   #F4F1EA;                   /* gon-bone */
+  --surface:      #1A1814;                   /* gon-ink */
+  --surface-soft: rgba(26, 24, 20, 0.72);    /* ink @ 72% */
+  --border:       #3D362A;                   /* gon-ink-40 */
+  --ink-muted:    #A8A39A;                   /* gon-ink-80 */
+  --ink-dim:      #7A7468;                   /* gon-ink-60 */
+  --primary:      #D8503C;                   /* gon-pulse */
+  --cyan:         #A07A4C;                   /* legacy "cyan" → bronze warm */
+  --magenta:      #A07A4C;                   /* legacy "magenta" → bronze */
+  --good:         #34D178;                   /* warm green — trader semantic */
+  --warning:      #C8924E;                   /* bronze amber */
+  --danger:       #D8503C;                   /* = pulse */
+  --radius-xl:    1.5rem;
 }
 
 @theme inline {
@@ -78,7 +80,7 @@ h6 {
 .surface-panel {
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
-  background: rgba(17, 24, 39, 0.78);
+  background: rgba(26, 24, 20, 0.78);  /* gon-ink @ 78% — warm */
   backdrop-filter: blur(10px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -98,13 +100,14 @@ h6 {
 .surface-panel-muted {
   border: 1px solid var(--border);
   border-radius: 1.2rem;
-  background: rgba(15, 23, 42, 0.9);
+  background: rgba(20, 18, 14, 0.9);  /* warm dark — entre ink y ink-deep */
 }
 
 .label-eyebrow {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
   font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  font-weight: 500;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--ink-muted);
 }
@@ -112,31 +115,34 @@ h6 {
 .badge {
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(20, 18, 14, 0.95);  /* warm dark */
   color: var(--ink-muted);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   padding: 0.3rem 0.66rem;
-  font-size: 0.66rem;
-  font-weight: 600;
+  font-size: 0.62rem;
+  font-weight: 500;
   line-height: 1;
 }
 
 .badge-live {
-  border-color: rgba(34, 197, 94, 0.4);
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
+  border-color: rgba(52, 209, 120, 0.4);   /* warm green */
+  background: rgba(52, 209, 120, 0.12);
+  color: #34D178;
 }
 
 .badge-danger {
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+  border-color: rgba(216, 80, 60, 0.4);    /* pulse */
+  background: rgba(216, 80, 60, 0.12);
+  color: #D8503C;
 }
 
 .live-dot {
   width: 0.44rem;
   height: 0.44rem;
   border-radius: 999px;
-  background: #22c55e;
+  background: #34D178;
   animation: pulseGlow 1.5s infinite;
 }
 
@@ -174,15 +180,15 @@ h6 {
 @keyframes pulseGlow {
   0% {
     opacity: 0.45;
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+    box-shadow: 0 0 0 0 rgba(52, 209, 120, 0.5);  /* warm green halo */
   }
   60% {
     opacity: 1;
-    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+    box-shadow: 0 0 0 8px rgba(52, 209, 120, 0);
   }
   100% {
     opacity: 0.6;
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    box-shadow: 0 0 0 0 rgba(52, 209, 120, 0);
   }
 }
 
@@ -325,36 +331,36 @@ h6 {
     inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Variante azul primaria */
+/* Variante primaria — GON Pulse (warm) */
 .glass-btn-primary {
-  background: rgba(59, 130, 246, 0.22);
-  border-color: rgba(59, 130, 246, 0.30);
-  border-top-color: rgba(147, 197, 253, 0.35);
-  color: #93c5fd;
+  background: rgba(216, 80, 60, 0.20);
+  border-color: rgba(216, 80, 60, 0.32);
+  border-top-color: rgba(244, 145, 125, 0.40);
+  color: #F4917D;  /* pulse-200 cálido */
   box-shadow:
-    0 4px 16px rgba(59, 130, 246, 0.20),
-    inset 0 1px 0 rgba(147, 197, 253, 0.20);
+    0 4px 16px rgba(216, 80, 60, 0.20),
+    inset 0 1px 0 rgba(244, 145, 125, 0.22);
 }
 
 .glass-btn-primary:hover {
-  background: rgba(59, 130, 246, 0.32);
-  border-top-color: rgba(147, 197, 253, 0.5);
-  color: #bfdbfe;
+  background: rgba(216, 80, 60, 0.30);
+  border-top-color: rgba(244, 145, 125, 0.55);
+  color: #FBC0AE;
   box-shadow:
-    0 6px 24px rgba(59, 130, 246, 0.35),
-    inset 0 1px 0 rgba(147, 197, 253, 0.30),
-    0 0 20px rgba(59, 130, 246, 0.15);
+    0 6px 24px rgba(216, 80, 60, 0.35),
+    inset 0 1px 0 rgba(244, 145, 125, 0.32),
+    0 0 20px rgba(216, 80, 60, 0.18);
 }
 
-/* Variante verde buena señal */
+/* Variante verde buena señal — warm green (trader semantic) */
 .glass-btn-success {
-  background: rgba(34, 197, 94, 0.15);
-  border-color: rgba(34, 197, 94, 0.25);
+  background: rgba(52, 209, 120, 0.14);
+  border-color: rgba(52, 209, 120, 0.26);
   border-top-color: rgba(134, 239, 172, 0.30);
-  color: #86efac;
+  color: #86EFAC;
   box-shadow:
-    0 4px 16px rgba(34, 197, 94, 0.15),
-    inset 0 1px 0 rgba(134, 239, 172, 0.15);
+    0 4px 16px rgba(52, 209, 120, 0.14),
+    inset 0 1px 0 rgba(134, 239, 172, 0.16);
 }
 
 /* ── HEADER flotante de vidrio liquido ── */
@@ -427,15 +433,16 @@ h6 {
     margin-top 0.35s ease;
 }
 
-/* El logo se vuelve mas chico */
+/* El emblema se vuelve más chico al colapsar — escala el contenido R3F */
 .glass-header[data-scrolled="true"] .header-logo {
-  width: 2rem;
-  height: 2rem;
+  transform: scale(0.66);
+  transform-origin: center left;
 }
 
 .header-logo {
-  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-              height 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: scale(1);
+  transform-origin: center left;
+  transition: transform 0.4s var(--gon-ease-expo);
 }
 
 /* El titulo se achica un poco */

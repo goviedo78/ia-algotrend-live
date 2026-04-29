@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
-import Image from 'next/image'
 import type { Candle, AlgoTrendResult } from '@/lib/algotrend'
 import type { Trade } from '@/lib/db'
 import StatsPanel from './StatsPanel'
@@ -366,14 +365,14 @@ export default function Dashboard() {
   // GON-warmer green/red — el verde gana saturación cálida, el rojo es el Pulse GON.
   // Se mantiene el lenguaje universal del trader sin sentirse Saas-blue genérico.
   const marketBiasColor = !lastResult
-    ? 'text-[#9CA3AF]'
+    ? 'text-[#A8A39A]'
     : lastResult.probUp >= lastResult.probDown
       ? 'text-[#34D178] value-glow'   // warm green
       : 'text-[#D8503C] value-glow'   // GON pulse
 
   return (
-    <div className="app-shell min-h-screen px-3 py-4 text-[#E5E7EB] sm:px-6 sm:py-6 lg:px-10">
-      {/* Overlay del top — re-tinteado a warm Ink para alinear con la paleta GON */}
+    <div className="app-shell min-h-screen px-3 py-4 text-[#F4F1EA] sm:px-6 sm:py-6 lg:px-10">
+      {/* Overlay del top — warm Ink para alinear con la paleta GON */}
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-gradient-to-b from-[#1A1814] via-[#14120E]/70 to-transparent" />
 
       <div className="relative mx-auto flex max-w-[1560px] flex-col gap-4 sm:gap-5">
@@ -393,28 +392,23 @@ export default function Dashboard() {
         <header ref={headerRef} className="glass-header reveal-up rounded-2xl px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex items-center gap-3">
-                <div className="header-logo flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827] shadow-[0_8px_20px_rgba(0,0,0,0.3)] border border-[#1f2937] overflow-hidden">
-                  <img src="/logo-algotrend.png" alt="IA AlgoTrend" className="h-9 w-9 object-contain" />
-                </div>
-                {/* Emblema GON 3D micro — la firma de marca al lado del producto */}
-                <GonEmblem3D size={40} className="hidden sm:block" />
-                <div className="gon-by-tag hidden sm:flex">
-                  <span className="by">By</span>
-                  <span className="name">GON</span>
-                </div>
+              {/* Único emblema de marca — GON 3D respirando. Saca el algotrend png:
+                  el strip eyebrow ya dice "GON · ALGOTREND" en mono, no necesita
+                  duplicado visual. */}
+              <div className="header-logo flex-shrink-0">
+                <GonEmblem3D size={56} />
               </div>
 
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <span className="flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#D8503C]" />
-                  <p className="label-eyebrow">🧠 IA AlgoTrend en Vivo</p>
+                  <p className="label-eyebrow">IA AlgoTrend · en vivo</p>
                 </div>
-                <h1 className="header-title text-[1.65rem] leading-tight text-[#E5E7EB] sm:text-[2rem]">
+                <h1 className="header-title text-[1.65rem] leading-tight text-[#F4F1EA] sm:text-[2rem]">
                   Mesa de Trading BTC 1H
                 </h1>
-                <p className="header-description max-w-2xl text-sm text-[#9CA3AF] sm:text-[0.95rem]">
-                  Monitor de ejecución de Algoritmos Inteligentes con stream en vivo de Bitstamp e historial automático de operaciones.
+                <p className="header-description max-w-2xl text-sm text-[#A8A39A] sm:text-[0.95rem]">
+                  Monitor de ejecución del algoritmo probabilístico con stream en vivo de Bitstamp e historial automático de operaciones.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <span className="badge">
@@ -438,21 +432,21 @@ export default function Dashboard() {
 
             <div className="header-stats-grid grid grid-cols-1 gap-3 sm:grid-cols-[1.25fr_repeat(3,minmax(110px,1fr))]">
               <div className="surface-panel-muted min-w-[150px] px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">Precio BTC</p>
-                <p className="mt-1 font-mono text-[1.75rem] font-semibold text-[#E5E7EB] value-glow">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7A7468]">Precio BTC</p>
+                <p className="mt-1 font-mono text-[1.75rem] font-semibold text-[#F4F1EA] value-glow">
                   {lastPrice ? `$${lastPrice.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '...'}
                 </p>
               </div>
               <div className="surface-panel-muted min-w-[110px] px-3 py-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">Capital inicial</p>
-                <p className="mt-1 font-mono text-[1.05rem] font-semibold text-[#E5E7EB]">$10,000</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7A7468]">Capital inicial</p>
+                <p className="mt-1 font-mono text-[1.05rem] font-semibold text-[#F4F1EA]">$10,000</p>
               </div>
               <div className="surface-panel-muted min-w-[110px] px-3 py-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">Operaciones cerradas</p>
-                <p className="mt-1 font-mono text-[1.05rem] font-semibold text-[#E5E7EB]">{closedTrades}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7A7468]">Operaciones cerradas</p>
+                <p className="mt-1 font-mono text-[1.05rem] font-semibold text-[#F4F1EA]">{closedTrades}</p>
               </div>
               <div className="surface-panel-muted min-w-[110px] px-3 py-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">Sesgo de mercado</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7A7468]">Sesgo de mercado</p>
                 <p className={`mt-1 text-[1rem] font-semibold ${marketBiasColor}`}>{marketBias}</p>
               </div>
             </div>
@@ -484,7 +478,7 @@ export default function Dashboard() {
         </div>
 
         {!engineReady && (
-          <div className="surface-panel-muted px-4 py-2.5 text-center text-xs font-medium text-[#9CA3AF]">
+          <div className="surface-panel-muted px-4 py-2.5 text-center text-xs font-medium text-[#A8A39A]">
             Inicializando motor de IA...
           </div>
         )}

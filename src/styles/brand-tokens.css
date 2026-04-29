@@ -20,11 +20,27 @@
   --gon-bronze: oklch(58% 0.085 65);   /* acento premium — una superficie por composición */
   --gon-pulse:  oklch(62% 0.18  28);   /* señal cinética — links, hover, momento vivo */
 
-  /* Hex equivalentes para contextos sin OKLCH (correos, SVG legacy) */
-  --gon-ink-hex:    #1A1814;
-  --gon-bone-hex:   #F4F1EA;
-  --gon-bronze-hex: #A07A4C;
-  --gon-pulse-hex:  #D8503C;
+  /* Hex equivalentes — para Tailwind arbitrary values, SVG legacy, charts canvas, etc. */
+  --gon-ink-hex:        #1A1814;
+  --gon-ink-deep-hex:   #0E0C09;  /* fondo app shell */
+  --gon-ink-20-hex:     #2A2620;  /* surface raised */
+  --gon-ink-30-hex:     #332E26;  /* surface intermedia */
+  --gon-ink-40-hex:     #3D362A;  /* borders sutiles */
+  --gon-ink-60-hex:     #7A7468;  /* texto dim */
+  --gon-ink-80-hex:     #A8A39A;  /* texto muted */
+  --gon-bone-hex:       #F4F1EA;
+  --gon-bone-90-hex:    #E8E3D8;
+  --gon-bone-80-hex:    #C2BCB0;
+  --gon-bronze-hex:     #A07A4C;
+  --gon-bronze-deep-hex:#7C5E37;
+  --gon-pulse-hex:      #D8503C;
+  --gon-pulse-700-hex:  #B83E2C;  /* pulse darker — hover/active */
+  --gon-pulse-800-hex:  #8E2E1F;  /* pulse deep */
+  /* Trading semantic warmer — convención universal sin sentirse SaaS-blue */
+  --gon-good-hex:       #34D178;  /* warm green */
+  --gon-good-deep-hex:  #1F2A14;  /* warm green ink (open long row bg) */
+  --gon-bad-hex:        #D8503C;  /* = pulse */
+  --gon-bad-deep-hex:   #2A1814;  /* warm red ink (open short row bg) */
 
   /* =====================================================================
      RAMPAS FUNCIONALES — derivadas matemáticamente, no son colores nuevos
