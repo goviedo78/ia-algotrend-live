@@ -144,8 +144,8 @@ export const PRESETS: Record<PresetName, PresetConfig> = {
       { type: 'directional', color: 0xff8a3d, intensity: 1.4, position: [0, 100, -500] },
       { type: 'directional', color: 0xff8a3d, intensity: 0.5, position: [-400, 200, -200] },
     ],
-    heatColor: [0.42, 0.12, 0.02], // #6B1F05
-    heatEmissive: [0.95, 0.28, 0.04],
+    heatColor: [0.48, 0.18, 0.02],
+    heatEmissive: [1.0, 0.40, 0.04],
     heatEmissiveStrength: 1.6,
     toneMappingExposure: 1.55,
     environmentIntensity: 1.0,
@@ -248,6 +248,11 @@ const AUTO_ROT_AMP_Y = THREE.MathUtils.degToRad(8) // ±8° auto-rotación horiz
 const AUTO_ROT_AMP_X = THREE.MathUtils.degToRad(2.5) // ±2.5° auto-rotación vertical
 const AUTO_ROT_FREQ_Y = 0.30  // Hz
 const AUTO_ROT_FREQ_X = 0.20  // Hz
+const MOBILE_IDLE_HEAT = 0.36
+const MOBILE_IDLE_ORBIT_X = 0.085
+const MOBILE_IDLE_ORBIT_Y = 0.065
+const MOBILE_IDLE_ORBIT_FREQ_X = 0.22
+const MOBILE_IDLE_ORBIT_FREQ_Y = 0.16
 
 const easeOutQuint = (t: number) => 1 - Math.pow(1 - t, 5)
 
@@ -350,6 +355,7 @@ function MateriaMesh({
   const tiltTarget    = useRef(new THREE.Vector2(0, 0))
   const tiltCurrent   = useRef(new THREE.Vector2(0, 0))
   const lastInputRef  = useRef<number>(0)  // último tiempo (clock.elapsedTime) con input
+  const supportsHoverRef = useRef(true)
 
   // Uniforms compartidos entre material y useFrame
   const uniformsRef = useRef({
@@ -444,12 +450,11 @@ function MateriaMesh({
 
           float dist = distance(localUV, uMouse);
           float mouseAmp = smoothstep(0.28, 0.0, dist) * uMouseStrength;
-          vGonHeat = mouseAmp * frontFactor; // pass to fragment for copper tint
+          vGonHeat = mouseAmp * frontFactor;
 
           float aliveAmp = mix(uAmp, 0.0, uCalm);
 
-          // Mouse displacement aumentado de 32 → 60 para picos más altos
-          // y walls más visibles con el tint copper.
+          // Same feel as the standalone HTML reference, with color handled in fragment.
           transformed += normal * (n * aliveAmp + mouseAmp * 60.0) * frontFactor;
           `
         )
@@ -517,6 +522,23 @@ function MateriaMesh({
   // tras idleDelay segundos desde la carga (no inmediatamente).
   useEffect(() => {
     lastInputRef.current = performance.now() / 1000
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const media = window.matchMedia('(hover: hover) and (pointer: fine)')
+    const update = () => {
+      supportsHoverRef.current = media.matches
+    }
+
+    update()
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', update)
+      return () => media.removeEventListener('change', update)
+    }
+
+    media.addListener(update)
+    return () => media.removeListener(update)
   }, [])
 
   // Tracking del cursor a nivel ventana (no solo sobre el mesh) para tilt.
@@ -600,11 +622,18 @@ function MateriaMesh({
     const u = uniformsRef.current
     u.uTime.value = state.clock.elapsedTime
 
+    if (!supportsHoverRef.current && !hovering) {
+      targetMouse.current.set(
+        0.5 + Math.cos(state.clock.elapsedTime * MOBILE_IDLE_ORBIT_FREQ_X * Math.PI * 2) * MOBILE_IDLE_ORBIT_X,
+        0.52 + Math.sin(state.clock.elapsedTime * MOBILE_IDLE_ORBIT_FREQ_Y * Math.PI * 2 + 0.8) * MOBILE_IDLE_ORBIT_Y
+      )
+    }
+
     // Smooth lerp de mouse uv y strength
     currentMouse.current.lerp(targetMouse.current, 0.12)
     u.uMouse.value.copy(currentMouse.current)
 
-    const targetStrength = hovering ? 1 : 0
+    const targetStrength = hovering ? 1 : (supportsHoverRef.current ? 0 : MOBILE_IDLE_HEAT)
     u.uMouseStrength.value += (targetStrength - u.uMouseStrength.value) * 0.08
 
     const targetCalm = mouseDownRef.current ? 1 : 0
@@ -759,10 +788,14 @@ function ZoomControl({ enabled, minZ, maxZ, doneRef }: ZoomControlProps) {
   const { camera, gl } = useThree()
   const targetZ = useRef(camera.position.z)
   const lastPinchDist = useRef(0)
+  const syncedAfterEntryRef = useRef(false)
+  const userZoomedRef = useRef(false)
 
-  // Sincronizar target inicial con la posición actual (post-entry)
+  // Sincronizar target inicial con la posición actual de la cámara.
   useEffect(() => {
     targetZ.current = camera.position.z
+    syncedAfterEntryRef.current = false
+    userZoomedRef.current = false
   }, [camera])
 
   // Listeners de wheel (desktop) y touch pinch (mobile)
@@ -773,6 +806,7 @@ function ZoomControl({ enabled, minZ, maxZ, doneRef }: ZoomControlProps) {
     const onWheel = (e: WheelEvent) => {
       if (!doneRef.current) return
       e.preventDefault()
+      userZoomedRef.current = true
       targetZ.current = THREE.MathUtils.clamp(
         targetZ.current + e.deltaY * 1.5,
         minZ,
@@ -798,6 +832,7 @@ function ZoomControl({ enabled, minZ, maxZ, doneRef }: ZoomControlProps) {
       e.preventDefault()
       const dist = distance(e.touches)
       const delta = lastPinchDist.current - dist // pinch in (acercar dedos) = alejar cámara
+      userZoomedRef.current = true
       targetZ.current = THREE.MathUtils.clamp(
         targetZ.current + delta * 4,
         minZ,
@@ -818,7 +853,20 @@ function ZoomControl({ enabled, minZ, maxZ, doneRef }: ZoomControlProps) {
 
   // Lerp suave de la posición Z hacia el target
   useFrame(() => {
-    if (!enabled || !doneRef.current) return
+    if (!enabled) return
+
+    if (!doneRef.current) {
+      syncedAfterEntryRef.current = false
+      return
+    }
+
+    if (!syncedAfterEntryRef.current) {
+      targetZ.current = camera.position.z
+      syncedAfterEntryRef.current = true
+    } else if (!userZoomedRef.current && Math.abs(targetZ.current - camera.position.z) > 24) {
+      targetZ.current = camera.position.z
+    }
+
     const cur = camera.position.z
     const next = cur + (targetZ.current - cur) * ZOOM_LERP
     camera.position.z = next
@@ -887,8 +935,8 @@ export function MateriaLogo({
   idleDelay      = 3,
   gyroscope      = true,
   preset         = 'brasa',
-  bloom          = true,
-  bloomIntensity = 0.7,
+  bloom          = false,
+  bloomIntensity = 0.45,
   // Las siguientes props sobrescriben el preset cuando se proveen
   baseColor:           baseColorProp,
   background:          backgroundProp,
@@ -1017,7 +1065,7 @@ export function MateriaLogo({
           <EffectComposer>
             <Bloom
               intensity={bloomIntensity}
-              luminanceThreshold={0.55}
+              luminanceThreshold={0.62}
               luminanceSmoothing={0.25}
               mipmapBlur
             />
