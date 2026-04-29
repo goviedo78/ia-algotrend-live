@@ -23,7 +23,7 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: '🧠 IA AlgoTrend — Live Monitoring',
+  title: 'IA AlgoTrend · Live Trading Desk',
   description: 'Mesa de monitoreo en vivo para la estrategia Algotrend en BTC/USD.',
   manifest: '/manifest.json',
   appleWebApp: {
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1A1814", // GON Ink — warm dark
+  themeColor: "#11162A", // GON v2 Ink Deep — navy app shell
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

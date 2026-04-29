@@ -3,6 +3,7 @@ import { runAlgoTrend, type Candle } from '@/lib/algotrend'
 import { openTrade, closeTrade, getOpenTrade, updateOpenTradeRisk } from '@/lib/db'
 import { notifyOpen, notifyClose } from '@/lib/telegram'
 import { emailOpen, emailClose } from '@/lib/email'
+import { logEvent } from '@/lib/analytics'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -194,6 +195,38 @@ export async function GET(req: NextRequest) {
 
     // ── 2. Open new trade if signal detected ──
     if (signal === 'LONG' || signal === 'SHORT') {
+      // ── ATR Filter (opt-in via env var, motor original intacto si no se activa) ──
+      const atrFilterOn = process.env.ATR_FILTER_ENABLED === 'true'
+      let atrBlocked = false
+
+      if (atrFilterOn) {
+        const ATR_PERIOD = 14
+        const ATR_THRESHOLD = parseFloat(process.env.ATR_THRESHOLD || '0.40')
+        const recentCandles = candles.slice(-ATR_PERIOD - 1)
+
+        if (recentCandles.length >= 2) {
+          let trSum = 0
+          for (let i = 1; i < recentCandles.length; i++) {
+            const h = recentCandles[i].high
+            const l = recentCandles[i].low
+            const pc = recentCandles[i - 1].close
+            trSum += Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc))
+          }
+          const atr = trSum / (recentCandles.length - 1)
+          const atrPct = (atr / lastCandle.close) * 100
+
+          if (atrPct < ATR_THRESHOLD) {
+            atrBlocked = true
+            await logEvent('signal_filtered_atr', {
+              signal, price: last.close, atrPct: +atrPct.toFixed(3),
+              threshold: ATR_THRESHOLD,
+            })
+            actions.push(`atr_filtered_${signal}_${atrPct.toFixed(2)}pct`)
+          }
+        }
+      }
+
+      if (!atrBlocked) {
       const stop = signal === 'LONG' ? last.longStop : last.shortStop
       const tp = signal === 'LONG' ? last.longTp : last.shortTp
       const trade = await openTrade(signal, last.time, last.time, last.close, stop, tp)
@@ -219,6 +252,7 @@ export async function GET(req: NextRequest) {
       } else {
         actions.push('signal_already_processed')
       }
+      } // end !atrBlocked
     }
 
     return NextResponse.json({
