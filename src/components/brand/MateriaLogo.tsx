@@ -25,6 +25,28 @@ import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import * as THREE from 'three'
 import { SVGLoader, type SVGResult } from 'three/examples/jsm/loaders/SVGLoader.js'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+
+function CustomRoomEnvironment({ intensity = 1.0 }: { intensity?: number }) {
+  const { gl, scene } = useThree()
+
+  useEffect(() => {
+    const pmrem = new THREE.PMREMGenerator(gl)
+    pmrem.compileEquirectangularShader()
+    const envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+
+    scene.environment = envMap
+    scene.environmentIntensity = intensity
+
+    return () => {
+      scene.environment = null
+      envMap.dispose()
+      pmrem.dispose()
+    }
+  }, [gl, scene, intensity])
+
+  return null
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Tipos públicos
@@ -1027,7 +1049,7 @@ export function MateriaLogo({
           )
         )}
 
-        <Environment preset="studio" environmentIntensity={environmentIntensity} />
+        <CustomRoomEnvironment intensity={environmentIntensity} />
 
         <CameraEntry
           enabled={entryAnimation}
