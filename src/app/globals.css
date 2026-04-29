@@ -21,9 +21,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-manrope);
-  --font-display: var(--font-syne);
-  --font-mono: var(--font-ibm-plex-mono);
+  /* GON typography — apuntando a las nuevas next/font vars en layout.tsx */
+  --font-sans:    var(--font-inter);
+  --font-display: var(--font-space-grotesk);
+  --font-mono:    var(--font-jetbrains-mono);
 }
 
 *,
@@ -35,9 +36,15 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-manrope), sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  background-image: radial-gradient(circle at top, #111827, #020617 65%);
+  /* GON warm radial — Ink en el top, Ink-deep al fondo. Mantiene el feel oscuro
+     pero shifteado del azul navy hacia ámbar cálido para alinear con la marca. */
+  background-image: radial-gradient(
+    circle at top,
+    oklch(20% 0.018 50),
+    oklch(8% 0.012 60) 65%
+  );
   background-attachment: fixed;
 }
 
@@ -47,8 +54,8 @@ body::before {
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(to right, rgba(31, 41, 55, 0.45) 1px, transparent 1px) 0 0 / 32px 32px,
-    linear-gradient(to bottom, rgba(31, 41, 55, 0.35) 1px, transparent 1px) 0 0 / 32px 32px;
+    linear-gradient(to right, rgba(64, 56, 44, 0.32) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(to bottom, rgba(64, 56, 44, 0.26) 1px, transparent 1px) 0 0 / 32px 32px;
   mask-image: radial-gradient(circle at center, black 55%, transparent 98%);
   z-index: 0;
 }
@@ -59,7 +66,8 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 .app-shell {
@@ -133,7 +141,7 @@ h6 {
 }
 
 .value-glow {
-  text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  text-shadow: 0 0 10px rgba(216, 80, 60, 0.45);
 }
 
 .reveal-up {
@@ -228,7 +236,7 @@ h6 {
   z-index: 1;
 }
 
-/* Efecto de refraccion de color — sutil aureola de color */
+/* Efecto de refraccion de color — GON: pulse/bronze cálido en lugar de azul/cyan */
 .glass::after {
   content: "";
   position: absolute;
@@ -236,15 +244,15 @@ h6 {
   border-radius: inherit;
   background: linear-gradient(
     120deg,
-    rgba(59, 130, 246, 0.08) 0%,
-    rgba(139, 92, 246, 0.05) 50%,
-    rgba(34, 211, 238, 0.06) 100%
+    rgba(216, 80, 60, 0.07) 0%,
+    rgba(160, 122, 76, 0.04) 50%,
+    rgba(216, 80, 60, 0.05) 100%
   );
   pointer-events: none;
   z-index: 0;
 }
 
-/* Hover — el vidrio se aclara como si tomara mas luz */
+/* Hover — el vidrio se aclara como si tomara mas luz (pulse rim en lugar de azul) */
 .glass:hover {
   background: rgba(255, 255, 255, 0.07);
   border-top-color: rgba(255, 255, 255, 0.28);
@@ -252,7 +260,7 @@ h6 {
     0 12px 40px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     inset 0 -1px 0 rgba(0, 0, 0, 0.2),
-    0 0 0 1px rgba(59, 130, 246, 0.12);
+    0 0 0 1px rgba(216, 80, 60, 0.14);
   transform: translateY(-2px);
 }
 
@@ -307,7 +315,7 @@ h6 {
   box-shadow:
     0 6px 24px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.20),
-    0 0 0 1px rgba(59, 130, 246, 0.20);
+    0 0 0 1px rgba(216, 80, 60, 0.22);
 }
 
 .glass-btn:active {
@@ -368,7 +376,7 @@ h6 {
     border-color 0.4s ease;
 }
 
-/* Linea de luz superior — reflejo especular sutil */
+/* Linea de luz superior — reflejo especular sutil (GON: pulse en el centro) */
 .glass-header::after {
   content: "";
   position: absolute;
@@ -378,7 +386,7 @@ h6 {
     90deg,
     transparent 0%,
     rgba(255, 255, 255, 0.12) 30%,
-    rgba(59, 130, 246, 0.25) 50%,
+    rgba(216, 80, 60, 0.30) 50%,
     rgba(255, 255, 255, 0.12) 70%,
     transparent 100%
   );
@@ -387,15 +395,15 @@ h6 {
   transition: opacity 0.4s ease;
 }
 
-/* ─ Estado COLAPSADO — activado via data-scrolled="true" ─ */
+/* ─ Estado COLAPSADO — pulse rim en lugar de azul ─ */
 .glass-header[data-scrolled="true"] {
-  background: rgba(9, 14, 25, 0.90);
+  background: rgba(15, 13, 11, 0.92);
   border-color: rgba(255, 255, 255, 0.08);
-  border-top-color: rgba(59, 130, 246, 0.20);
+  border-top-color: rgba(216, 80, 60, 0.22);
   box-shadow:
-    0 1px 0 rgba(59, 130, 246, 0.08) inset,
+    0 1px 0 rgba(216, 80, 60, 0.08) inset,
     0 4px 24px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(59, 130, 246, 0.05);
+    0 0 0 1px rgba(216, 80, 60, 0.06);
 }
 
 /* Oculta contenido secundario del header cuando colapsa */
@@ -469,5 +477,132 @@ h6 {
 
 .glass-live {
   animation: glassShimmer 2.5s ease-in-out infinite;
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   GON · MOTION SYSTEM v1
+   ─────────────────────────────────────────────────────────────────────────────
+   Curva canónica: inOutExpo, expresada como CSS linear() polyline.
+   Disponible en JS via gonEaseExpo en src/lib/motion/gon-motion.ts
+   ═════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* La curva inOutExpo native CSS — slow-start, slow-end, fast middle.
+     Es la que define el "feel respiratorio" GON. */
+  --gon-ease-expo: linear(
+    0, 0.0006, 0.0009, 0.0013, 0.0017, 0.0022, 0.003, 0.0039, 0.0052,
+    0.0068, 0.009, 0.0118, 0.0156, 0.0206, 0.0272, 0.0359, 0.0474,
+    0.0625, 0.0825, 0.1088, 0.1436, 0.1895, 0.25, 0.3299, 0.4353,
+    0.5647, 0.6701, 0.75, 0.8105, 0.8564, 0.8912, 0.9175, 0.9375,
+    0.9526, 0.9641, 0.9728, 0.9794, 0.9844, 0.9882, 0.991, 0.9932,
+    0.9948, 0.9961, 0.997, 0.9978, 0.9983, 0.9987, 0.999, 0.9993, 1
+  );
+  --gon-dur-quick:  400ms;
+  --gon-dur-normal: 700ms;
+  --gon-dur-slow:  1200ms;
+  --gon-dur-breath: 4500ms;
+}
+
+/* ── Strip eyebrow GON arriba del header — venta sin ocupar espacio ── */
+.gon-eyebrow-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(244, 241, 234, 0.55); /* Bone @ 55% */
+  border-bottom: 1px solid rgba(216, 80, 60, 0.12);
+  background: linear-gradient(
+    180deg,
+    rgba(216, 80, 60, 0.04) 0%,
+    transparent 100%
+  );
+  user-select: none;
+}
+
+.gon-eyebrow-strip .sep {
+  color: var(--gon-pulse-hex);
+  opacity: 0.7;
+  font-weight: 700;
+}
+
+.gon-eyebrow-strip .live-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--gon-pulse-hex);
+  animation: glassShimmer 2.5s ease-in-out infinite;
+}
+
+.gon-eyebrow-strip .live-tag::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gon-pulse-hex);
+  box-shadow: 0 0 8px rgba(216, 80, 60, 0.6);
+}
+
+/* ── Firma "BY GON" al lado del logo del producto ── */
+.gon-by-tag {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.gon-by-tag .by {
+  color: rgba(244, 241, 234, 0.4);
+}
+
+.gon-by-tag .name {
+  color: var(--gon-pulse-hex);
+  font-weight: 600;
+}
+
+/* ── Flash on trade close — usa la curva inOutExpo (sistema motion GON) ── */
+@keyframes gonFlashWin {
+  0%   { background-color: rgba(216, 80, 60, 0); }
+  18%  { background-color: rgba(216, 138, 70, 0.22); } /* ámbar cálido */
+  100% { background-color: rgba(216, 80, 60, 0); }
+}
+
+@keyframes gonFlashLoss {
+  0%   { background-color: rgba(58, 30, 22, 0); }
+  18%  { background-color: rgba(58, 30, 22, 0.55); } /* ink-deep cálido */
+  100% { background-color: rgba(58, 30, 22, 0); }
+}
+
+.gon-flash-win {
+  animation: gonFlashWin 1200ms var(--gon-ease-expo) both;
+}
+
+.gon-flash-loss {
+  animation: gonFlashLoss 1200ms var(--gon-ease-expo) both;
+}
+
+/* ── Breath — loop infinito, scale sutil, idle de cualquier elemento ── */
+@keyframes gonBreath {
+  0%, 100% { transform: scale(1);     opacity: 0.92; }
+  50%      { transform: scale(1.012); opacity: 1; }
+}
+
+.gon-breath {
+  animation: gonBreath var(--gon-dur-breath) var(--gon-ease-expo) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gon-breath { animation: none; }
 }
 

@@ -11,6 +11,7 @@ import NotificationBell from './NotificationBell'
 import InstallButton from './InstallButton'
 import SponsorBanner from './SponsorBanner'
 import GonSignature from './brand/GonSignature'
+import GonEmblem3D from './brand/GonEmblem3D'
 
 const Chart = dynamic(() => import('./Chart'), { ssr: false })
 
@@ -362,27 +363,51 @@ export default function Dashboard() {
   const marketBias = lastResult
     ? lastResult.probUp >= lastResult.probDown ? 'Sesgo alcista' : 'Sesgo bajista'
     : 'Sin sesgo'
+  // GON-warmer green/red — el verde gana saturación cálida, el rojo es el Pulse GON.
+  // Se mantiene el lenguaje universal del trader sin sentirse Saas-blue genérico.
   const marketBiasColor = !lastResult
     ? 'text-[#9CA3AF]'
     : lastResult.probUp >= lastResult.probDown
-      ? 'text-[#22C55E] value-glow'
-      : 'text-[#EF4444] value-glow'
+      ? 'text-[#34D178] value-glow'   // warm green
+      : 'text-[#D8503C] value-glow'   // GON pulse
 
   return (
     <div className="app-shell min-h-screen px-3 py-4 text-[#E5E7EB] sm:px-6 sm:py-6 lg:px-10">
-      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-gradient-to-b from-[#111827] via-[#0B1220]/70 to-transparent" />
+      {/* Overlay del top — re-tinteado a warm Ink para alinear con la paleta GON */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-gradient-to-b from-[#1A1814] via-[#14120E]/70 to-transparent" />
 
       <div className="relative mx-auto flex max-w-[1560px] flex-col gap-4 sm:gap-5">
+        {/* GON eyebrow strip — frase de venta, ocupa una línea, sin restar espacio del monitor */}
+        <div className="gon-eyebrow-strip reveal-up rounded-2xl">
+          <span>GON</span>
+          <span className="sep">·</span>
+          <span>ALGOTREND</span>
+          <span className="sep">·</span>
+          <span>ALGORITMO PROBABILÍSTICO IA</span>
+          <span className="sep hidden sm:inline">·</span>
+          <span className="hidden sm:inline">BTC 1H</span>
+          <span className="sep">·</span>
+          <span className="live-tag">LIVE</span>
+        </div>
+
         <header ref={headerRef} className="glass-header reveal-up rounded-2xl px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div className="flex items-start gap-4">
-              <div className="header-logo flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827] shadow-[0_8px_20px_rgba(0,0,0,0.3)] border border-[#1f2937] overflow-hidden">
-                <img src="/logo-algotrend.png" alt="IA AlgoTrend" className="h-9 w-9 object-contain" />
+              <div className="flex items-center gap-3">
+                <div className="header-logo flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827] shadow-[0_8px_20px_rgba(0,0,0,0.3)] border border-[#1f2937] overflow-hidden">
+                  <img src="/logo-algotrend.png" alt="IA AlgoTrend" className="h-9 w-9 object-contain" />
+                </div>
+                {/* Emblema GON 3D micro — la firma de marca al lado del producto */}
+                <GonEmblem3D size={40} className="hidden sm:block" />
+                <div className="gon-by-tag hidden sm:flex">
+                  <span className="by">By</span>
+                  <span className="name">GON</span>
+                </div>
               </div>
 
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
-                  <span className="flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#289eff]" />
+                  <span className="flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#D8503C]" />
                   <p className="label-eyebrow">🧠 IA AlgoTrend en Vivo</p>
                 </div>
                 <h1 className="header-title text-[1.65rem] leading-tight text-[#E5E7EB] sm:text-[2rem]">

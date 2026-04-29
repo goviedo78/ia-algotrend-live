@@ -1,20 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Manrope, Syne } from "next/font/google";
+import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 
-const manrope = Manrope({
-  variable: "--font-manrope",
+// GON typography stack — Space Grotesk (display) + Inter (text) + JetBrains Mono (mono).
+// Estos nombres coinciden con --gon-font-display / -text / -mono en brand-tokens.css.
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
-const syne = Syne({
-  variable: "--font-syne",
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const ibmPlexMono = IBM_Plex_Mono({
-  variable: "--font-ibm-plex-mono",
+const jetBrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
 });
@@ -31,7 +34,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#3b82f6",
+  themeColor: "#1A1814", // GON Ink — warm dark
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -45,7 +48,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${manrope.variable} ${syne.variable} ${ibmPlexMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${spaceGrotesk.variable} ${jetBrainsMono.variable} h-full antialiased`}
     >
       <head />
       <body className="min-h-full flex flex-col">
