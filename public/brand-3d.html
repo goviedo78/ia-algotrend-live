@@ -402,7 +402,7 @@ material.onBeforeCompile = (shader) => {
       `#include <emissivemap_fragment>
        // 3) Emissive boost en peaks: el área desplazada EMITE luz propia,
        //    mismo hue pero amplificado, simulando brasa caliente glowing.
-       totalEmissiveRadiance += vec3(0.95, 0.28, 0.04) * vGonHeat * 1.6;`
+       totalEmissiveRadiance += vec3(1.0, 0.45, 0.08) * vGonHeat * 3.0;`
     );
 };
 

@@ -167,8 +167,8 @@ export const PRESETS: Record<PresetName, PresetConfig> = {
       { type: 'directional', color: 0xff8a3d, intensity: 0.5, position: [-400, 200, -200] },
     ],
     heatColor: [0.42, 0.12, 0.02],
-    heatEmissive: [0.95, 0.28, 0.04],
-    heatEmissiveStrength: 1.6,
+    heatEmissive: [1.0, 0.45, 0.08],
+    heatEmissiveStrength: 3.0,
     toneMappingExposure: 1.55,
     environmentIntensity: 1.0,
   },
@@ -1087,7 +1087,7 @@ export function MateriaLogo({
           <EffectComposer>
             <Bloom
               intensity={bloomIntensity}
-              luminanceThreshold={0.62}
+              luminanceThreshold={0.45}
               luminanceSmoothing={0.25}
               mipmapBlur
             />
