@@ -30,9 +30,6 @@ export default function MateriaPage() {
         key={preset}
         height="100vh"
         preset={preset}
-        // Bloom on → el emissive naranja irradia halo difuso alrededor del peak
-        bloom
-        bloomIntensity={0.85}
         // En modo render: cero interacciones para que la pose sea estable
         cursorTilt={!renderMode}
         autoRotateIdle={!renderMode}

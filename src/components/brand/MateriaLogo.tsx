@@ -1087,7 +1087,7 @@ export function MateriaLogo({
           <EffectComposer>
             <Bloom
               intensity={bloomIntensity}
-              luminanceThreshold={0.45}
+              luminanceThreshold={0.95}
               luminanceSmoothing={0.25}
               mipmapBlur
             />
