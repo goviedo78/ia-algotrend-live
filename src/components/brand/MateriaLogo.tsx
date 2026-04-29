@@ -386,8 +386,8 @@ function MateriaMesh({
     uMouseStrength:        { value: 0 },
     uCalm:                 { value: 0 },
     uAmp:                  { value: amplitude },
-    uHeatColor:            { value: new THREE.Color(...heatColor) },
-    uHeatEmissive:         { value: new THREE.Color(...heatEmissive) },
+    uHeatColor:            { value: new THREE.Vector3(...heatColor) },
+    uHeatEmissive:         { value: new THREE.Vector3(...heatEmissive) },
     uHeatEmissiveStrength: { value: heatEmissiveStrength },
   })
 
@@ -531,10 +531,10 @@ function MateriaMesh({
     uniformsRef.current.uAmp.value = amplitude
   }, [amplitude])
   useEffect(() => {
-    uniformsRef.current.uHeatColor.value.setRGB(...heatColor)
+    uniformsRef.current.uHeatColor.value.set(...heatColor)
   }, [heatColor])
   useEffect(() => {
-    uniformsRef.current.uHeatEmissive.value.setRGB(...heatEmissive)
+    uniformsRef.current.uHeatEmissive.value.set(...heatEmissive)
   }, [heatEmissive])
   useEffect(() => {
     uniformsRef.current.uHeatEmissiveStrength.value = heatEmissiveStrength
