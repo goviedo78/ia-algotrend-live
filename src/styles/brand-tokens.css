@@ -13,46 +13,50 @@
 
 :root {
   /* =====================================================================
-     PALETA PRINCIPAL — 4 colores, ni uno más
+     PALETA PRINCIPAL v2 — navy + cream + vivid + steel
+     Inspiración: vintage Americana retro (Saul Bass-style poster).
+     Contraste alto entre frío (ink) y cálido (bone/pulse) → memorable.
      ===================================================================== */
-  --gon-ink:    oklch(15% 0.012 60);   /* tinta cálida — fondo dark, texto sobre claro */
-  --gon-bone:   oklch(96% 0.008 80);   /* hueso cálido — fondo light, emblema sobre oscuro */
-  --gon-bronze: oklch(58% 0.085 65);   /* acento premium — una superficie por composición */
-  --gon-pulse:  oklch(62% 0.18  28);   /* señal cinética — links, hover, momento vivo */
+  --gon-ink:    oklch(20% 0.040 270);   /* deep navy — fondo dark, texto sobre claro */
+  --gon-bone:   oklch(86% 0.045 85);    /* rich cream — sand/golden, emblema sobre oscuro */
+  --gon-bronze: oklch(72% 0.080 75);    /* warm gold — acento premium derivado del cream */
+  --gon-pulse:  oklch(64% 0.220 35);    /* vivid signal orange — links, hover, cinético */
+  --gon-steel:  oklch(35% 0.020 270);   /* gris navy neutral — superficies intermedias */
 
   /* Hex equivalentes — para Tailwind arbitrary values, SVG legacy, charts canvas, etc. */
-  --gon-ink-hex:        #1A1814;
-  --gon-ink-deep-hex:   #0E0C09;  /* fondo app shell */
-  --gon-ink-20-hex:     #2A2620;  /* surface raised */
-  --gon-ink-30-hex:     #332E26;  /* surface intermedia */
-  --gon-ink-40-hex:     #3D362A;  /* borders sutiles */
-  --gon-ink-60-hex:     #7A7468;  /* texto dim */
-  --gon-ink-80-hex:     #A8A39A;  /* texto muted */
-  --gon-bone-hex:       #F4F1EA;
-  --gon-bone-90-hex:    #E8E3D8;
-  --gon-bone-80-hex:    #C2BCB0;
-  --gon-bronze-hex:     #A07A4C;
-  --gon-bronze-deep-hex:#7C5E37;
-  --gon-pulse-hex:      #D8503C;
-  --gon-pulse-700-hex:  #B83E2C;  /* pulse darker — hover/active */
-  --gon-pulse-800-hex:  #8E2E1F;  /* pulse deep */
-  /* Trading semantic warmer — convención universal sin sentirse SaaS-blue */
-  --gon-good-hex:       #34D178;  /* warm green */
-  --gon-good-deep-hex:  #1F2A14;  /* warm green ink (open long row bg) */
-  --gon-bad-hex:        #D8503C;  /* = pulse */
-  --gon-bad-deep-hex:   #2A1814;  /* warm red ink (open short row bg) */
+  --gon-ink-hex:        #1C223A;  /* deep navy */
+  --gon-ink-deep-hex:   #11162A;  /* fondo app shell — más profundo */
+  --gon-ink-20-hex:     #2A3148;  /* surface raised */
+  --gon-ink-30-hex:     #383F58;  /* surface intermedia */
+  --gon-ink-40-hex:     #4F5570;  /* borders sutiles */
+  --gon-ink-60-hex:     #6B7385;  /* texto dim slate-bone */
+  --gon-ink-80-hex:     #A8AABA;  /* texto muted slate-light */
+  --gon-bone-hex:       #E5D4B6;  /* cream rich */
+  --gon-bone-90-hex:    #D8C8A6;
+  --gon-bone-80-hex:    #B8AB8E;
+  --gon-bronze-hex:     #C9A87A;  /* warm gold */
+  --gon-bronze-deep-hex:#9A7E54;
+  --gon-steel-hex:      #3A3F4D;  /* el gris obscuro que pediste */
+  --gon-pulse-hex:      #F44E1C;  /* vivid signal orange */
+  --gon-pulse-700-hex:  #D43D10;  /* pulse darker — hover/active */
+  --gon-pulse-800-hex:  #A82F08;  /* pulse deep */
+  /* Trading semantic — verde ajustado al palette navy (sigue siendo lenguaje trader) */
+  --gon-good-hex:       #4FBC72;  /* spring green readable on navy */
+  --gon-good-deep-hex:  #1A3024;  /* green-navy mix (open long row bg) */
+  --gon-bad-hex:        #F44E1C;  /* = pulse */
+  --gon-bad-deep-hex:   #301A1A;  /* red-navy mix (open short row bg) */
 
   /* =====================================================================
-     RAMPAS FUNCIONALES — derivadas matemáticamente, no son colores nuevos
+     RAMPAS FUNCIONALES — derivadas matemáticamente del navy + cream v2
      ===================================================================== */
-  --gon-ink-100: oklch(96% 0.005 60);
-  --gon-ink-80:  oklch(78% 0.008 60);
-  --gon-ink-60:  oklch(55% 0.010 60);
-  --gon-ink-40:  oklch(35% 0.011 60);
-  --gon-ink-20:  oklch(22% 0.012 60);
+  --gon-ink-100: oklch(94% 0.020 90);   /* casi cream tenue */
+  --gon-ink-80:  oklch(72% 0.020 270);  /* slate-bone muted text */
+  --gon-ink-60:  oklch(52% 0.025 270);  /* slate dim text */
+  --gon-ink-40:  oklch(38% 0.030 270);  /* borders sutiles */
+  --gon-ink-20:  oklch(28% 0.035 270);  /* surfaces raised */
 
-  --gon-bone-90: oklch(92% 0.009 80);
-  --gon-bone-80: oklch(86% 0.010 80);
+  --gon-bone-90: oklch(82% 0.045 85);
+  --gon-bone-80: oklch(76% 0.045 80);
 
   /* =====================================================================
      TIPOGRAFÍA — vía libre. Premium futura: GT America + Berkeley Mono.

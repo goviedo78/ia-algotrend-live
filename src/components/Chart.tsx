@@ -55,15 +55,15 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
     const chart = createChart(containerRef.current, {
       layout: {
         // GON warm palette — Ink-deep bg + bone-warm muted text
-        background: { color: '#14120E' },
-        textColor: '#A8A39A',
+        background: { color: '#161C30' },
+        textColor: '#A8AABA',
         fontSize: 13,
         fontFamily: '"JetBrains Mono", ui-monospace, monospace',
       },
-      grid: { vertLines: { color: '#2A2620' }, horzLines: { color: '#2A2620' } },
+      grid: { vertLines: { color: '#2A3148' }, horzLines: { color: '#2A3148' } },
       crosshair: { mode: 1 },
-      timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#3D362A' },
-      rightPriceScale: { borderColor: '#3D362A' },
+      timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#4F5570' },
+      rightPriceScale: { borderColor: '#4F5570' },
       width: containerRef.current.clientWidth,
       height: 500,
     })
@@ -71,21 +71,21 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
 
     // GON trading semantic — warm green up, pulse down (= LONG/SHORT)
     candleRef.current = chart.addSeries(CandlestickSeries, {
-      upColor: '#34D178',
-      downColor: '#D8503C',
-      borderUpColor: '#34D178',
-      borderDownColor: '#D8503C',
-      wickUpColor: '#34D178',
-      wickDownColor: '#D8503C',
+      upColor: '#4FBC72',
+      downColor: '#F44E1C',
+      borderUpColor: '#4FBC72',
+      borderDownColor: '#F44E1C',
+      wickUpColor: '#4FBC72',
+      wickDownColor: '#F44E1C',
     })
 
     stBullRef.current = chart.addSeries(LineSeries, {
-      color: '#34D178', lineWidth: 2,
+      color: '#4FBC72', lineWidth: 2,
       lastValueVisible: false, priceLineVisible: false,
     })
 
     stBearRef.current = chart.addSeries(LineSeries, {
-      color: '#D8503C', lineWidth: 2,
+      color: '#F44E1C', lineWidth: 2,
       lastValueVisible: false, priceLineVisible: false,
     })
     
@@ -198,7 +198,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
           time: t.open_time as Time,
           position: 'inBar',
           shape: t.direction === 'LONG' ? 'arrowUp' : 'arrowDown',
-          color: t.direction === 'LONG' ? '#34D178' : '#D8503C',
+          color: t.direction === 'LONG' ? '#4FBC72' : '#F44E1C',
           size: 1,
         })
         
@@ -207,7 +207,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
           time: t.open_time as Time,
           position: 'inBar',
           shape: 'circle',
-          color: t.direction === 'LONG' ? '#34D178' : '#D8503C',
+          color: t.direction === 'LONG' ? '#4FBC72' : '#F44E1C',
           text: t.direction === 'LONG' ? 'BUY' : 'SELL',
           size: 0, 
         })
@@ -217,7 +217,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
           time: t.open_time as Time,
           position: 'inBar',
           shape: 'circle',
-          color: t.direction === 'LONG' ? '#34D178' : '#D8503C',
+          color: t.direction === 'LONG' ? '#4FBC72' : '#F44E1C',
           text: '',
           size: 2, 
         })
@@ -227,7 +227,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
           time: t.open_time as Time,
           position: 'inBar',
           shape: 'circle',
-          color: t.direction === 'LONG' ? '#34D178' : '#D8503C',
+          color: t.direction === 'LONG' ? '#4FBC72' : '#F44E1C',
           text: probText,
           size: 0, 
         })
@@ -238,7 +238,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
             time: t.close_time as Time,
             position: t.direction === 'LONG' ? 'aboveBar' : 'belowBar',
             shape: t.direction === 'LONG' ? 'arrowDown' : 'arrowUp',
-            color: '#A8A39A',
+            color: '#A8AABA',
             text: `EXIT`,
             size: 1.5,
           })
@@ -280,7 +280,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         time: openTrade.open_time as Time,
         position: 'inBar',
         shape: openTrade.direction === 'LONG' ? 'arrowUp' : 'arrowDown',
-        color: openTrade.direction === 'LONG' ? '#34D178' : '#D8503C',
+        color: openTrade.direction === 'LONG' ? '#4FBC72' : '#F44E1C',
         size: 1,
       })
       
@@ -289,7 +289,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         time: openTrade.open_time as Time,
         position: 'inBar',
         shape: 'circle',
-        color: openTrade.direction === 'LONG' ? '#34D178' : '#D8503C',
+        color: openTrade.direction === 'LONG' ? '#4FBC72' : '#F44E1C',
         text: openTrade.direction === 'LONG' ? 'BUY' : 'SELL',
         size: 0,
       })
@@ -299,7 +299,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         time: openTrade.open_time as Time,
         position: 'inBar',
         shape: 'circle',
-        color: openTrade.direction === 'LONG' ? '#34D178' : '#D8503C',
+        color: openTrade.direction === 'LONG' ? '#4FBC72' : '#F44E1C',
         text: '',
         size: 2,
       })
@@ -309,7 +309,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         time: openTrade.open_time as Time,
         position: 'inBar',
         shape: 'circle',
-        color: openTrade.direction === 'LONG' ? '#34D178' : '#D8503C',
+        color: openTrade.direction === 'LONG' ? '#4FBC72' : '#F44E1C',
         text: `${probText} LIVE`,
         size: 0,
       })
@@ -318,7 +318,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         if (slLineRef.current) candleRef.current.removePriceLine(slLineRef.current)
         slLineRef.current = candleRef.current.createPriceLine({
           price: openTrade.stop_loss,
-          color: '#D8503C',
+          color: '#F44E1C',
           lineWidth: 2,
           lineStyle: 1,
           axisLabelVisible: true,
@@ -329,7 +329,7 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
         if (openTrade.take_profit) {
           tpLineRef.current = candleRef.current.createPriceLine({
             price: openTrade.take_profit,
-            color: '#34D178',
+            color: '#4FBC72',
             lineWidth: 2,
             lineStyle: 1,
             axisLabelVisible: true,
@@ -413,8 +413,8 @@ export default function Chart({ candles, results, liveCandle, trades, openTrade 
   }, [liveCandle])
 
   return (
-    <div className="relative w-full overflow-hidden rounded-[1.45rem] border border-[#3D362A] bg-gradient-to-b from-[#1F1B14] to-[#14120E] shadow-[0_18px_45px_rgba(0,0,0,0.4)]">
-      <div className="pointer-events-none absolute left-4 top-3 z-10 rounded-full border border-[#3D362A] bg-[#1A1814]/85 px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-[#A8A39A]">
+    <div className="relative w-full overflow-hidden rounded-[1.45rem] border border-[#4F5570] bg-gradient-to-b from-[#20283F] to-[#161C30] shadow-[0_18px_45px_rgba(0,0,0,0.4)]">
+      <div className="pointer-events-none absolute left-4 top-3 z-10 rounded-full border border-[#4F5570] bg-[#1C223A]/85 px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-[#A8AABA]">
         IA Algotrend
       </div>
       <div ref={containerRef} className="h-[500px] w-full" />

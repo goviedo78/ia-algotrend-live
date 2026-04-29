@@ -75,7 +75,7 @@ export function GonEmblem3D({ size = 40, enable3D = true, className }: GonEmblem
           width={size}
           height={size}
           priority
-          style={{ filter: 'drop-shadow(0 0 4px rgba(216,80,60,0.25))' }}
+          style={{ filter: 'drop-shadow(0 0 4px rgba(244,78,28,0.28))' }}
         />
       </div>
     )

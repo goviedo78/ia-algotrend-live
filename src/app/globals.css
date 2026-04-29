@@ -2,21 +2,22 @@
 @import "../styles/brand-tokens.css";
 
 :root {
-  /* Re-tinted al sistema GON warm — todas las clases base que consumen estas
-     variables (surface-panel, badge, value-glow, etc) heredan automáticamente. */
-  --background:   #0E0C09;                   /* gon-ink-deep */
-  --foreground:   #F4F1EA;                   /* gon-bone */
-  --surface:      #1A1814;                   /* gon-ink */
-  --surface-soft: rgba(26, 24, 20, 0.72);    /* ink @ 72% */
-  --border:       #3D362A;                   /* gon-ink-40 */
-  --ink-muted:    #A8A39A;                   /* gon-ink-80 */
-  --ink-dim:      #7A7468;                   /* gon-ink-60 */
-  --primary:      #D8503C;                   /* gon-pulse */
-  --cyan:         #A07A4C;                   /* legacy "cyan" → bronze warm */
-  --magenta:      #A07A4C;                   /* legacy "magenta" → bronze */
-  --good:         #34D178;                   /* warm green — trader semantic */
-  --warning:      #C8924E;                   /* bronze amber */
-  --danger:       #D8503C;                   /* = pulse */
+  /* GON v2 — deep navy + cream + vivid + steel.
+     Toda clase base que consuma estas variables hereda automáticamente. */
+  --background:   #11162A;                   /* gon-ink-deep — navy profundo */
+  --foreground:   #E5D4B6;                   /* gon-bone — cream rich */
+  --surface:      #1C223A;                   /* gon-ink — navy panel */
+  --surface-soft: rgba(28, 34, 58, 0.72);    /* ink @ 72% */
+  --border:       #4F5570;                   /* gon-ink-40 */
+  --ink-muted:    #A8AABA;                   /* gon-ink-80 — slate-light */
+  --ink-dim:      #6B7385;                   /* gon-ink-60 — slate-dim */
+  --primary:      #F44E1C;                   /* gon-pulse vivid */
+  --cyan:         #C9A87A;                   /* legacy "cyan" → bronze warm gold */
+  --magenta:      #C9A87A;                   /* legacy "magenta" → bronze */
+  --good:         #4FBC72;                   /* spring green readable on navy */
+  --warning:      #C9A87A;                   /* bronze gold */
+  --danger:       #F44E1C;                   /* = pulse vivid */
+  --steel:        #3A3F4D;                   /* gris navy neutral */
   --radius-xl:    1.5rem;
 }
 
@@ -40,12 +41,11 @@ body {
   color: var(--foreground);
   font-family: var(--font-inter), system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  /* GON warm radial — Ink en el top, Ink-deep al fondo. Mantiene el feel oscuro
-     pero shifteado del azul navy hacia ámbar cálido para alinear con la marca. */
+  /* GON v2 — deep navy radial. Ink en top, ink-deep al fondo. */
   background-image: radial-gradient(
     circle at top,
-    oklch(20% 0.018 50),
-    oklch(8% 0.012 60) 65%
+    oklch(24% 0.045 270),
+    oklch(14% 0.035 270) 65%
   );
   background-attachment: fixed;
 }
@@ -55,9 +55,10 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
+  /* Grid lines — slate-navy, sutil */
   background:
-    linear-gradient(to right, rgba(64, 56, 44, 0.32) 1px, transparent 1px) 0 0 / 32px 32px,
-    linear-gradient(to bottom, rgba(64, 56, 44, 0.26) 1px, transparent 1px) 0 0 / 32px 32px;
+    linear-gradient(to right, rgba(79, 85, 112, 0.28) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(to bottom, rgba(79, 85, 112, 0.22) 1px, transparent 1px) 0 0 / 32px 32px;
   mask-image: radial-gradient(circle at center, black 55%, transparent 98%);
   z-index: 0;
 }
@@ -80,7 +81,7 @@ h6 {
 .surface-panel {
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
-  background: rgba(26, 24, 20, 0.78);  /* gon-ink @ 78% — warm */
+  background: rgba(28, 34, 58, 0.78);  /* gon-ink navy @ 78% */
   backdrop-filter: blur(10px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -100,7 +101,7 @@ h6 {
 .surface-panel-muted {
   border: 1px solid var(--border);
   border-radius: 1.2rem;
-  background: rgba(20, 18, 14, 0.9);  /* warm dark — entre ink y ink-deep */
+  background: rgba(22, 28, 48, 0.9);  /* navy entre ink y ink-deep */
 }
 
 .label-eyebrow {
@@ -115,7 +116,7 @@ h6 {
 .badge {
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: rgba(20, 18, 14, 0.95);  /* warm dark */
+  background: rgba(22, 28, 48, 0.95);  /* navy dark */
   color: var(--ink-muted);
   font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
   letter-spacing: 0.08em;
@@ -127,27 +128,27 @@ h6 {
 }
 
 .badge-live {
-  border-color: rgba(52, 209, 120, 0.4);   /* warm green */
-  background: rgba(52, 209, 120, 0.12);
-  color: #34D178;
+  border-color: rgba(79, 188, 114, 0.42);  /* spring green */
+  background: rgba(79, 188, 114, 0.12);
+  color: #4FBC72;
 }
 
 .badge-danger {
-  border-color: rgba(216, 80, 60, 0.4);    /* pulse */
-  background: rgba(216, 80, 60, 0.12);
-  color: #D8503C;
+  border-color: rgba(244, 78, 28, 0.42);   /* pulse vivid */
+  background: rgba(244, 78, 28, 0.12);
+  color: #F44E1C;
 }
 
 .live-dot {
   width: 0.44rem;
   height: 0.44rem;
   border-radius: 999px;
-  background: #34D178;
+  background: #4FBC72;
   animation: pulseGlow 1.5s infinite;
 }
 
 .value-glow {
-  text-shadow: 0 0 10px rgba(216, 80, 60, 0.45);
+  text-shadow: 0 0 10px rgba(244, 78, 28, 0.45);  /* pulse vivid */
 }
 
 .reveal-up {
@@ -180,15 +181,15 @@ h6 {
 @keyframes pulseGlow {
   0% {
     opacity: 0.45;
-    box-shadow: 0 0 0 0 rgba(52, 209, 120, 0.5);  /* warm green halo */
+    box-shadow: 0 0 0 0 rgba(79, 188, 114, 0.5);  /* spring green halo */
   }
   60% {
     opacity: 1;
-    box-shadow: 0 0 0 8px rgba(52, 209, 120, 0);
+    box-shadow: 0 0 0 8px rgba(79, 188, 114, 0);
   }
   100% {
     opacity: 0.6;
-    box-shadow: 0 0 0 0 rgba(52, 209, 120, 0);
+    box-shadow: 0 0 0 0 rgba(79, 188, 114, 0);
   }
 }
 
@@ -242,7 +243,7 @@ h6 {
   z-index: 1;
 }
 
-/* Efecto de refraccion de color — GON: pulse/bronze cálido en lugar de azul/cyan */
+/* Refracción de color — pulse vivid + bronze gold en navy */
 .glass::after {
   content: "";
   position: absolute;
@@ -250,15 +251,15 @@ h6 {
   border-radius: inherit;
   background: linear-gradient(
     120deg,
-    rgba(216, 80, 60, 0.07) 0%,
-    rgba(160, 122, 76, 0.04) 50%,
-    rgba(216, 80, 60, 0.05) 100%
+    rgba(244, 78, 28, 0.08) 0%,
+    rgba(201, 168, 122, 0.04) 50%,
+    rgba(244, 78, 28, 0.06) 100%
   );
   pointer-events: none;
   z-index: 0;
 }
 
-/* Hover — el vidrio se aclara como si tomara mas luz (pulse rim en lugar de azul) */
+/* Hover — pulse rim vivid */
 .glass:hover {
   background: rgba(255, 255, 255, 0.07);
   border-top-color: rgba(255, 255, 255, 0.28);
@@ -266,7 +267,7 @@ h6 {
     0 12px 40px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     inset 0 -1px 0 rgba(0, 0, 0, 0.2),
-    0 0 0 1px rgba(216, 80, 60, 0.14);
+    0 0 0 1px rgba(244, 78, 28, 0.16);
   transform: translateY(-2px);
 }
 
@@ -321,7 +322,7 @@ h6 {
   box-shadow:
     0 6px 24px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.20),
-    0 0 0 1px rgba(216, 80, 60, 0.22);
+    0 0 0 1px rgba(244, 78, 28, 0.24);
 }
 
 .glass-btn:active {
@@ -331,43 +332,43 @@ h6 {
     inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Variante primaria — GON Pulse (warm) */
+/* Variante primaria — GON Pulse vivid */
 .glass-btn-primary {
-  background: rgba(216, 80, 60, 0.20);
-  border-color: rgba(216, 80, 60, 0.32);
-  border-top-color: rgba(244, 145, 125, 0.40);
-  color: #F4917D;  /* pulse-200 cálido */
+  background: rgba(244, 78, 28, 0.20);
+  border-color: rgba(244, 78, 28, 0.32);
+  border-top-color: rgba(255, 138, 96, 0.40);
+  color: #FF8A60;
   box-shadow:
-    0 4px 16px rgba(216, 80, 60, 0.20),
-    inset 0 1px 0 rgba(244, 145, 125, 0.22);
+    0 4px 16px rgba(244, 78, 28, 0.20),
+    inset 0 1px 0 rgba(255, 138, 96, 0.22);
 }
 
 .glass-btn-primary:hover {
-  background: rgba(216, 80, 60, 0.30);
-  border-top-color: rgba(244, 145, 125, 0.55);
-  color: #FBC0AE;
+  background: rgba(244, 78, 28, 0.30);
+  border-top-color: rgba(255, 138, 96, 0.55);
+  color: #FFC0A6;
   box-shadow:
-    0 6px 24px rgba(216, 80, 60, 0.35),
-    inset 0 1px 0 rgba(244, 145, 125, 0.32),
-    0 0 20px rgba(216, 80, 60, 0.18);
+    0 6px 24px rgba(244, 78, 28, 0.35),
+    inset 0 1px 0 rgba(255, 138, 96, 0.32),
+    0 0 20px rgba(244, 78, 28, 0.18);
 }
 
-/* Variante verde buena señal — warm green (trader semantic) */
+/* Variante verde buena señal — spring green readable on navy */
 .glass-btn-success {
-  background: rgba(52, 209, 120, 0.14);
-  border-color: rgba(52, 209, 120, 0.26);
+  background: rgba(79, 188, 114, 0.14);
+  border-color: rgba(79, 188, 114, 0.26);
   border-top-color: rgba(134, 239, 172, 0.30);
   color: #86EFAC;
   box-shadow:
-    0 4px 16px rgba(52, 209, 120, 0.14),
+    0 4px 16px rgba(79, 188, 114, 0.14),
     inset 0 1px 0 rgba(134, 239, 172, 0.16);
 }
 
 /* ── HEADER flotante de vidrio liquido ── */
 .glass-header {
   position: relative;
-  /* Solid dark background by default — NO transparency */
-  background: rgba(13, 20, 35, 0.98);
+  /* GON v2 navy — gon-ink @ 96% opacity */
+  background: rgba(28, 34, 58, 0.96);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -382,7 +383,7 @@ h6 {
     border-color 0.4s ease;
 }
 
-/* Linea de luz superior — reflejo especular sutil (GON: pulse en el centro) */
+/* Línea de luz superior — pulse vivid en el centro */
 .glass-header::after {
   content: "";
   position: absolute;
@@ -392,7 +393,7 @@ h6 {
     90deg,
     transparent 0%,
     rgba(255, 255, 255, 0.12) 30%,
-    rgba(216, 80, 60, 0.30) 50%,
+    rgba(244, 78, 28, 0.32) 50%,
     rgba(255, 255, 255, 0.12) 70%,
     transparent 100%
   );
@@ -401,15 +402,15 @@ h6 {
   transition: opacity 0.4s ease;
 }
 
-/* ─ Estado COLAPSADO — pulse rim en lugar de azul ─ */
+/* ─ Estado COLAPSADO — navy más profundo + pulse rim ─ */
 .glass-header[data-scrolled="true"] {
-  background: rgba(15, 13, 11, 0.92);
+  background: rgba(17, 22, 42, 0.94);
   border-color: rgba(255, 255, 255, 0.08);
-  border-top-color: rgba(216, 80, 60, 0.22);
+  border-top-color: rgba(244, 78, 28, 0.24);
   box-shadow:
-    0 1px 0 rgba(216, 80, 60, 0.08) inset,
+    0 1px 0 rgba(244, 78, 28, 0.08) inset,
     0 4px 24px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(216, 80, 60, 0.06);
+    0 0 0 1px rgba(244, 78, 28, 0.06);
 }
 
 /* Oculta contenido secundario del header cuando colapsa */
@@ -522,11 +523,11 @@ h6 {
   font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(244, 241, 234, 0.55); /* Bone @ 55% */
-  border-bottom: 1px solid rgba(216, 80, 60, 0.12);
+  color: rgba(229, 212, 182, 0.6); /* cream @ 60% */
+  border-bottom: 1px solid rgba(244, 78, 28, 0.14);
   background: linear-gradient(
     180deg,
-    rgba(216, 80, 60, 0.04) 0%,
+    rgba(244, 78, 28, 0.05) 0%,
     transparent 100%
   );
   user-select: none;
@@ -552,7 +553,7 @@ h6 {
   height: 5px;
   border-radius: 50%;
   background: var(--gon-pulse-hex);
-  box-shadow: 0 0 8px rgba(216, 80, 60, 0.6);
+  box-shadow: 0 0 8px rgba(244, 78, 28, 0.6);
 }
 
 /* ── Firma "BY GON" al lado del logo del producto ── */
@@ -570,7 +571,7 @@ h6 {
 }
 
 .gon-by-tag .by {
-  color: rgba(244, 241, 234, 0.4);
+  color: rgba(229, 212, 182, 0.42);
 }
 
 .gon-by-tag .name {
@@ -578,17 +579,17 @@ h6 {
   font-weight: 600;
 }
 
-/* ── Flash on trade close — usa la curva inOutExpo (sistema motion GON) ── */
+/* ── Flash on trade close — usa inOutExpo (sistema motion GON) ── */
 @keyframes gonFlashWin {
-  0%   { background-color: rgba(216, 80, 60, 0); }
-  18%  { background-color: rgba(216, 138, 70, 0.22); } /* ámbar cálido */
-  100% { background-color: rgba(216, 80, 60, 0); }
+  0%   { background-color: rgba(79, 188, 114, 0); }
+  18%  { background-color: rgba(79, 188, 114, 0.22); }   /* spring green hint */
+  100% { background-color: rgba(79, 188, 114, 0); }
 }
 
 @keyframes gonFlashLoss {
-  0%   { background-color: rgba(58, 30, 22, 0); }
-  18%  { background-color: rgba(58, 30, 22, 0.55); } /* ink-deep cálido */
-  100% { background-color: rgba(58, 30, 22, 0); }
+  0%   { background-color: rgba(48, 26, 26, 0); }
+  18%  { background-color: rgba(48, 26, 26, 0.55); }     /* red-navy ink */
+  100% { background-color: rgba(48, 26, 26, 0); }
 }
 
 .gon-flash-win {
