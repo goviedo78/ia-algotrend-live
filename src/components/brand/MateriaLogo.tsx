@@ -166,9 +166,9 @@ export const PRESETS: Record<PresetName, PresetConfig> = {
       { type: 'directional', color: 0xff8a3d, intensity: 1.4, position: [0, 100, -500] },
       { type: 'directional', color: 0xff8a3d, intensity: 0.5, position: [-400, 200, -200] },
     ],
-    heatColor: [0.60, 0.20, 0.01],
-    heatEmissive: [1.0, 0.45, 0.02],
-    heatEmissiveStrength: 2.2,
+    heatColor: [0.42, 0.12, 0.02],
+    heatEmissive: [0.95, 0.28, 0.04],
+    heatEmissiveStrength: 1.6,
     toneMappingExposure: 1.55,
     environmentIntensity: 1.0,
   },
@@ -472,11 +472,7 @@ function MateriaMesh({
 
           float dist = distance(localUV, uMouse);
           float mouseAmp = smoothstep(0.28, 0.0, dist) * uMouseStrength;
-          
-          // Brillo naranja permanente en las crestas de la animación
-          float peakGlow = smoothstep(0.15, 0.55, n) * 0.7;
-          
-          vGonHeat = min(1.0, mouseAmp + peakGlow) * frontFactor;
+          vGonHeat = mouseAmp * frontFactor;
 
           float aliveAmp = mix(uAmp, 0.0, uCalm);
 
