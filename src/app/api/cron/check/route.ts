@@ -249,7 +249,7 @@ export async function GET(req: NextRequest) {
       if (!atrBlocked) {
       const stop = signal === 'LONG' ? last.longStop : last.shortStop
       const tp = signal === 'LONG' ? last.longTp : last.shortTp
-      const trade = await openTrade(signal, last.time, last.time, last.close, stop, tp)
+      const trade = await openTrade(signal, last.time, last.time, last.close, stop, tp, atrPct > 0 ? +atrPct.toFixed(3) : null)
 
       if (trade) {
         const prob = signal === 'LONG' ? last.probUp : last.probDown

@@ -22,6 +22,7 @@ export interface Trade {
   close_reason: CloseReason | null
   pnl_usd: number | null
   pnl_pct: number | null
+  atr_pct: number | null
   status: TradeStatus
 }
 
@@ -51,7 +52,8 @@ export async function openTrade(
   openTime: number,
   openPrice: number,
   stopLoss: number,
-  takeProfit: number | null
+  takeProfit: number | null,
+  atrPct: number | null
 ): Promise<Trade | null> {
   const { data, error } = await supabase
     .from(TABLE)
@@ -62,6 +64,7 @@ export async function openTrade(
       open_price: openPrice,
       stop_loss: stopLoss,
       take_profit: takeProfit,
+      atr_pct: atrPct,
       status: 'OPEN',
     })
     .select()

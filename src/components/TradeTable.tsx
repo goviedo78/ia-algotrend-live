@@ -57,7 +57,10 @@ export default function TradeTable({ trades: tradesProp, openTrade, currentPrice
             <span className={`badge ${openTrade.direction === 'LONG' ? 'badge-live' : 'badge-danger'}`}>
               {openTrade.direction === 'LONG' ? 'Largo abierto' : 'Corto abierto'}
             </span>
-            <span className="text-xs font-mono text-[#A8AABA]">@ ${fmt(openTrade.open_price)}</span>
+            <span className="text-xs font-mono text-[#A8AABA]">
+              @ ${fmt(openTrade.open_price)}
+              {openTrade.atr_pct != null && <span className="text-[10px] text-[#6B7385] ml-1.5">(ATR {openTrade.atr_pct.toFixed(2)}%)</span>}
+            </span>
           </div>
           <div className="text-right">
             <span className="text-xs text-[#A8AABA]">SL ${fmt(openTrade.stop_loss)} · TP ${fmt(openTrade.take_profit)}</span>
@@ -113,7 +116,12 @@ export default function TradeTable({ trades: tradesProp, openTrade, currentPrice
                     <div className="font-mono text-[#E5D4B6]">{trade.close_time ? fmtTime(trade.close_time) : '—'}</div>
                     <div className="text-[11px] text-[#A8AABA]">{trade.close_time ? exitLabel : '—'}</div>
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono text-[#E5D4B6]">${fmt(trade.open_price)}</td>
+                  <td className="px-3 py-2.5 text-right font-mono text-[#E5D4B6]">
+                    <div>${fmt(trade.open_price)}</div>
+                    {trade.atr_pct != null && (
+                      <div className="text-[10px] text-[#A8AABA]">(ATR {trade.atr_pct.toFixed(2)}%)</div>
+                    )}
+                  </td>
                   <td className="px-3 py-2.5 text-right font-mono text-[#E5D4B6]">{trade.close_price ? `$${fmt(trade.close_price)}` : '—'}</td>
                 </tr>
               )
