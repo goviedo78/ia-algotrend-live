@@ -2,13 +2,13 @@
 
 /**
  * GonSignature
- * Firma de autoría sutil. Indica que el producto está construido por GON
+ * Firma de autoría sutil. Indica que el producto está construido por GONOVI
  * sin invadir la identidad del producto host. Diseñada para vivir en el
  * footer o esquina inferior de cualquier pantalla.
  *
  * Uso:
- *   <GonSignature />                     // default: "Built by GON" + emblem
- *   <GonSignature label="By GON" />      // texto custom
+ *   <GonSignature />                     // default: "Built by GONOVI" + emblem
+ *   <GonSignature label="By GONOVI" />   // texto custom
  *   <GonSignature variant="compact" />   // solo emblema, sin texto
  *   <GonSignature href="/brand" />       // link al /brand (default)
  *
@@ -19,6 +19,7 @@ import Link from 'next/link'
 import type { CSSProperties } from 'react'
 
 type Variant = 'full' | 'compact'
+const SELECTED_LOGO_SRC = '/logo-elegant-triads/05-ink-bone-pulse.svg'
 
 export interface GonSignatureProps {
   label?: string
@@ -31,7 +32,7 @@ export interface GonSignatureProps {
 }
 
 export function GonSignature({
-  label   = 'Built by GON',
+  label   = 'Built by GONOVI',
   href    = '/brand',
   variant = 'full',
   size    = 16,
@@ -56,18 +57,17 @@ export function GonSignature({
       }}
     >
       <img
-        src="/logo-gon-mark.svg"
-        alt="GON"
+        src={SELECTED_LOGO_SRC}
+        alt="GONOVI"
         width={size}
         height={size}
         style={{
           width: size,
           height: size,
           display: 'block',
+          borderRadius: '999px',
           opacity: 0.7,
           transition: 'opacity 200ms var(--gon-ease-out)',
-          // logo-gon-mark.svg uses currentColor as fallback
-          color: 'currentColor',
         }}
       />
       {variant === 'full' && <span>{label}</span>}

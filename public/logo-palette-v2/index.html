@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GONOVI - Alternativas paleta v2</title>
+<style>
+  :root {
+    --ink-deep: #11162A;
+    --ink: #1C223A;
+    --ink-20: #2A3148;
+    --ink-40: #4F5570;
+    --ink-80: #A8AABA;
+    --bone: #E5D4B6;
+    --bronze: #C9A87A;
+    --pulse: #F44E1C;
+    --steel: #3A3F4D;
+    --good: #4FBC72;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--pulse) 22%, transparent), transparent 26rem),
+      linear-gradient(135deg, var(--ink-deep), var(--ink));
+    color: var(--bone);
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding: 44px 24px 64px;
+  }
+  header,
+  main,
+  footer { width: min(1280px, 100%); margin-inline: auto; }
+  header { display: grid; gap: 18px; margin-bottom: 34px; }
+  .badge {
+    width: fit-content;
+    background: var(--bone);
+    color: var(--ink);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    padding: 4px 9px;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: clamp(40px, 7vw, 92px);
+    letter-spacing: -0.065em;
+    line-height: 0.92;
+    max-width: 11ch;
+  }
+  .lede {
+    color: var(--ink-80);
+    font-size: 17px;
+    line-height: 1.55;
+    max-width: 74ch;
+  }
+  .palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0 34px;
+  }
+  .chip {
+    border: 1px solid color-mix(in srgb, var(--bone) 18%, transparent);
+    border-radius: 999px;
+    color: var(--bone);
+    display: inline-flex;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    gap: 8px;
+    letter-spacing: 0.03em;
+    padding: 7px 10px;
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .card {
+    background: color-mix(in srgb, var(--ink-20) 70%, transparent);
+    border: 1px solid color-mix(in srgb, var(--bone) 16%, transparent);
+    overflow: hidden;
+  }
+  .preview { aspect-ratio: 1; background: var(--ink-deep); }
+  .preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .meta { border-top: 1px solid color-mix(in srgb, var(--bone) 14%, transparent); padding: 16px; }
+  .num {
+    color: var(--pulse);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  h2 { font-size: 19px; letter-spacing: -0.025em; margin: 7px 0 5px; }
+  .use {
+    color: var(--bronze);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .desc { color: var(--ink-80); font-size: 13px; line-height: 1.45; min-height: 56px; }
+  a {
+    border-top: 1px solid color-mix(in srgb, var(--bone) 14%, transparent);
+    color: var(--bone);
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    padding: 11px 16px;
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+  a:hover { background: var(--pulse); color: var(--bone); }
+  footer {
+    color: var(--ink-80);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    margin-top: 32px;
+    text-transform: uppercase;
+  }
+  @media (max-width: 980px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) {
+    body { padding: 28px 14px 44px; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <span class="badge">GONOVI - Palette v2</span>
+    <h1>Alternativas de color</h1>
+    <p class="lede">Misma geometria del logo GONOVI, explorada con la paleta Navy + Cream + Vivid + Steel. Pulse queda reservado para versiones de senal/accion; Bronze se usa como acento premium y Steel como superficie neutral.</p>
+  </header>
+  <main>
+    <div class="palette">
+      <span class="chip"><span class="dot" style="background:#1C223A"></span>Ink #1C223A</span>
+      <span class="chip"><span class="dot" style="background:#E5D4B6"></span>Bone #E5D4B6</span>
+      <span class="chip"><span class="dot" style="background:#C9A87A"></span>Bronze #C9A87A</span>
+      <span class="chip"><span class="dot" style="background:#F44E1C"></span>Pulse #F44E1C</span>
+      <span class="chip"><span class="dot" style="background:#3A3F4D"></span>Steel #3A3F4D</span>
+      <span class="chip"><span class="dot" style="background:#4FBC72"></span>Good #4FBC72</span>
+    </div>
+    <section class="grid">
+      <article class="card">
+        <div class="preview"><img src="01-ink-bone.svg" alt="Ink / Bone" /></div>
+        <div class="meta">
+          <div class="num">01</div>
+          <h2>Ink / Bone</h2>
+          <div class="use">Principal sobre oscuro</div>
+          <p class="desc">La version mas estable: Ink como campo y Bone como marca.</p>
+        </div>
+        <a href="01-ink-bone.svg">Abrir SVG</a>
+      </article>
+      <article class="card">
+        <div class="preview"><img src="02-bone-ink.svg" alt="Bone / Ink" /></div>
+        <div class="meta">
+          <div class="num">02</div>
+          <h2>Bone / Ink</h2>
+          <div class="use">Principal sobre claro</div>
+          <p class="desc">La inversa limpia para fondos claros y piezas editoriales.</p>
+        </div>
+        <a href="02-bone-ink.svg">Abrir SVG</a>
+      </article>
+      <article class="card">
+        <div class="preview"><img src="03-bronze-premium.svg" alt="Bronze Premium" /></div>
+        <div class="meta">
+          <div class="num">03</div>
+          <h2>Bronze Premium</h2>
+          <div class="use">Acento premium</div>
+          <p class="desc">Bronze como superficie unica, con marca Ink para mantener contraste.</p>
+        </div>
+        <a href="03-bronze-premium.svg">Abrir SVG</a>
+      </article>
+      <article class="card">
+        <div class="preview"><img src="04-steel-panel.svg" alt="Steel Panel" /></div>
+        <div class="meta">
+          <div class="num">04</div>
+          <h2>Steel Panel</h2>
+          <div class="use">UI / surfaces neutras</div>
+          <p class="desc">Steel como panel intermedio, Bone para lectura y un filo Pulse minimo.</p>
+        </div>
+        <a href="04-steel-panel.svg">Abrir SVG</a>
+      </article>
+      <article class="card">
+        <div class="preview"><img src="05-pulse-signal.svg" alt="Pulse Signal" /></div>
+        <div class="meta">
+          <div class="num">05</div>
+          <h2>Pulse Signal</h2>
+          <div class="use">CTA / alerta / launch</div>
+          <p class="desc">Pulse en primer plano con glow controlado; no para uso permanente.</p>
+        </div>
+        <a href="05-pulse-signal.svg">Abrir SVG</a>
+      </article>
+      <article class="card">
+        <div class="preview"><img src="06-ink-bronze.svg" alt="Ink / Bronze" /></div>
+        <div class="meta">
+          <div class="num">06</div>
+          <h2>Ink / Bronze</h2>
+          <div class="use">Premium oscuro</div>
+          <p class="desc">Bronze queda como spice sobre Ink; elegante y menos obvio que Pulse.</p>
+        </div>
+        <a href="06-ink-bronze.svg">Abrir SVG</a>
+      </article>
+      <article class="card">
+        <div class="preview"><img src="07-editorial-cream.svg" alt="Editorial Cream" /></div>
+        <div class="meta">
+          <div class="num">07</div>
+          <h2>Editorial Cream</h2>
+          <div class="use">Poster / print / sello</div>
+          <p class="desc">Tratamiento retro editorial: Bone, Ink y Bronze con borde fuerte.</p>
+        </div>
+        <a href="07-editorial-cream.svg">Abrir SVG</a>
+      </article>
+      <article class="card">
+        <div class="preview"><img src="08-live-state.svg" alt="Live State" /></div>
+        <div class="meta">
+          <div class="num">08</div>
+          <h2>Live State</h2>
+          <div class="use">Trading / estado activo</div>
+          <p class="desc">Version de producto: marca Bone, estado live en verde semantico.</p>
+        </div>
+        <a href="08-live-state.svg">Abrir SVG</a>
+      </article>
+    </section>
+  </main>
+  <footer>Generado desde public/logo-gon-mark.svg - paleta https://algotrend.vercel.app/brand/palette</footer>
+</body>
+</html>

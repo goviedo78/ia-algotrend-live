@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GON - Orange Graphite</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #282622;
+  color: #F2DFC3;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  padding: 44px 24px 64px;
+}
+main { width: min(1280px, 100%); margin: 0 auto; }
+.tag {
+  background: #EC5E27;
+  color: #403D39;
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  padding: 5px 9px;
+  text-transform: uppercase;
+}
+h1 { font-size: clamp(42px, 7vw, 88px); letter-spacing: -.065em; line-height: .92; max-width: 10ch; }
+.lede { color: #C4B7A8; font-size: 17px; line-height: 1.55; margin: 18px 0 34px; max-width: 72ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.chip {
+  border: 1px solid rgba(242, 223, 195, .18);
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  padding: 7px 10px;
+}
+.dot { border-radius: 999px; height: 12px; width: 12px; }
+.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.card { background: #403D39; border: 1px solid rgba(242, 223, 195, .15); }
+.preview { aspect-ratio: 1; }
+img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.meta { border-top: 1px solid rgba(242, 223, 195, .14); padding: 16px; }
+.note { color: #EC5E27; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+h2 { font-size: 19px; letter-spacing: -.03em; margin: 7px 0; }
+p { color: #C4B7A8; font-size: 13px; line-height: 1.48; min-height: 58px; }
+a {
+  border-top: 1px solid rgba(242, 223, 195, .14);
+  color: #F2DFC3;
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: .1em;
+  padding: 11px 16px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+a:hover { background: #EC5E27; color: #403D39; }
+@media (max-width: 980px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 540px) { body { padding: 28px 14px 44px; } .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <span class="tag">GON - Orange Graphite</span>
+  <h1>Mas energia, mas contraste</h1>
+  <p class="lede">Exploraciones con Orange #EC5E27 y Graphite #403D39. La clave es decidir si Orange domina como energia de lanzamiento o si queda como acento sobre una base Graphite mas premium.</p>
+  <div class="chips">
+    <span class="chip"><span class="dot" style="background:#EC5E27"></span>Orange #EC5E27</span>
+    <span class="chip"><span class="dot" style="background:#403D39"></span>Graphite #403D39</span>
+    <span class="chip"><span class="dot" style="background:#F2DFC3"></span>Cream apoyo #F2DFC3</span>
+  </div>
+  <section class="grid">
+    <article class="card">
+      <div class="preview"><img src="01-graphite-orange-core.svg" alt="Graphite / Orange Core" /></div>
+      <div class="meta">
+        <div class="note">Principal fuerte</div>
+        <h2>Graphite / Orange Core</h2>
+        <p>Graphite domina y Orange queda como logo completo. Es la version mas directa y potente.</p>
+      </div>
+      <a href="01-graphite-orange-core.svg">Abrir SVG</a>
+    </article>
+    <article class="card">
+      <div class="preview"><img src="02-orange-graphite-core.svg" alt="Orange / Graphite Core" /></div>
+      <div class="meta">
+        <div class="note">Launch loud</div>
+        <h2>Orange / Graphite Core</h2>
+        <p>Campo Orange con logo Graphite. Muy visible, ideal para portada, splash o campana.</p>
+      </div>
+      <a href="02-orange-graphite-core.svg">Abrir SVG</a>
+    </article>
+    <article class="card">
+      <div class="preview"><img src="03-graphite-orange-ring.svg" alt="Graphite / Orange Ring" /></div>
+      <div class="meta">
+        <div class="note">Capa exterior</div>
+        <h2>Graphite / Orange Ring</h2>
+        <p>Aro Orange grueso como capa total, centro Graphite y logo Cream para mas lectura.</p>
+      </div>
+      <a href="03-graphite-orange-ring.svg">Abrir SVG</a>
+    </article>
+    <article class="card">
+      <div class="preview"><img src="04-orange-graphite-ring.svg" alt="Orange / Graphite Ring" /></div>
+      <div class="meta">
+        <div class="note">Inversion agresiva</div>
+        <h2>Orange / Graphite Ring</h2>
+        <p>Nucleo Orange con borde Graphite grueso. Se siente mas industrial y deportivo.</p>
+      </div>
+      <a href="04-orange-graphite-ring.svg">Abrir SVG</a>
+    </article>
+    <article class="card">
+      <div class="preview"><img src="05-split-signal.svg" alt="Split Signal" /></div>
+      <div class="meta">
+        <div class="note">Doble lectura</div>
+        <h2>Split Signal</h2>
+        <p>Mitad Orange, mitad Graphite. Funciona como asset dinamico para trading o live states.</p>
+      </div>
+      <a href="05-split-signal.svg">Abrir SVG</a>
+    </article>
+    <article class="card">
+      <div class="preview"><img src="06-graphite-cream-orange.svg" alt="Graphite / Cream / Orange" /></div>
+      <div class="meta">
+        <div class="note">Mas elegante</div>
+        <h2>Graphite / Cream / Orange</h2>
+        <p>Graphite de fondo, logo Cream y Orange solo como detalle. La opcion mas premium.</p>
+      </div>
+      <a href="06-graphite-cream-orange.svg">Abrir SVG</a>
+    </article>
+    <article class="card">
+      <div class="preview"><img src="07-orange-shadow.svg" alt="Orange Shadow" /></div>
+      <div class="meta">
+        <div class="note">Impacto 3D plano</div>
+        <h2>Orange Shadow</h2>
+        <p>Logo Cream con sombra Graphite desplazada sobre Orange. Tiene energia poster/sportswear.</p>
+      </div>
+      <a href="07-orange-shadow.svg">Abrir SVG</a>
+    </article>
+    <article class="card">
+      <div class="preview"><img src="08-graphite-glow.svg" alt="Graphite Glow" /></div>
+      <div class="meta">
+        <div class="note">Tech nocturno</div>
+        <h2>Graphite Glow</h2>
+        <p>Orange con glow sobre Graphite profundo. Bueno para app icon, loader o modo oscuro.</p>
+      </div>
+      <a href="08-graphite-glow.svg">Abrir SVG</a>
+    </article>
+  </section>
+</main>
+</body>
+</html>

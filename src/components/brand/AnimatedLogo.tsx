@@ -176,7 +176,7 @@ export function AnimatedLogo({
         }
         transition={{ duration: 1.8, ease: BREATH_EASE, repeat: Infinity }}
       >
-        <img className={maskClass} src={src} alt="GON" style={imgStyle} />
+        <img className={maskClass} src={src} alt="GONOVI" style={imgStyle} />
         <div className={sheenClass} style={sheenStyle} aria-hidden />
       </motion.div>
 

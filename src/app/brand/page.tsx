@@ -17,7 +17,7 @@ export default function BrandPage() {
   return (
     <main style={styles.main}>
       <header style={styles.hud}>
-        <span style={styles.badge}>GON · Concepto A</span>
+        <span style={styles.badge}>GONOVI · Concepto A</span>
         <div style={styles.hudTitle}>Inscripción</div>
         <div style={styles.hudMeta}>1400ms · ease-out-quint · Framer Motion</div>
         <div style={styles.hudRow}>

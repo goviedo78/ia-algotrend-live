@@ -5,7 +5,7 @@
   protección visual. El doble anillo crea el efecto "sello" sin alterar la
   geometría interna.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" role="img" aria-label="GON">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" role="img" aria-label="GONOVI">
   <!-- Outer protective ring (the stamp frame) -->
   <circle cx="600" cy="600" r="580" fill="none"
           stroke="var(--logo-fg, currentColor)" stroke-width="8"/>

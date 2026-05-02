@@ -25,8 +25,8 @@ export async function notifyOpen(trade: Trade) {
     `${dir} <b>BTC/USD</b> (1H)\n` +
     `━━━━━━━━━━━━━━\n` +
     `💰 Entrada:    <b>$${fmt(trade.open_price)}</b>\n` +
-    `🛑 Stop Loss:  <b>$${fmt(trade.stop_loss)}</b>\n` +
-    `🎯 Take Profit: <b>${trade.take_profit !== null ? `$${fmt(trade.take_profit)}` : 'Trailing activo'}</b>\n` +
+    `🛑 Stop:       <b>$${fmt(trade.stop_loss)}</b>\n` +
+    `🎯 Objetivo:   <b>${trade.take_profit !== null ? `$${fmt(trade.take_profit)}` : 'Stop móvil activo'}</b>\n` +
     `📊 Capital base: $10,000`
   )
 }
@@ -47,6 +47,6 @@ export async function notifyClose(trade: Trade) {
     `📤 Cierre:   <b>$${fmt(trade.close_price)}</b>\n` +
     `${reason}\n` +
     `━━━━━━━━━━━━━━\n` +
-    `PnL: <b>${win ? '+' : ''}$${fmt(trade.pnl_usd)}</b>  (${win ? '+' : ''}${fmt(trade.pnl_pct ?? 0)}%)`
+    `Resultado: <b>${win ? '+' : ''}$${fmt(trade.pnl_usd)}</b>  (${win ? '+' : ''}${fmt(trade.pnl_pct ?? 0)}%)`
   )
 }

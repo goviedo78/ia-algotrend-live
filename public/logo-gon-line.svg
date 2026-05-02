@@ -5,7 +5,7 @@
   Mantiene la silueta circular y la división tripartita pero como contornos
   abiertos. Stroke proporcional al diámetro.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-label="GON"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-label="GONOVI"
      fill="none"
      stroke="var(--logo-fg, currentColor)"
      stroke-width="20"

@@ -4,7 +4,7 @@
   La N va reforzada (trazos más gruesos) porque a tamaños chicos las letras
   finas desaparecen. La silueta y la división tripartita se mantienen.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="GON" shape-rendering="geometricPrecision">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="GONOVI" shape-rendering="geometricPrecision">
   <g fill="var(--logo-fg, currentColor)">
     <!-- Outer ring (annulus via even-odd) -->
     <path fill-rule="evenodd" d="M 16 1 A 15 15 0 1 1 15.99 1 Z M 16 7 A 9 9 0 1 0 16 25 A 9 9 0 1 0 16 7 Z"/>

@@ -27,7 +27,7 @@ interface StatsPanelProps {
 
 function StatRow({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-[#4F5570] bg-[#1C223A] px-3 py-2.5 text-xs">
+    <div className="stat-row-highlight flex items-center justify-between rounded-xl border border-[#4F5570] bg-[#1C223A] px-3 py-2.5 text-xs">
       <span className="text-[#A8AABA]">{label}</span>
       <span className={`font-mono font-semibold ${color ?? 'text-[#E5D4B6]'}`}>{value}</span>
     </div>
@@ -41,7 +41,7 @@ function ProbabilityBar(
   const isActive = value >= threshold
 
   return (
-    <div className="rounded-xl border border-[#4F5570] bg-[#1C223A] p-3">
+    <div className="stat-row-highlight rounded-xl border border-[#4F5570] bg-[#1C223A] p-3">
       <div className="mb-2 flex items-end justify-between">
         <span className="text-[11px] uppercase tracking-[0.12em] text-[#6B7385]">{label}</span>
         <span className={`font-mono text-xl font-semibold ${isActive ? textColor : 'text-[#6B7385]'}`}>
@@ -81,8 +81,8 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
   return (
     <aside className="flex flex-col gap-3 sm:gap-4">
       <section className="surface-panel px-4 py-4 sm:px-5 sm:py-5">
-        <div className="mb-4 flex items-center justify-between">
-          <p className="label-eyebrow">Estado del motor</p>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <p className="label-eyebrow accent-underline">Estado del motor</p>
           <span className={`badge inline-flex items-center gap-1.5 ${connected ? 'badge-live' : 'badge-danger'}`}>
             {connected && <span className="live-dot" />}
             {connected ? 'EN VIVO' : 'SIN CONEXIÓN'}
@@ -98,7 +98,9 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
           </div>
           <div className="surface-panel-muted px-3 py-2.5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7385]">{`ATR (${PRESET.atrPeriod})`}</p>
-            <p className="mt-1 font-mono text-[1.05rem] font-semibold text-[#E5D4B6]">{engine ? engine.atrVal.toFixed(2) : '...'}</p>
+            <p className="mt-1 font-mono text-[1.05rem] font-semibold text-[#E5D4B6]">
+              {engine ? `$${engine.atrVal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '...'}
+            </p>
           </div>
         </div>
 
@@ -139,7 +141,7 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
       </section>
 
       <section className="surface-panel px-4 py-4 sm:px-5 sm:py-5">
-        <p className="label-eyebrow mb-3">Rendimiento</p>
+        <p className="label-eyebrow accent-underline mb-3">Rendimiento</p>
         {stats ? (() => {
           const initialCapital = 10000
           const returnPct = ((stats.balance - initialCapital) / initialCapital) * 100
@@ -149,7 +151,11 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
           return (
           <div className="space-y-2">
             {/* Highlight: Return % */}
-            <div className="rounded-xl border border-[#C9A87A]/35 bg-gradient-to-br from-[#1C223A] to-[#11162A] px-4 py-3 text-center shadow-[inset_0_1px_0_rgba(229,212,182,0.08)]">
+            <div className="metric-hero-card rounded-xl border border-[#C9A87A]/35 bg-gradient-to-br from-[#1C223A] to-[#11162A] px-4 py-3 text-center shadow-[inset_0_1px_0_rgba(229,212,182,0.08)]">
+              <div className="section-chip-row justify-center">
+                <span className="section-chip section-chip-pastel">GONOVI</span>
+                <span className="section-chip section-chip-orange">PERFORMANCE</span>
+              </div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7385]">Rendimiento total</p>
               <p className={`mt-1 font-mono text-2xl font-bold ${returnColor}`}>
                 {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%
@@ -158,8 +164,8 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
                 Capital: <span className="text-[#E5D4B6]">${stats.balance.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</span> (base $10,000)
               </p>
             </div>
-            <StatRow label="PnL total" value={`${(stats.totalPnl ?? 0) >= 0 ? '+' : ''}$${(stats.totalPnl ?? 0).toFixed(2)}`} color={pnlColor} />
-            <StatRow label="Promedio por trade" value={`${avgPnl >= 0 ? '+' : ''}$${avgPnl.toFixed(2)}`} color={avgColor} />
+            <StatRow label="Resultado total" value={`${(stats.totalPnl ?? 0) >= 0 ? '+' : ''}$${(stats.totalPnl ?? 0).toFixed(2)}`} color={pnlColor} />
+            <StatRow label="Promedio por operación" value={`${avgPnl >= 0 ? '+' : ''}$${avgPnl.toFixed(2)}`} color={avgColor} />
             <StatRow label="Tasa de acierto" value={`${(stats.winRate ?? 0).toFixed(1)}%`} color={(stats.winRate ?? 0) >= 50 ? 'text-[#4FBC72]' : 'text-[#F44E1C]'} />
             <StatRow label="Operaciones" value={`${stats.wins ?? 0}G / ${(stats.total ?? 0) - (stats.wins ?? 0)}P / ${stats.total ?? 0}T`} />
           </div>
@@ -170,14 +176,17 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
       </section>
 
       <section className="surface-panel px-4 py-4 sm:px-5 sm:py-5">
-        <p className="label-eyebrow mb-3">Gestión de riesgo</p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="label-eyebrow accent-underline">Gestión de riesgo</p>
+          <span className="section-chip section-chip-orange">Mapa de riesgo</span>
+        </div>
         <div className="space-y-2">
-          <StatRow label="Stop Loss" value={`${PRESET.slPct}% (${PRESET.slMode})`} color="text-[#F44E1C]" />
-          <StatRow label="Take Profit" value={`${PRESET.tpRR}:1 R:R (${PRESET.tpMode})`} color="text-[#4FBC72]" />
+          <StatRow label="Stop" value={`${PRESET.slPct}% (${PRESET.slMode})`} color="text-[#F44E1C]" />
+          <StatRow label="Objetivo" value={`${PRESET.tpRR}:1 R:R (${PRESET.tpMode})`} color="text-[#4FBC72]" />
           <div className="rounded-xl border border-[#4F5570] bg-[#1C223A] px-3 py-2.5">
             <div className="flex items-center gap-2 mb-2">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#C9A87A]"></span>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#C9A87A]">Trailing Stop Activo</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#C9A87A] accent-underline">Stop móvil activo</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-lg bg-[#2A3148]/50 px-2.5 py-1.5">
@@ -197,7 +206,10 @@ export default function StatsPanel({ stats, engine, connected, lastPrice }: Stat
       </section>
 
       <section className="surface-panel px-4 py-4 sm:px-5 sm:py-5">
-        <p className="label-eyebrow mb-3">Parámetros del modelo</p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="label-eyebrow">Parámetros del modelo</p>
+          <span className="section-chip section-chip-pastel">Preset IA</span>
+        </div>
         <div className="space-y-1 text-[11px] text-[#A8AABA]">
           <div>ATR {PRESET.atrPeriod} · Factor {PRESET.factor} · K {PRESET.kNeighbors}</div>
           <div>Ventana {PRESET.samplingWindowSize} · Paso {PRESET.momentumWindow} · MA {PRESET.maType}</div>

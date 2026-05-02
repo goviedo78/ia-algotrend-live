@@ -48,7 +48,7 @@ self.addEventListener('push', (event) => {
       tag: data.tag || 'signal',
       vibrate: [200, 100, 200],
       data: { url: '/' },
-      actions: [{ action: 'open', title: 'Ver dashboard' }],
+      actions: [{ action: 'open', title: 'Ver panel' }],
     })
   )
 })

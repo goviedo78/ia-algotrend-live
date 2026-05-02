@@ -90,6 +90,8 @@ export interface MateriaLogoProps {
   heatEmissive?: [number, number, number]
   /** Multiplicador del emissive en peaks. Default 1.6. */
   heatEmissiveStrength?: number
+  /** Intensidad del tinte naranja sobre la superficie en hover. Default 1. */
+  heatTintStrength?: number
   /** Configuración de luces. Si se pasa, reemplaza el setup default. */
   lights?: LightConfig[]
   /** Exposición del tone mapping. Default 1.55. */
@@ -357,6 +359,7 @@ interface MateriaMeshProps {
   heatColor: [number, number, number]
   heatEmissive: [number, number, number]
   heatEmissiveStrength: number
+  heatTintStrength: number
   entryDoneRef: React.MutableRefObject<boolean>
 }
 
@@ -372,6 +375,7 @@ function MateriaMesh({
   heatColor,
   heatEmissive,
   heatEmissiveStrength,
+  heatTintStrength,
   entryDoneRef,
 }: MateriaMeshProps) {
   const tiltGroupRef  = useRef<THREE.Group>(null)
@@ -391,6 +395,7 @@ function MateriaMesh({
     uHeatColor:            { value: new THREE.Vector3(...heatColor) },
     uHeatEmissive:         { value: new THREE.Vector3(...heatEmissive) },
     uHeatEmissiveStrength: { value: heatEmissiveStrength },
+    uHeatTintStrength:     { value: heatTintStrength },
   })
 
   // Estado del puntero
@@ -445,6 +450,7 @@ function MateriaMesh({
       shader.uniforms.uHeatColor            = u.uHeatColor
       shader.uniforms.uHeatEmissive         = u.uHeatEmissive
       shader.uniforms.uHeatEmissiveStrength = u.uHeatEmissiveStrength
+      shader.uniforms.uHeatTintStrength     = u.uHeatTintStrength
 
       shader.vertexShader = shader.vertexShader
         .replace(
@@ -494,6 +500,7 @@ function MateriaMesh({
            uniform vec3  uHeatColor;
            uniform vec3  uHeatEmissive;
            uniform float uHeatEmissiveStrength;
+           uniform float uHeatTintStrength;
            varying vec2  vGonUV;
            varying float vGonHeat;`
         )
@@ -506,7 +513,8 @@ function MateriaMesh({
            gonShadow = mix(1.0, gonShadow, uMouseStrength * 0.45);
            diffuseColor.rgb *= gonShadow;
            // 2) Tint del heat color en peaks
-           diffuseColor.rgb = mix(diffuseColor.rgb, uHeatColor, vGonHeat);`
+           float gonHeatTint = clamp(vGonHeat * uHeatTintStrength, 0.0, 1.0);
+           diffuseColor.rgb = mix(diffuseColor.rgb, uHeatColor, gonHeatTint);`
         )
         .replace(
           '#include <emissivemap_fragment>',
@@ -541,6 +549,9 @@ function MateriaMesh({
   useEffect(() => {
     uniformsRef.current.uHeatEmissiveStrength.value = heatEmissiveStrength
   }, [heatEmissiveStrength])
+  useEffect(() => {
+    uniformsRef.current.uHeatTintStrength.value = heatTintStrength
+  }, [heatTintStrength])
 
   // Inicializar el "último input" al mount para que el auto-rotate arranque
   // tras idleDelay segundos desde la carga (no inmediatamente).
@@ -581,6 +592,52 @@ function MateriaMesh({
     return () => window.removeEventListener('pointermove', onMove)
   }, [cursorTilt])
 
+  // Mobile/touch: no hay hover, así que el dedo se convierte en el punto de calor.
+  // Lo hacemos a nivel ventana para que el gesto siga vivo aunque el usuario arrastre
+  // sobre un hueco del SVG o fuera de la geometría extruida.
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const coarsePointer = window.matchMedia('(hover: none), (pointer: coarse)')
+    let active = false
+
+    const syncTouchHeat = (e: PointerEvent) => {
+      const x = THREE.MathUtils.clamp(e.clientX / window.innerWidth, 0.02, 0.98)
+      const y = THREE.MathUtils.clamp(1 - e.clientY / window.innerHeight, 0.02, 0.98)
+      targetMouse.current.set(x, y)
+      lastInputRef.current = performance.now() / 1000
+    }
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (!coarsePointer.matches || e.pointerType === 'mouse') return
+      active = true
+      syncTouchHeat(e)
+      setHovering(true)
+    }
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!active) return
+      syncTouchHeat(e)
+    }
+
+    const onPointerEnd = () => {
+      if (!active) return
+      active = false
+      setHovering(false)
+    }
+
+    window.addEventListener('pointerdown', onPointerDown, { passive: true })
+    window.addEventListener('pointermove', onPointerMove, { passive: true })
+    window.addEventListener('pointerup', onPointerEnd, { passive: true })
+    window.addEventListener('pointercancel', onPointerEnd, { passive: true })
+
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerEnd)
+      window.removeEventListener('pointercancel', onPointerEnd)
+    }
+  }, [])
+
   // Gyroscope (mobile): tilt por orientación del dispositivo. iOS ≥13 requiere
   // permiso explícito en respuesta a un gesto del usuario.
   useEffect(() => {
@@ -610,34 +667,37 @@ function MateriaMesh({
       attached = true
     }
 
-    // iOS 13+ requiere permiso vía gesto del usuario
+    const emitGyroStatus = (status: 'granted' | 'denied' | 'unsupported') => {
+      window.dispatchEvent(new CustomEvent('gonovi:gyro-status', { detail: { status } }))
+    }
+
+    // iOS 13+ requiere permiso vía gesto del usuario. En /brand/materia se dispara
+    // desde un botón explícito para que no aparezca un prompt sorpresa al tocar.
     const requestPermission = () => {
       if (Ctor?.requestPermission) {
         Ctor.requestPermission().then((res) => {
-          if (res === 'granted') attach()
-        }).catch(() => {})
+          if (res === 'granted') {
+            attach()
+            emitGyroStatus('granted')
+          } else {
+            emitGyroStatus('denied')
+          }
+        }).catch(() => emitGyroStatus('denied'))
       } else {
         // Android/desktop browsers: no requiere permiso
         attach()
+        emitGyroStatus(Ctor ? 'granted' : 'unsupported')
       }
     }
 
-    // Pedir permiso en el primer touch (iOS lo exige)
-    const onFirstTouch = () => {
-      requestPermission()
-      window.removeEventListener('touchstart', onFirstTouch)
-      window.removeEventListener('pointerdown', onFirstTouch)
-    }
-    window.addEventListener('touchstart', onFirstTouch, { once: true, passive: true })
-    window.addEventListener('pointerdown', onFirstTouch, { once: true, passive: true })
+    window.addEventListener('gonovi:request-gyro', requestPermission)
 
     // Si no es iOS (no hay requestPermission), intenta attach directamente
     if (Ctor && !Ctor.requestPermission) attach()
 
     return () => {
       window.removeEventListener('deviceorientation', onOrientation)
-      window.removeEventListener('touchstart', onFirstTouch)
-      window.removeEventListener('pointerdown', onFirstTouch)
+      window.removeEventListener('gonovi:request-gyro', requestPermission)
     }
   }, [gyroscope])
 
@@ -717,7 +777,9 @@ function MateriaMesh({
         scale={[1, -1, 1]} // SVGLoader usa Y invertida
         onPointerMove={handlePointerMove}
         onPointerOut={handlePointerOut}
-        onPointerDown={() => { mouseDownRef.current = true }}
+        onPointerDown={(e) => {
+          if (e.pointerType === 'mouse') mouseDownRef.current = true
+        }}
         onPointerUp={() => { mouseDownRef.current = false }}
       >
         {geometries.map((g, i) => (
@@ -933,7 +995,7 @@ function StaticFallback({
     >
       <img
         src={svgUrl}
-        alt="GON"
+        alt="GONOVI"
         style={{
           width: 'min(360px, 60vw)',
           aspectRatio: '1 / 1',
@@ -971,6 +1033,7 @@ export function MateriaLogo({
   heatColor:           heatColorProp,
   heatEmissive:        heatEmissiveProp,
   heatEmissiveStrength: heatEmissiveStrengthProp,
+  heatTintStrength     = 1,
   lights:              lightsProp,
   toneMappingExposure: toneMappingExposureProp,
   environmentIntensity: environmentIntensityProp,
@@ -1083,6 +1146,7 @@ export function MateriaLogo({
             heatColor={heatColor}
             heatEmissive={heatEmissive}
             heatEmissiveStrength={heatEmissiveStrength}
+            heatTintStrength={heatTintStrength}
             entryDoneRef={entryDoneRef}
           />
         </Suspense>

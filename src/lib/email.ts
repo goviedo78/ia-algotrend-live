@@ -32,7 +32,7 @@ export async function sendEmail(subject: string, body: string) {
             </div>
             <hr style="border: none; border-top: 1px solid #333; margin: 16px 0;">
             <p style="font-size: 12px; color: #666; margin: 0;">
-              Señal automática • <a href="https://algotrend.vercel.app" style="color: #289eff;">Ver dashboard</a>
+              Señal automática • <a href="https://algotrend.vercel.app" style="color: #289eff;">Ver panel</a>
             </p>
           </div>
         </div>
@@ -55,9 +55,9 @@ export function emailOpen(direction: string, price: number, sl: number, tp: numb
       Señal ${dir} detectada
     </p>
     <table style="width: 100%; font-size: 14px; color: #ccc;">
-      <tr><td style="padding: 6px 0;">📍 Entrada</td><td style="text-align: right; font-weight: bold;">$${price.toLocaleString('en-US')}</td></tr>
-      <tr><td style="padding: 6px 0;">🛑 Stop Loss</td><td style="text-align: right; color: #ff4444;">$${sl.toLocaleString('en-US')}</td></tr>
-      <tr><td style="padding: 6px 0;">🎯 Take Profit</td><td style="text-align: right; color: #44ff44;">${tp ? '$' + tp.toLocaleString('en-US') : 'Trailing'}</td></tr>
+      <tr><td style="padding: 6px 0;">📍 Entrada</td><td style="text-align: right; font-weight: bold;">$${price.toLocaleString('es-MX')}</td></tr>
+      <tr><td style="padding: 6px 0;">🛑 Stop</td><td style="text-align: right; color: #ff4444;">$${sl.toLocaleString('es-MX')}</td></tr>
+      <tr><td style="padding: 6px 0;">🎯 Objetivo</td><td style="text-align: right; color: #44ff44;">${tp ? '$' + tp.toLocaleString('es-MX') : 'Stop móvil'}</td></tr>
       <tr><td style="padding: 6px 0;">📊 Confianza</td><td style="text-align: right;">${(prob * 100).toFixed(1)}%</td></tr>
     </table>
   `
@@ -65,18 +65,20 @@ export function emailOpen(direction: string, price: number, sl: number, tp: numb
 }
 
 export function emailClose(direction: string, openPrice: number, closePrice: number, pnlPct: number | null, reason: string) {
-  const subject = `⚪ AlgoTrend — Salida ${direction} (${reason})`
+  const dir = direction === 'LONG' ? 'Largo' : 'Corto'
+  const closeReason = reason === 'TP' ? 'objetivo' : reason === 'SL' ? 'stop' : reason === 'SIGNAL' ? 'señal contraria' : reason
+  const subject = `⚪ AlgoTrend — Salida ${dir} (${closeReason})`
   const pnl = pnlPct !== null ? pnlPct.toFixed(2) : '?'
   const pnlColor = (pnlPct ?? 0) >= 0 ? '#44ff44' : '#ff4444'
   const body = `
     <p style="font-size: 20px; font-weight: bold; color: #999;">
-      Posición ${direction} cerrada
+      Posición ${dir} cerrada
     </p>
     <table style="width: 100%; font-size: 14px; color: #ccc;">
-      <tr><td style="padding: 6px 0;">📍 Entrada</td><td style="text-align: right;">$${openPrice.toLocaleString('en-US')}</td></tr>
-      <tr><td style="padding: 6px 0;">📍 Salida</td><td style="text-align: right; font-weight: bold;">$${closePrice.toLocaleString('en-US')}</td></tr>
-      <tr><td style="padding: 6px 0;">📈 PnL</td><td style="text-align: right; font-weight: bold; color: ${pnlColor};">${pnl}%</td></tr>
-      <tr><td style="padding: 6px 0;">📋 Razón</td><td style="text-align: right;">${reason}</td></tr>
+      <tr><td style="padding: 6px 0;">📍 Entrada</td><td style="text-align: right;">$${openPrice.toLocaleString('es-MX')}</td></tr>
+      <tr><td style="padding: 6px 0;">📍 Salida</td><td style="text-align: right; font-weight: bold;">$${closePrice.toLocaleString('es-MX')}</td></tr>
+      <tr><td style="padding: 6px 0;">📈 Resultado</td><td style="text-align: right; font-weight: bold; color: ${pnlColor};">${pnl}%</td></tr>
+      <tr><td style="padding: 6px 0;">📋 Razón</td><td style="text-align: right;">${closeReason}</td></tr>
     </table>
   `
   return sendEmail(subject, body)

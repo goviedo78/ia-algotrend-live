@@ -4,6 +4,12 @@ import { notifyOpen, notifyClose } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
 
+type TradeDirection = 'LONG' | 'SHORT'
+
+function directionLabel(direction: TradeDirection) {
+  return direction === 'LONG' ? 'Largo' : 'Corto'
+}
+
 // TradingView sends alerts as JSON or plain text.
 // We expect JSON with this shape from the alert message:
 // {
@@ -62,8 +68,8 @@ export async function POST(req: NextRequest) {
         const closed = await closeTrade(existing.id, now, price, 'SIGNAL')
         await notifyClose(closed)
         await sendPush(req, {
-          title: `⚪ AlgoTrend — Salida ${closed.direction}`,
-          body: `Precio: $${price.toLocaleString('en-US')} | PnL: ${closed.pnl_pct?.toFixed(2)}% (TV Webhook)`,
+          title: `⚪ AlgoTrend — Salida ${directionLabel(closed.direction)}`,
+          body: `Precio: $${price.toLocaleString('es-MX')} | Resultado: ${closed.pnl_pct?.toFixed(2)}% (señal de TradingView)`,
           tag: `close-${closed.id}`
         })
         return NextResponse.json({ ok: true, action: 'closed', trade: closed })
@@ -78,8 +84,8 @@ export async function POST(req: NextRequest) {
       const closed = await closeTrade(existing.id, now, price, 'SIGNAL')
       await notifyClose(closed)
       await sendPush(req, {
-        title: `⚪ AlgoTrend — Salida ${closed.direction}`,
-        body: `Precio: $${price.toLocaleString('en-US')} | PnL: ${closed.pnl_pct?.toFixed(2)}% (Reversal)`,
+        title: `⚪ AlgoTrend — Salida ${directionLabel(closed.direction)}`,
+        body: `Precio: $${price.toLocaleString('es-MX')} | Resultado: ${closed.pnl_pct?.toFixed(2)}% (reversión)`,
         tag: `close-${closed.id}`
       })
     }
@@ -102,7 +108,7 @@ export async function POST(req: NextRequest) {
 
     await sendPush(req, {
       title: `${emoji} AlgoTrend — ${dir} ${probText ? `(${probText})` : ''}`,
-      body: `Entrada: $${price.toLocaleString('en-US')} | SL: $${stopLoss.toLocaleString('en-US')} | TP: $${takeProfit.toLocaleString('en-US')}`,
+      body: `Entrada: $${price.toLocaleString('es-MX')} | Stop: $${stopLoss.toLocaleString('es-MX')} | Objetivo: $${takeProfit.toLocaleString('es-MX')}`,
       tag: `signal-${now}`,
     })
 

@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * GON Brand · Gallery
+ * GONOVI Brand · Gallery
  * Muestra las 6 alternativas visuales del emblema lado a lado.
  * Cada celda es un canvas R3F independiente. Pesado en GPU; mover el cursor
  * sobre cualquiera activa su tilt y heat tint.
@@ -27,7 +27,7 @@ export default function GalleryPage() {
   return (
     <main style={styles.main}>
       <header style={styles.hud}>
-        <span style={styles.badge}>GON · Gallery</span>
+        <span style={styles.badge}>GONOVI · Gallery</span>
         <div style={styles.title}>6 alternativas visuales</div>
         <div style={styles.meta}>Misma geometría · materiales y luces distintos</div>
       </header>

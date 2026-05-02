@@ -52,8 +52,11 @@ export default function SponsorBanner() {
           Partner Oficial
         </p>
       </div>
+      <div className="absolute left-4 top-4 z-10 hidden sm:flex">
+        <span className="section-chip section-chip-pastel">GONOVI Partner</span>
+      </div>
 
-      <div className="p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="flex flex-col items-center justify-between gap-4 p-4 pt-11 sm:flex-row sm:px-6 sm:py-4 sm:pt-12">
         <div className="flex items-center gap-4 w-full sm:w-auto">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[#4F5570] bg-gradient-to-br from-[#C9A87A] to-[#9A7E54] font-display text-sm font-bold tracking-[0.08em] text-[#11162A] shadow-lg ring-4 ring-[#11162A]">
             {sponsor.logo}

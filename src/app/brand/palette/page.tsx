@@ -1,5 +1,5 @@
 /**
- * GON Palette v2 — Brief navegable
+ * GONOVI Palette v2 — Brief navegable
  * URL: /brand/palette
  *
  * Documenta la propuesta de paleta v2 (navy + cream + vivid + steel).
@@ -10,7 +10,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'GON · Palette v2 · Brief',
+  title: 'GONOVI · Palette v2 · Brief',
   description: 'Brief de la paleta v2: navy + cream + vivid + steel. Vintage Americana retro.',
 }
 
@@ -55,7 +55,7 @@ export default function PalettePage() {
     <main style={s.main}>
       {/* HUD */}
       <header style={s.hud}>
-        <span style={s.hudBadge}>GON · Brief</span>
+        <span style={s.hudBadge}>GONOVI · Brief</span>
         <span style={s.hudMono}>Palette v2 · 2026.04</span>
       </header>
 
@@ -67,7 +67,7 @@ export default function PalettePage() {
           Dirección estética inspirada en{' '}
           <em style={s.italic}>vintage Americana retro</em> — poster Saul Bass, 50s editorial.
           Reemplaza el palette warm‑Ink (v1) por un sistema de contrastes alternados
-          frío/cálido. Mismo ADN GON, más punch, más memorable.
+          frío/cálido. Mismo ADN GONOVI, más punch, más memorable.
         </p>
       </section>
 
@@ -185,7 +185,7 @@ export default function PalettePage() {
 
       {/* MAPPING v1 → v2 */}
       <section style={s.section}>
-        <SectionTitle eyebrow="06 · Mapping v1 → v2" title="Para migrar otros proyectos GON" />
+        <SectionTitle eyebrow="06 · Mapping v1 → v2" title="Para migrar otros proyectos GONOVI" />
         <table style={s.mapTable}>
           <thead>
             <tr>

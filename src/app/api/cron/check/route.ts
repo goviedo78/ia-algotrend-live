@@ -12,6 +12,20 @@ const PAIR = 'btcusd'
 const STEP = 3600
 const HISTORY_BATCHES = 12
 
+type TradeDirection = 'LONG' | 'SHORT'
+type CloseReason = 'SL' | 'TP' | 'SIGNAL' | null
+
+function directionLabel(direction: TradeDirection) {
+  return direction === 'LONG' ? 'Largo' : 'Corto'
+}
+
+function closeReasonLabel(reason: CloseReason) {
+  if (reason === 'TP') return 'objetivo'
+  if (reason === 'SL') return 'stop'
+  if (reason === 'SIGNAL') return 'señal contraria'
+  return 'cierre'
+}
+
 interface BitstampOhlcEntry {
   timestamp: string; open: string; high: string; low: string; close: string; volume: string
 }
@@ -127,8 +141,8 @@ export async function GET(req: NextRequest) {
         const trade = await closeTrade(existingTrade.id, last.time, firstHit.closePrice, firstHit.hit)
         await notifyClose(trade)
         await sendPushDirect({
-          title: `⚪ AlgoTrend — Salida ${trade.direction}`,
-          body: `Precio: $${trade.close_price?.toLocaleString('en-US')} | PnL: ${trade.pnl_pct?.toFixed(2)}% (${trade.close_reason})`,
+          title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
+          body: `Precio: $${trade.close_price?.toLocaleString('es-MX')} | Resultado: ${trade.pnl_pct?.toFixed(2)}% (${closeReasonLabel(trade.close_reason)})`,
           tag: `close-${trade.id}`
         })
         await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
@@ -140,8 +154,8 @@ export async function GET(req: NextRequest) {
           const trade = await closeTrade(existingTrade.id, last.time, secondHit.closePrice, secondHit.hit)
           await notifyClose(trade)
           await sendPushDirect({
-            title: `⚪ AlgoTrend — Salida ${trade.direction}`,
-            body: `Precio: $${trade.close_price?.toLocaleString('en-US')} | PnL: ${trade.pnl_pct?.toFixed(2)}% (${trade.close_reason})`,
+            title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
+            body: `Precio: $${trade.close_price?.toLocaleString('es-MX')} | Resultado: ${trade.pnl_pct?.toFixed(2)}% (${closeReasonLabel(trade.close_reason)})`,
             tag: `close-${trade.id}`
           })
           await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
@@ -174,8 +188,8 @@ export async function GET(req: NextRequest) {
             const trade = await closeTrade(existingTrade.id, last.time, price, closeHit)
             await notifyClose(trade)
             await sendPushDirect({
-              title: `⚪ AlgoTrend — Salida ${trade.direction}`,
-              body: `Precio: $${trade.close_price?.toLocaleString('en-US')} | PnL: ${trade.pnl_pct?.toFixed(2)}% (${trade.close_reason})`,
+              title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
+              body: `Precio: $${trade.close_price?.toLocaleString('es-MX')} | Resultado: ${trade.pnl_pct?.toFixed(2)}% (${closeReasonLabel(trade.close_reason)})`,
               tag: `close-${trade.id}`
             })
             await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
@@ -195,6 +209,23 @@ export async function GET(req: NextRequest) {
 
     // ── 2. Open new trade if signal detected ──
     if (signal === 'LONG' || signal === 'SHORT') {
+      // ── Always calculate ATR for logging/notifications ──
+      const ATR_PERIOD = 14
+      const recentCandles = candles.slice(-ATR_PERIOD - 1)
+      let atrPct = 0
+
+      if (recentCandles.length >= 2) {
+        let trSum = 0
+        for (let i = 1; i < recentCandles.length; i++) {
+          const h = recentCandles[i].high
+          const l = recentCandles[i].low
+          const pc = recentCandles[i - 1].close
+          trSum += Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc))
+        }
+        const atr = trSum / (recentCandles.length - 1)
+        atrPct = (atr / lastCandle.close) * 100
+      }
+
       // ── ATR Filter (opt-in via env var OR db setting) ──
       const dbEnabled = await getSetting('atr_filter_enabled')
       const envEnabled = process.env.ATR_FILTER_ENABLED === 'true'
@@ -202,30 +233,16 @@ export async function GET(req: NextRequest) {
       let atrBlocked = false
 
       if (atrFilterOn) {
-        const ATR_PERIOD = 14
         const dbThreshold = await getSetting('atr_threshold')
         const ATR_THRESHOLD = parseFloat(dbThreshold || process.env.ATR_THRESHOLD || '0.40')
-        const recentCandles = candles.slice(-ATR_PERIOD - 1)
 
-        if (recentCandles.length >= 2) {
-          let trSum = 0
-          for (let i = 1; i < recentCandles.length; i++) {
-            const h = recentCandles[i].high
-            const l = recentCandles[i].low
-            const pc = recentCandles[i - 1].close
-            trSum += Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc))
-          }
-          const atr = trSum / (recentCandles.length - 1)
-          const atrPct = (atr / lastCandle.close) * 100
-
-          if (atrPct < ATR_THRESHOLD) {
-            atrBlocked = true
-            await logEvent('signal_filtered_atr', {
-              signal, price: last.close, atrPct: +atrPct.toFixed(3),
-              threshold: ATR_THRESHOLD,
-            })
-            actions.push(`atr_filtered_${signal}_${atrPct.toFixed(2)}pct`)
-          }
+        if (atrPct > 0 && atrPct < ATR_THRESHOLD) {
+          atrBlocked = true
+          await logEvent('signal_filtered_atr', {
+            signal, price: last.close, atrPct: +atrPct.toFixed(3),
+            threshold: ATR_THRESHOLD,
+          })
+          actions.push(`atr_filtered_${signal}_${atrPct.toFixed(2)}pct`)
         }
       }
 
@@ -245,7 +262,7 @@ export async function GET(req: NextRequest) {
 
         await sendPushDirect({
           title: `${emoji} AlgoTrend — ${dir} (${probText})`,
-          body: `Entrada: $${last.close.toLocaleString('en-US')} | SL: $${stop.toLocaleString('en-US')} | TP: ${tp ? '$' + tp.toLocaleString('en-US') : 'Trailing'}`,
+          body: `Entrada: $${last.close.toLocaleString('es-MX')} (ATR = ${atrPct.toFixed(2)}%) | Stop: $${stop.toLocaleString('es-MX')} | Objetivo: ${tp ? '$' + tp.toLocaleString('es-MX') : 'Stop móvil'}`,
           tag: `signal-${last.time}`,
         })
 

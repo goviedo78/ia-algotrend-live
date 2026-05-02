@@ -36,12 +36,15 @@ export default function TradeTable({ trades: tradesProp, openTrade, currentPrice
 
   return (
     <div className="surface-panel overflow-hidden">
-      <div className="flex items-center justify-between border-b border-[#4F5570] px-4 py-3 sm:px-5 sm:py-4">
+      <div className="flex flex-col gap-3 border-b border-[#4F5570] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
         <div>
-          <p className="label-eyebrow">Historial de operaciones</p>
+          <p className="label-eyebrow accent-underline">Historial de operaciones</p>
           <p className="mt-1 text-[10px] sm:text-xs text-[#A8AABA]">Últimas operaciones del backtest y posición abierta en vivo.</p>
         </div>
-        <span className="badge text-[10px] sm:text-xs">{closedTrades.length} cerradas</span>
+        <div className="flex flex-wrap justify-end gap-2">
+          <span className="section-chip section-chip-pastel">GONOVI</span>
+          <span className="badge badge-accent text-[10px] sm:text-xs">{closedTrades.length} cerradas</span>
+        </div>
       </div>
 
       {openTrade && (
@@ -73,11 +76,11 @@ export default function TradeTable({ trades: tradesProp, openTrade, currentPrice
             <tr className="border-b border-[#4F5570] text-[#A8AABA]">
               <th className="px-3 py-3 text-left">#</th>
               <th className="px-3 py-3 text-left">Dirección</th>
+              <th className="px-3 py-3 text-right">Resultado</th>
               <th className="px-3 py-3 text-left">Entrada</th>
               <th className="px-3 py-3 text-left">Salida</th>
               <th className="px-3 py-3 text-right">Precio Entrada</th>
               <th className="px-3 py-3 text-right">Precio Salida</th>
-              <th className="px-3 py-3 text-right">Resultado</th>
             </tr>
           </thead>
           <tbody>
@@ -96,6 +99,12 @@ export default function TradeTable({ trades: tradesProp, openTrade, currentPrice
                       {trade.direction === 'LONG' ? 'Largo' : 'Corto'}
                     </span>
                   </td>
+                  <td className={`px-3 py-2.5 text-right font-mono font-semibold ${win ? 'text-[#4FBC72]' : 'text-[#F44E1C]'}`}>
+                    <div>{win ? '+' : ''}${fmt(trade.pnl_usd ?? 0)}</div>
+                    <div className={win ? 'text-[#4FBC72]' : 'text-[#F44E1C]'}>
+                      {(trade.pnl_pct ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
+                    </div>
+                  </td>
                   <td className="px-3 py-2.5">
                     <div className="font-mono text-[#E5D4B6]">{fmtTime(trade.open_time)}</div>
                     <div className="text-[11px] text-[#A8AABA]">{directionLabel}</div>
@@ -106,12 +115,6 @@ export default function TradeTable({ trades: tradesProp, openTrade, currentPrice
                   </td>
                   <td className="px-3 py-2.5 text-right font-mono text-[#E5D4B6]">${fmt(trade.open_price)}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-[#E5D4B6]">{trade.close_price ? `$${fmt(trade.close_price)}` : '—'}</td>
-                  <td className={`px-3 py-2.5 text-right font-mono font-semibold ${win ? 'text-[#4FBC72]' : 'text-[#F44E1C]'}`}>
-                    <div>{win ? '+' : ''}${fmt(trade.pnl_usd ?? 0)}</div>
-                    <div className={win ? 'text-[#4FBC72]' : 'text-[#F44E1C]'}>
-                      {(trade.pnl_pct ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
-                    </div>
-                  </td>
                 </tr>
               )
             })}

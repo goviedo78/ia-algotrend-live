@@ -209,34 +209,34 @@ function AdminDashboard() {
         </button>
       </header>
 
-      {/* ── 1. Trading Performance ────────────────────────────── */}
-      <Section title="Trading Performance" icon="📈">
+      {/* ── 1. Rendimiento de trading ────────────────────────────── */}
+      <Section title="Rendimiento de trading" icon="📈">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <StatCard label="Win Rate" value={`${t.winRate}%`} color={t.winRate >= 50 ? 'green' : 'red'} icon="🎯" />
-          <StatCard label="PnL Total" value={`$${t.totalPnl.toLocaleString('en-US')}`} color={t.totalPnl >= 0 ? 'green' : 'red'} icon="💰" />
-          <StatCard label="PnL %" value={`${t.totalPnlPct}%`} color={t.totalPnlPct >= 0 ? 'green' : 'red'} icon="📊" />
-          <StatCard label="Max Drawdown" value={`${t.maxDrawdown}%`} color="red" icon="📉" />
+          <StatCard label="Tasa de acierto" value={`${t.winRate}%`} color={t.winRate >= 50 ? 'green' : 'red'} icon="🎯" />
+          <StatCard label="Resultado total" value={`$${t.totalPnl.toLocaleString('es-MX')}`} color={t.totalPnl >= 0 ? 'green' : 'red'} icon="💰" />
+          <StatCard label="Resultado %" value={`${t.totalPnlPct}%`} color={t.totalPnlPct >= 0 ? 'green' : 'red'} icon="📊" />
+          <StatCard label="Máxima caída" value={`${t.maxDrawdown}%`} color="red" icon="📉" />
           <StatCard label="Sharpe" value={t.sharpe} color={t.sharpe > 1 ? 'green' : t.sharpe > 0 ? 'amber' : 'red'} icon="⚡" />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Trades" value={t.total} icon="🔄" />
-          <StatCard label="Wins / Losses" value={`${t.wins} / ${t.losses}`} color="default" icon="📋" />
+          <StatCard label="Operaciones" value={t.total} icon="🔄" />
+          <StatCard label="Ganadas / perdidas" value={`${t.wins} / ${t.losses}`} color="default" icon="📋" />
           <StatCard label="Mejor racha" value={t.bestStreak} color="green" icon="🔥" />
-          <StatCard label="Balance" value={`$${t.balance.toLocaleString('en-US')}`} color="cyan" icon="💎" large />
+          <StatCard label="Balance" value={`$${t.balance.toLocaleString('es-MX')}`} color="cyan" icon="💎" large />
         </div>
 
-        {/* Equity Curve */}
+        {/* Curva de balance */}
         {t.equityCurve.length > 1 && (
           <div className="rounded-xl border border-[#1F2937] p-4" style={{ background: 'rgba(17,24,39,0.6)' }}>
-            <p className="text-xs uppercase tracking-wider text-[#6B7280] mb-3">Equity Curve (Balance compuesto desde $10,000)</p>
+            <p className="text-xs uppercase tracking-wider text-[#6B7280] mb-3">Curva de balance (balance compuesto desde $10,000)</p>
             <EquityChart data={t.equityCurve} />
           </div>
         )}
 
-        {/* Monthly PnL */}
+        {/* Resultado mensual */}
         {t.monthly.length > 0 && (
           <div className="rounded-xl border border-[#1F2937] p-4" style={{ background: 'rgba(17,24,39,0.6)' }}>
-            <p className="text-xs uppercase tracking-wider text-[#6B7280] mb-3">PnL Mensual (USD)</p>
+            <p className="text-xs uppercase tracking-wider text-[#6B7280] mb-3">Resultado mensual (USD)</p>
             <MiniBar
               items={t.monthly.map(m => ({ label: m.month, value: m.pnl }))}
               color="#22C55E"

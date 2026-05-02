@@ -13,6 +13,7 @@ import GonSignature from './brand/GonSignature'
 import GonEmblem3D from './brand/GonEmblem3D'
 
 const Chart = dynamic(() => import('./Chart'), { ssr: false })
+const MateriaLogo = dynamic(() => import('./brand/MateriaLogo').then(mod => mod.MateriaLogo), { ssr: false })
 
 // ── Bitstamp config ──────────────────────────────────────────────────────────
 const PAIR = 'btcusd'
@@ -20,6 +21,13 @@ const STEP = 3600          // 1H in seconds
 const REST_URL = `https://www.bitstamp.net/api/v2/ohlc/${PAIR}/?step=${STEP}&limit=1000`
 const WS_URL = 'wss://ws.bitstamp.net'
 const HISTORY_BATCHES = 5   // 5000 candles to satisfy Pine window_size=1000 pipeline
+
+const HOME_MATERIA_LIGHTS = [
+  { type: 'ambient' as const, color: 0x1b120d, intensity: 0.48 },
+  { type: 'directional' as const, color: 0xf44e1c, intensity: 1.85, position: [0, 90, -520] as [number, number, number] },
+  { type: 'directional' as const, color: 0xff6a21, intensity: 0.95, position: [-320, 360, 520] as [number, number, number] },
+  { type: 'directional' as const, color: 0xf2dfc3, intensity: 0.32, position: [460, -120, 260] as [number, number, number] },
+]
 
 // Bitstamp OHLC REST response
 interface BitstampOhlcEntry {
@@ -375,19 +383,42 @@ export default function Dashboard() {
       : 'text-[#F44E1C] value-glow'   // GON pulse
 
   return (
-    <div className="app-shell min-h-screen px-3 py-4 font-sans text-[#E5D4B6] sm:px-6 sm:py-6 lg:px-10">
-      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[30rem] bg-[radial-gradient(circle_at_50%_0%,rgba(244,78,28,0.15),transparent_22rem),linear-gradient(180deg,#1C223A,rgba(17,22,42,0)_86%)]" />
+    <div className="app-shell relative isolate min-h-screen px-3 py-4 font-sans text-[#E5D4B6] sm:px-6 sm:py-6 lg:px-10">
+      <div className="pointer-events-none fixed inset-0 -z-20 opacity-[0.22] mix-blend-screen [mask-image:radial-gradient(circle_at_50%_22%,black_0%,black_34%,transparent_72%)]">
+        <MateriaLogo
+          amplitude={5}
+          autoRotateIdle
+          baseColor={0x120d0a}
+          bloomIntensity={0.42}
+          cameraDistance={2050}
+          cursorTilt={false}
+          enableZoom={false}
+          environmentIntensity={0.2}
+          height="100vh"
+          heatColor={[0.96, 0.31, 0.11]}
+          heatEmissive={[1, 0.28, 0.04]}
+          heatEmissiveStrength={2.6}
+          heatTintStrength={1.4}
+          idleDelay={0}
+          lights={HOME_MATERIA_LIGHTS}
+          material={{
+            clearcoat: 0.36,
+            clearcoatRoughness: 0.38,
+            reflectivity: 0.08,
+            roughness: 0.48,
+          }}
+          preset="brasa"
+          style={{ pointerEvents: 'none' }}
+          toneMappingExposure={0.92}
+          transparentBackground
+        />
+      </div>
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[30rem] bg-[radial-gradient(circle_at_50%_0%,rgba(244,78,28,0.15),transparent_22rem),radial-gradient(circle_at_78%_8%,rgba(248,218,194,0.10),transparent_20rem),linear-gradient(180deg,#1C223A,rgba(17,22,42,0)_86%)]" />
 
       <div className="relative mx-auto flex max-w-[1560px] flex-col gap-4 sm:gap-5">
-        <div className="gon-eyebrow-strip reveal-up rounded-xl">
-          <span>GON</span>
-          <span className="sep">·</span>
-          <span>ALGOTREND</span>
-          <span className="sep">·</span>
-          <span>ALGORITMO PROBABILÍSTICO IA</span>
-          <span className="sep hidden sm:inline">·</span>
-          <span className="hidden sm:inline">BTC 1H</span>
-          <span className="sep">·</span>
+        <div className="gon-eyebrow-strip reveal-up">
+          <span className="gon-strip-chip">GONOVI · ALGOTREND</span>
+          <span className="gon-strip-accent">BTC 1H</span>
           <span className="live-tag">LIVE</span>
         </div>
 
@@ -401,7 +432,7 @@ export default function Dashboard() {
               <div className="header-copy flex flex-col">
                 <div className="flex items-center gap-2">
                   <span className="flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#F44E1C]" />
-                  <p className="label-eyebrow">IA AlgoTrend · en vivo</p>
+                  <p className="label-eyebrow accent-underline">IA AlgoTrend · en vivo</p>
                 </div>
                 <h1 className="header-title font-display text-[1.65rem] font-semibold leading-tight text-[#E5D4B6] sm:text-[2rem]">
                   AlgoTrend Live Desk
@@ -410,7 +441,7 @@ export default function Dashboard() {
                   Monitor probabilístico BTC 1H con stream Bitstamp, señales activas e historial automático de operaciones.
                 </p>
                 <div className="header-actions flex flex-wrap gap-2">
-                  <span className="badge">
+                  <span className="badge badge-pastel">
                     Parámetros por defecto
                   </span>
                   <span className="badge">
@@ -420,9 +451,6 @@ export default function Dashboard() {
                     {connected && <span className="live-dot" />}
                     {connected ? 'Stream en vivo' : 'Reconectando stream'}
                   </span>
-                  <span className="badge">
-                    Algoritmo: Probabilidad IA
-                  </span>
                   <InstallButton />
                   <NotificationBell />
                 </div>
@@ -430,7 +458,7 @@ export default function Dashboard() {
             </div>
 
             <div className="header-stats-grid flex gap-3 overflow-x-auto pb-1 xl:grid xl:grid-cols-[1.35fr_repeat(3,minmax(120px,1fr))] xl:overflow-visible xl:pb-0">
-              <div className="header-summary-card surface-panel-muted min-w-[210px] px-4 py-3">
+              <div className="header-summary-card header-summary-card-featured surface-panel-muted min-w-[210px] px-4 py-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7385]">Precio BTC</p>
                 <p className="mt-1 font-mono text-[1.75rem] font-semibold text-[#E5D4B6]">
                   {lastPrice ? `$${lastPrice.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '...'}
@@ -490,7 +518,7 @@ export default function Dashboard() {
         <footer className="mt-6 flex justify-end pb-4 pr-1">
           {/* href={null} = sello visual sin link, las rutas /brand quedan
               accesibles solo si alguien teclea la URL directamente. */}
-          <GonSignature href={null} />
+          <GonSignature href={null} label="By GONOVI" />
         </footer>
       </div>
     </div>

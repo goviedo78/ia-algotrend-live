@@ -4,6 +4,17 @@ import { notifyOpen, notifyClose } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
 
+function directionLabel(direction: Trade['direction']) {
+  return direction === 'LONG' ? 'Largo' : 'Corto'
+}
+
+function closeReasonLabel(reason: Trade['close_reason']) {
+  if (reason === 'TP') return 'objetivo'
+  if (reason === 'SL') return 'stop'
+  if (reason === 'SIGNAL') return 'señal contraria'
+  return 'cierre'
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -51,8 +62,8 @@ export async function POST(req: NextRequest) {
         const closed = await closeTrade(openTrade_.id, time, firstHit.closePrice, firstHit.hit)
         await notifyClose(closed)
         await sendPush(req, {
-          title: `⚪ AlgoTrend — Salida ${closed.direction}`,
-          body: `Precio: $${closed.close_price?.toLocaleString('en-US')} | PnL: ${closed.pnl_pct?.toFixed(2)}% (${closed.close_reason})`,
+          title: `⚪ AlgoTrend — Salida ${directionLabel(closed.direction)}`,
+          body: `Precio: $${closed.close_price?.toLocaleString('es-MX')} | Resultado: ${closed.pnl_pct?.toFixed(2)}% (${closeReasonLabel(closed.close_reason)})`,
           tag: `close-${closed.id}`
         })
       } else {
@@ -61,8 +72,8 @@ export async function POST(req: NextRequest) {
           const closed = await closeTrade(openTrade_.id, time, secondHit.closePrice, secondHit.hit)
           await notifyClose(closed)
           await sendPush(req, {
-            title: `⚪ AlgoTrend — Salida ${closed.direction}`,
-            body: `Precio: $${closed.close_price?.toLocaleString('en-US')} | PnL: ${closed.pnl_pct?.toFixed(2)}% (${closed.close_reason})`,
+            title: `⚪ AlgoTrend — Salida ${directionLabel(closed.direction)}`,
+            body: `Precio: $${closed.close_price?.toLocaleString('es-MX')} | Resultado: ${closed.pnl_pct?.toFixed(2)}% (${closeReasonLabel(closed.close_reason)})`,
             tag: `close-${closed.id}`
           })
         } else {
@@ -92,8 +103,8 @@ export async function POST(req: NextRequest) {
             const closed = await closeTrade(openTrade_.id, time, price, closeHit)
             await notifyClose(closed)
             await sendPush(req, {
-              title: `⚪ AlgoTrend — Salida ${closed.direction}`,
-              body: `Precio: $${closed.close_price?.toLocaleString('en-US')} | PnL: ${closed.pnl_pct?.toFixed(2)}% (${closed.close_reason})`,
+              title: `⚪ AlgoTrend — Salida ${directionLabel(closed.direction)}`,
+              body: `Precio: $${closed.close_price?.toLocaleString('es-MX')} | Resultado: ${closed.pnl_pct?.toFixed(2)}% (${closeReasonLabel(closed.close_reason)})`,
               tag: `close-${closed.id}`
             })
           } else if (stopLoss !== openTrade_.stop_loss || takeProfit !== openTrade_.take_profit) {
@@ -117,7 +128,7 @@ export async function POST(req: NextRequest) {
 
         await sendPush(req, {
           title: `${emoji} AlgoTrend — ${dir} (${probText})`,
-          body: `Entrada: $${price.toLocaleString('en-US')} | SL: $${stop.toLocaleString('en-US')} | TP: ${tp ? '$' + tp.toLocaleString('en-US') : 'Trailing'}`,
+          body: `Entrada: $${price.toLocaleString('es-MX')} | Stop: $${stop.toLocaleString('es-MX')} | Objetivo: ${tp ? '$' + tp.toLocaleString('es-MX') : 'Stop móvil'}`,
           tag: `signal-${time}`,
         })
       }

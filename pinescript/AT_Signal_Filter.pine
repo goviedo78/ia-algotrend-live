@@ -2,7 +2,7 @@
 // © IA AlgoTrend
 
 //@version=6
-indicator("AT — Filtro ATR", shorttitle="AT Filter", overlay=false, precision=2)
+indicator("AT — Filtro ATR", shorttitle="AT Filter", overlay=false, precision=3, format=format.percent)
 
 // ============================================================================
 // INPUTS
@@ -31,15 +31,17 @@ atrOK  = atrPct >= atrThresh
 // PLOTS
 // ============================================================================
 
-// ATR % como barras de columna
+// ATR % como barras de columna - Agregamos precision al plot
 atrCol = atrOK ? color.new(#22C55E, 20) : color.new(#EF4444, 20)
-pATR = plot(atrPct, "ATR %", color=atrCol, style=plot.style_columns, linewidth=2)
+plot(atrPct, "ATR %", color=atrCol, style=plot.style_columns, linewidth=2)
 
-// Línea de umbral
-pThresh = plot(atrThresh, "Umbral", color=color.new(#F59E0B, 40),
-     linewidth=1, style=plot.style_line)
+// Línea de umbral con etiqueta en el eje de precios
+plot(atrThresh, "Umbral", color=color.new(#F59E0B, 20),
+     linewidth=2, style=plot.style_line)
 
 // Relleno entre ATR y umbral cuando está por debajo (zona peligro)
+pATR = plot(atrPct, display=display.none)
+pThresh = plot(atrThresh, display=display.none)
 fillCol = showFill and not atrOK ? color.new(#EF4444, 80) : na
 fill(pATR, pThresh, color=fillCol, title="Zona peligro")
 
@@ -66,7 +68,7 @@ if barstate.islast
 
     // ATR actual
     table.cell(tbl, 0, 1, "ATR " + str.tostring(atrLen), text_color=color.new(#9CA3AF, 0), text_size=size.small)
-    table.cell(tbl, 1, 1, str.tostring(atrPct, "#.##") + "%", text_color=atrCol, text_size=size.small)
+    table.cell(tbl, 1, 1, str.tostring(atrPct, "#.###") + "%", text_color=atrCol, text_size=size.small)
 
     // Umbral
     table.cell(tbl, 0, 2, "Umbral", text_color=color.new(#6B7280, 0), text_size=size.small)
@@ -83,3 +85,4 @@ alertcondition(not atrOK[1] and atrOK,
 alertcondition(atrOK[1] and not atrOK,
      title="Volatilidad baja",
      message="ATR cayó por debajo del umbral. Ignorar señales.")
+
