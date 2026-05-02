@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (signal === 'LONG' || signal === 'SHORT') {
-      const trade = await openTrade(signal, time, time, price, stop, tp)
+      const trade = await openTrade(signal, time, time, price, stop, tp, null)
 
       if (trade) {
         const prob = signal === 'LONG' ? (probUp ?? 0) : (probDown ?? 0)
