@@ -19,6 +19,7 @@ export default function NotificationBell() {
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Browser API sync: Notification.permission + SW subscription check */
   useEffect(() => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       setPermState('unsupported')
@@ -32,6 +33,7 @@ export default function NotificationBell() {
       setIsSubscribed(!!sub)
     })
   }, [])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const subscribe = useCallback(async () => {
     setLoading(true)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import LoginGate from '@/components/admin/LoginGate'
 import StatCard from '@/components/admin/StatCard'
@@ -146,12 +146,14 @@ function AdminDashboard() {
     setSavingSettings(false)
   }
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Initial data fetch on mount + interval refresh is a standard dashboard pattern */
   useEffect(() => {
     fetchData()
     fetchSettings()
     const interval = setInterval(fetchData, 60000) // Auto-refresh every 60s
     return () => clearInterval(interval)
   }, [fetchData, fetchSettings])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (loading && !data) {
     return (

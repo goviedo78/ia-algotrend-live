@@ -176,6 +176,7 @@ export function AnimatedLogo({
         }
         transition={{ duration: 1.8, ease: BREATH_EASE, repeat: Infinity }}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element -- Intentional: CSS mask-image animation requires raw img element */}
         <img className={maskClass} src={src} alt="GONOVI" style={imgStyle} />
         <div className={sheenClass} style={sheenStyle} aria-hidden />
       </motion.div>

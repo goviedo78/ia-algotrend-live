@@ -4,6 +4,7 @@ import { openTrade, closeTrade, getOpenTrade, updateOpenTradeRisk, getSetting } 
 import { notifyOpen, notifyClose } from '@/lib/telegram'
 import { emailOpen, emailClose } from '@/lib/email'
 import { logEvent } from '@/lib/analytics'
+import { latestAtrPercent } from '@/lib/atr'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -209,22 +210,8 @@ export async function GET(req: NextRequest) {
 
     // ── 2. Open new trade if signal detected ──
     if (signal === 'LONG' || signal === 'SHORT') {
-      // ── Always calculate ATR for logging/notifications ──
       const ATR_PERIOD = 14
-      const recentCandles = candles.slice(-ATR_PERIOD - 1)
-      let atrPct = 0
-
-      if (recentCandles.length >= 2) {
-        let trSum = 0
-        for (let i = 1; i < recentCandles.length; i++) {
-          const h = recentCandles[i].high
-          const l = recentCandles[i].low
-          const pc = recentCandles[i - 1].close
-          trSum += Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc))
-        }
-        const atr = trSum / (recentCandles.length - 1)
-        atrPct = (atr / lastCandle.close) * 100
-      }
+      const atrPct = latestAtrPercent(candles, ATR_PERIOD)
 
       // ── ATR Filter (opt-in via env var OR db setting) ──
       const dbEnabled = await getSetting('atr_filter_enabled')
@@ -236,7 +223,7 @@ export async function GET(req: NextRequest) {
         const dbThreshold = await getSetting('atr_threshold')
         const ATR_THRESHOLD = parseFloat(dbThreshold || process.env.ATR_THRESHOLD || '0.40')
 
-        if (atrPct > 0 && atrPct < ATR_THRESHOLD) {
+        if (atrPct !== null && atrPct < ATR_THRESHOLD) {
           atrBlocked = true
           await logEvent('signal_filtered_atr', {
             signal, price: last.close, atrPct: +atrPct.toFixed(3),
@@ -249,7 +236,7 @@ export async function GET(req: NextRequest) {
       if (!atrBlocked) {
       const stop = signal === 'LONG' ? last.longStop : last.shortStop
       const tp = signal === 'LONG' ? last.longTp : last.shortTp
-      const trade = await openTrade(signal, last.time, last.time, last.close, stop, tp, atrPct > 0 ? +atrPct.toFixed(3) : null)
+      const trade = await openTrade(signal, last.time, last.time, last.close, stop, tp, atrPct !== null ? +atrPct.toFixed(3) : null)
 
       if (trade) {
         const prob = signal === 'LONG' ? last.probUp : last.probDown
@@ -262,7 +249,7 @@ export async function GET(req: NextRequest) {
 
         await sendPushDirect({
           title: `${emoji} AlgoTrend — ${dir} (${probText})`,
-          body: `Entrada: $${last.close.toLocaleString('es-MX')} (ATR = ${atrPct.toFixed(2)}%) | Stop: $${stop.toLocaleString('es-MX')} | Objetivo: ${tp ? '$' + tp.toLocaleString('es-MX') : 'Stop móvil'}`,
+          body: `Entrada: $${last.close.toLocaleString('es-MX')} (ATR = ${atrPct !== null ? atrPct.toFixed(2) : '—'}%) | Stop: $${stop.toLocaleString('es-MX')} | Objetivo: ${tp ? '$' + tp.toLocaleString('es-MX') : 'Stop móvil'}`,
           tag: `signal-${last.time}`,
         })
 

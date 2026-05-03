@@ -20,7 +20,6 @@
  */
 
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
-import { Environment } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import * as THREE from 'three'
@@ -30,6 +29,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 function CustomRoomEnvironment({ intensity = 1.0 }: { intensity?: number }) {
   const { gl, scene } = useThree()
 
+  /* eslint-disable react-hooks/immutability -- R3F standard: scene is a mutable Three.js object */
   useEffect(() => {
     const pmrem = new THREE.PMREMGenerator(gl)
     pmrem.compileEquirectangularShader()
@@ -44,6 +44,7 @@ function CustomRoomEnvironment({ intensity = 1.0 }: { intensity?: number }) {
       pmrem.dispose()
     }
   }, [gl, scene, intensity])
+  /* eslint-enable react-hooks/immutability */
 
   return null
 }
@@ -525,7 +526,6 @@ function MateriaMesh({
     }
 
     return mat
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseColor, matCfg.roughness, matCfg.metalness, matCfg.clearcoat, matCfg.clearcoatRoughness, matCfg.reflectivity])
 
   // Centrar el grupo después de cargar
@@ -938,6 +938,7 @@ function ZoomControl({ enabled, minZ, maxZ, doneRef }: ZoomControlProps) {
   }, [enabled, gl, minZ, maxZ, doneRef])
 
   // Lerp suave de la posición Z hacia el target
+  /* eslint-disable react-hooks/immutability -- R3F standard: camera mutation inside useFrame is the expected pattern */
   useFrame(() => {
     if (!enabled) return
 
@@ -957,6 +958,7 @@ function ZoomControl({ enabled, minZ, maxZ, doneRef }: ZoomControlProps) {
     const next = cur + (targetZ.current - cur) * ZOOM_LERP
     camera.position.z = next
   })
+  /* eslint-enable react-hooks/immutability */
 
   return null
 }
@@ -993,6 +995,7 @@ function StaticFallback({
         ...style,
       }}
     >
+      {/* eslint-disable-next-line @next/next/no-img-element -- SVG fallback for devices without WebGL2; next/image unoptimized adds unnecessary wrapper complexity here */}
       <img
         src={svgUrl}
         alt="GONOVI"
@@ -1052,14 +1055,12 @@ export function MateriaLogo({
   const toneMappingExposure  = toneMappingExposureProp  ?? cfg.toneMappingExposure
   const environmentIntensity = environmentIntensityProp ?? cfg.environmentIntensity
 
-  const [supported, setSupported] = useState<boolean | null>(null)
+  // Lazy initializer: detecta WebGL2 una sola vez del lado cliente sin necesidad de useEffect
+  const [supported] = useState(() =>
+    typeof document === 'undefined' ? null : detectWebGL2()
+  )
   // Compartido entre CameraEntry, WheelZoom y MateriaMesh (para gating del tilt)
   const entryDoneRef = useRef(false)
-
-  // Detectar WebGL2 una sola vez del lado cliente
-  useEffect(() => {
-    setSupported(detectWebGL2())
-  }, [])
 
   if (supported === null) {
     // SSR / pre-detect: render placeholder de mismo tamaño para evitar layout shift

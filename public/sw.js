@@ -37,7 +37,7 @@ self.addEventListener('push', (event) => {
   let data = { title: 'AlgoTrend', body: 'Nueva señal detectada', tag: 'signal' }
   try {
     if (event.data) data = { ...data, ...event.data.json() }
-  } catch (e) {
+  } catch {
     if (event.data) data.body = event.data.text()
   }
   event.waitUntil(

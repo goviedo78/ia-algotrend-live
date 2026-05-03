@@ -125,6 +125,10 @@ h6 {
 }
 
 .badge {
+  display: inline-flex;
+  min-height: 2.12rem;
+  align-items: center;
+  justify-content: center;
   border: 1px solid rgba(79, 85, 112, 0.78);
   border-radius: 999px;
   background: rgba(17, 22, 42, 0.88);
@@ -132,10 +136,12 @@ h6 {
   font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 0.3rem 0.66rem;
+  padding: 0.42rem 0.72rem;
   font-size: 0.62rem;
   font-weight: 500;
-  line-height: 1;
+  line-height: 1.05;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .badge-live {
@@ -373,10 +379,11 @@ h6 {
 .glass-btn {
   position: relative;
   display: inline-flex;
+  min-height: 2.62rem;
   align-items: center;
   justify-content: center;
   gap: 0.4em;
-  padding: 0.55rem 1.1rem;
+  padding: 0.62rem 1.1rem;
   border-radius: 0.75rem;
   font-size: 0.8rem;
   font-weight: 600;
@@ -386,6 +393,8 @@ h6 {
   user-select: none;
   outline: none;
   text-decoration: none;
+  line-height: 1.05;
+  text-align: center;
   /* glass base */
   background: rgba(42, 49, 72, 0.72);
   backdrop-filter: blur(16px) saturate(160%);

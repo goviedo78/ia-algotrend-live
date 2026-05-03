@@ -232,7 +232,6 @@ export async function getTradePerformanceStats() {
   let balance = 10000
   let peak = balance
   let maxDrawdown = 0
-  let streak = 0
   let bestStreak = 0
   let currentStreak = 0
 

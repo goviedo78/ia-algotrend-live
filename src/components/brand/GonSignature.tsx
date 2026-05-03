@@ -56,6 +56,7 @@ export function GonSignature({
         ...style,
       }}
     >
+      {/* eslint-disable-next-line @next/next/no-img-element -- Tiny inline SVG icon (16px); next/image adds unnecessary wrapper for this use case */}
       <img
         src={SELECTED_LOGO_SRC}
         alt="GONOVI"

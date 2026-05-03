@@ -11,6 +11,7 @@ export default function InstallButton() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [installed, setInstalled] = useState(false)
 
+  /* eslint-disable react-hooks/set-state-in-effect -- One-time browser API check that must run client-side */
   useEffect(() => {
     // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -32,6 +33,7 @@ export default function InstallButton() {
 
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleInstall = async () => {
     if (!deferredPrompt) return
