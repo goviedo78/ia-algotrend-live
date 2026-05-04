@@ -11,6 +11,7 @@ import InstallButton from './InstallButton'
 import SponsorBanner from './SponsorBanner'
 import GonSignature from './brand/GonSignature'
 import GonEmblem3D from './brand/GonEmblem3D'
+import ShareButton from './ShareButton'
 
 const Chart = dynamic(() => import('./Chart'), { ssr: false })
 const MateriaLogo = dynamic(() => import('./brand/MateriaLogo').then(mod => mod.MateriaLogo), { ssr: false })
@@ -453,6 +454,13 @@ export default function Dashboard() {
                   </span>
                   <InstallButton />
                   <NotificationBell />
+                  <ShareButton
+                    price={lastPrice}
+                    winRate={winRate}
+                    returnPct={returnPct}
+                    balance={currentBalance}
+                    totalTrades={closedTrades}
+                  />
                 </div>
               </div>
             </div>

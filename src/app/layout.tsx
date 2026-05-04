@@ -26,6 +26,20 @@ export const metadata: Metadata = {
   title: 'IA AlgoTrend · Live Trading Desk',
   description: 'Mesa de monitoreo en vivo para la estrategia Algotrend en BTC/USD.',
   manifest: '/manifest.json',
+  openGraph: {
+    title: 'IA AlgoTrend · Live Trading Desk',
+    description: 'Monitor probabilístico BTC 1H con señales automáticas, historial en vivo y gestión de riesgo.',
+    url: 'https://algotrend.vercel.app',
+    siteName: 'IA AlgoTrend',
+    images: [{ url: '/og-card.png', width: 1200, height: 630 }],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'IA AlgoTrend · Live Trading Desk',
+    description: 'Motor de IA para BTC en vivo con Win Rate 74%+',
+    images: ['/og-card.png'],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
