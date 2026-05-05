@@ -288,6 +288,9 @@ export default function Dashboard() {
 
         candlesRef.current = hist
         setCandles(hist)
+        if (hist.length > 0) {
+          setLastPrice(hist[hist.length - 1].close)
+        }
 
         // Check if there are existing trades; if not, run backfill first
         const tradesRes = await fetch('/api/trades', { cache: 'no-store' })
