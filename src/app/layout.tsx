@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'IA AlgoTrend · Live Trading Desk',
     description: 'Monitor probabilístico BTC 1H con señales automáticas, historial en vivo y gestión de riesgo.',
-    url: 'https://algotrend.vercel.app',
+    url: 'https://gonovi.app',
     siteName: 'IA AlgoTrend',
     images: [{ url: '/og-card.png', width: 1200, height: 630 }],
     type: 'website',

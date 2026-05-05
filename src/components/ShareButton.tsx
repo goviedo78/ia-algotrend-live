@@ -28,7 +28,7 @@ function buildShareText({
     `💎 Balance: $${balance.toLocaleString('en-US', { maximumFractionDigits: 0 })} · ${totalTrades} operaciones`,
     `💰 Precio BTC: ${priceStr}`,
     ``,
-    `🔗 https://algotrend.vercel.app`,
+    `🔗 https://gonovi.app`,
   ].join('\n')
 }
 
@@ -51,7 +51,7 @@ export default function ShareButton(props: ShareButtonProps) {
         await navigator.share({
           title: 'IA AlgoTrend · Live Trading Desk',
           text,
-          url: 'https://algotrend.vercel.app',
+          url: 'https://gonovi.app',
         })
         return
       } catch (err) {
