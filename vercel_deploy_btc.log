@@ -1,0 +1,91 @@
+Retrieving project…
+Deploying goviedomexico-8219s-projects/fusion-engine-live
+Uploading [--------------------] (0.0B/80B)
+Uploading [====================] (80.0B/80B)
+Inspect: https://vercel.com/goviedomexico-8219s-projects/fusion-engine-live/5RZR2GLpft3GeXgLHSs7CDbiWQe2 [2s]
+Production: https://fusion-engine-live-5769l9juh-goviedomexico-8219s-projects.vercel.app [2s]
+Building...
+Building...
+Building: Running build in Washington, D.C., USA (East) – iad1
+Building: Build machine configuration: 2 cores, 8 GB
+Building: Retrieving list of deployment files...
+Building: Downloading 181 deployment files...
+Building: Restored build cache from previous deployment (8WbzfFMGDph8UX3EJosNVZcKfcAp)
+Building: Running "vercel build"
+Building: Vercel CLI 51.6.1
+Building: Installing dependencies...
+Building: up to date in 1s
+Building: 160 packages are looking for funding
+Building: run `npm fund` for details
+Building: Detected Next.js version: 16.2.4
+Building: Running "npm run build"
+Building: > fusion-engine-live@0.1.0 build
+Building: > next build
+Building: Applying modifyConfig from Vercel
+Building: ▲ Next.js 16.2.4 (Turbopack)
+Building: Creating an optimized production build ...
+Building: ✓ Compiled successfully in 14.8s
+Building: Running TypeScript ...
+Building: Finished TypeScript in 7.0s ...
+Building: Collecting page data using 1 worker ...
+Building: Generating static pages using 1 worker (0/13) ...
+Building: Generating static pages using 1 worker (3/13)
+Building: Generating static pages using 1 worker (6/13)
+Building: Generating static pages using 1 worker (9/13)
+Building: ✓ Generating static pages using 1 worker (13/13) in 348ms
+Building: Finalizing page optimization ...
+Building: Running onBuildComplete from Vercel
+Building: Route (app)
+Building: ┌ ○ /
+Building: ├ ○ /_not-found
+Building: ├ ƒ /api/analytics/event
+Building: ├ ƒ /api/analytics/stats
+Building: ├ ƒ /api/analytics/track
+Building: ├ ƒ /api/backfill
+Building: ├ ƒ /api/cron/check
+Building: ├ ƒ /api/dashboard/login
+Building: ├ ƒ /api/dashboard/settings
+Building: ├ ƒ /api/debug/engine
+Building: ├ ƒ /api/push/send
+Building: ├ ƒ /api/push/subscribe
+Building: ├ ƒ /api/signal
+Building: ├ ƒ /api/telegram/notify
+Building: ├ ƒ /api/telegram/setup
+Building: ├ ƒ /api/trades
+Building: ├ ƒ /api/webhook/tradingview
+Building: ├ ○ /apple-icon.png
+Building: ├ ○ /brand
+Building: ├ ○ /brand/gallery
+Building: ├ ○ /brand/materia
+Building: ├ ○ /brand/palette
+Building: ├ ○ /dashboard
+Building: └ ○ /icon.png
+Building: ○  (Static)   prerendered as static content
+Building: ƒ  (Dynamic)  server-rendered on demand
+Building: Build Completed in /vercel/output [26s]
+Building: Deploying outputs...
+[2K[1A[2K[GProduction: https://fusion-engine-live-5769l9juh-goviedomexico-8219s-projects.vercel.app [39s]
+Completing...
+Aliased: https://algotrend.gonovi.app [44s]
+{
+  "status": "ok",
+  "deployment": {
+    "id": "dpl_5RZR2GLpft3GeXgLHSs7CDbiWQe2",
+    "url": "https://fusion-engine-live-5769l9juh-goviedomexico-8219s-projects.vercel.app",
+    "inspectorUrl": "https://vercel.com/goviedomexico-8219s-projects/fusion-engine-live/5RZR2GLpft3GeXgLHSs7CDbiWQe2",
+    "readyState": "READY",
+    "target": "production",
+    "deploymentApiUrl": "https://api.vercel.com/v13/deployments/dpl_5RZR2GLpft3GeXgLHSs7CDbiWQe2"
+  },
+  "message": "Deployment fusion-engine-live-5769l9juh-goviedomexico-8219s-projects.vercel.app ready.",
+  "next": [
+    {
+      "command": "vercel inspect fusion-engine-live-5769l9juh-goviedomexico-8219s-projects.vercel.app",
+      "when": "Inspect deployment"
+    },
+    {
+      "command": "vercel deploy --prod",
+      "when": "Promote to production"
+    }
+  ]
+}

@@ -48,9 +48,9 @@ export async function POST(req: NextRequest) {
       secret?: string
     }
 
-    // Verify webhook secret
+    // Verify webhook secret (Fail-Closed)
     const webhookSecret = process.env.WEBHOOK_SECRET
-    if (webhookSecret && secret !== webhookSecret) {
+    if (!webhookSecret || secret !== webhookSecret) {
       return NextResponse.json({ error: 'Invalid secret' }, { status: 401 })
     }
 
