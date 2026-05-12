@@ -1,6 +1,12 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
   images: {
     formats: ["image/avif", "image/webp"],
   },
@@ -28,22 +34,47 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Prevent caching on API routes (trading data must always be fresh)
-        source: "/api/:path*",
+        // Public delayed endpoints opt-in to HTTP cache via their own headers.
+        source: "/api/public/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      {
+        // All other API routes: trading data must always be fresh.
+        source: "/api/((?!public/).*)",
         headers: [
           { key: "Cache-Control", value: "no-store, max-age=0" },
         ],
       },
-      {
-        // Long cache for static assets (fonts, images, JS bundles)
-        source: "/:path*.(js|css|woff2|png|svg|ico|webp|avif)",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-          },
-        ],
-      },
+      ...(isProduction
+        ? [
+            {
+              // Long cache only in production, where Next emits hashed assets.
+              source: "/:path*.(js|css|woff2|png|svg|ico|webp|avif)",
+              headers: [
+                {
+                  key: "Cache-Control",
+                  value: "public, max-age=31536000, immutable",
+                },
+              ],
+            },
+          ]
+        : [
+            {
+              // Turbopack dev chunk names can be reused between edits.
+              source: "/:path*.(js|css)",
+              headers: [
+                {
+                  key: "Cache-Control",
+                  value: "no-store, max-age=0",
+                },
+              ],
+            },
+          ]),
     ];
   },
 };
