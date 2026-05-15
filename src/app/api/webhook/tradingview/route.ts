@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { openTrade, closeTrade, getOpenTrade } from '@/lib/db'
 import { notifyOpen, notifyClose } from '@/lib/telegram'
+import { safeExecuteBingxClose, safeExecuteBingxOpen } from '@/lib/bingx'
+import { fetchLatestAtrPercent } from '@/lib/atr'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,9 +28,13 @@ async function sendPush(req: NextRequest, payload: { title: string; body: string
     const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
       : 'https://algotrend.vercel.app'
+    const cronSecret = process.env.CRON_SECRET?.trim()
     await fetch(`${baseUrl}/api/push/send`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {}),
+      },
       body: JSON.stringify(payload),
     })
   } catch (err) {
@@ -66,9 +72,10 @@ export async function POST(req: NextRequest) {
       const existing = await getOpenTrade()
       if (existing) {
         const closed = await closeTrade(existing.id, now, price, 'SIGNAL')
+        await safeExecuteBingxClose(closed)
         await notifyClose(closed)
         await sendPush(req, {
-          title: `⚪ AlgoTrend — Salida ${directionLabel(closed.direction)}`,
+          title: `₿⏱ BTC 1H — ⚪ Salida ${directionLabel(closed.direction)}`,
           body: `Precio: $${price.toLocaleString('es-MX')} | Resultado: ${closed.pnl_pct?.toFixed(2)}% (señal de TradingView)`,
           tag: `close-${closed.id}`
         })
@@ -82,9 +89,10 @@ export async function POST(req: NextRequest) {
     const existing = await getOpenTrade()
     if (existing) {
       const closed = await closeTrade(existing.id, now, price, 'SIGNAL')
+      await safeExecuteBingxClose(closed)
       await notifyClose(closed)
       await sendPush(req, {
-        title: `⚪ AlgoTrend — Salida ${directionLabel(closed.direction)}`,
+        title: `₿⏱ BTC 1H — ⚪ Salida ${directionLabel(closed.direction)}`,
         body: `Precio: $${price.toLocaleString('es-MX')} | Resultado: ${closed.pnl_pct?.toFixed(2)}% (reversión)`,
         tag: `close-${closed.id}`
       })
@@ -95,19 +103,21 @@ export async function POST(req: NextRequest) {
     const signalTime = Math.floor(now / 3600) * 3600
     const stopLoss = sl ?? (signal === 'LONG' ? price * 0.98 : price * 1.02)
     const takeProfit = tp ?? (signal === 'LONG' ? price * 1.03 : price * 0.97)
-    const trade = await openTrade(signal, signalTime, now, price, stopLoss, takeProfit, null)
+    const atrPct = await fetchLatestAtrPercent()
+    const trade = await openTrade(signal, signalTime, now, price, stopLoss, takeProfit, atrPct)
 
     if (!trade) {
       return NextResponse.json({ ok: true, action: 'signal_already_processed' })
     }
 
     await notifyOpen(trade)
+    await safeExecuteBingxOpen(trade)
 
     const emoji = signal === 'LONG' ? '🟢' : '🔴'
     const dir = signal === 'LONG' ? 'LARGO' : 'CORTO'
 
     await sendPush(req, {
-      title: `${emoji} AlgoTrend — ${dir} ${probText ? `(${probText})` : ''}`,
+      title: `₿⏱ BTC 1H — ${emoji} ${dir} ${probText ? `(${probText})` : ''}`,
       body: `Entrada: $${price.toLocaleString('es-MX')} | Stop: $${stopLoss.toLocaleString('es-MX')} | Objetivo: $${takeProfit.toLocaleString('es-MX')}`,
       tag: `signal-${now}`,
     })
