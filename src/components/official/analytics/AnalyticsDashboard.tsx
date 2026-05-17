@@ -86,8 +86,9 @@ export function AnalyticsDashboard({ stats, cardClicks = [] }: { stats: Stats; c
             <section className={s.chartSection}>
               <h2 className={s.sectionTitle}>Pageviews por día (últimos 30 días)</h2>
               <div className={s.barChart}>
-                {pageviews.daily.slice(-30).map((d) => {
+                {(() => {
                   const max = Math.max(...pageviews.daily.map((x) => x.views), 1)
+                  return pageviews.daily.slice(-30).map((d) => {
                   const pct = Math.round((d.views / max) * 100)
                   return (
                     <div key={d.date} className={s.barCol} title={`${d.date}: ${d.views} vistas`}>
@@ -95,7 +96,8 @@ export function AnalyticsDashboard({ stats, cardClicks = [] }: { stats: Stats; c
                       <span className={s.barLabel}>{d.date.slice(5)}</span>
                     </div>
                   )
-                })}
+                })
+                })()}
               </div>
             </section>
           )}

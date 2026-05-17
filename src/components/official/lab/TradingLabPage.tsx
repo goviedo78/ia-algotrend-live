@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import allScenarios, { type LabScenario, type LabCategory } from '@/data/official/trading-lab-scenarios'
 import s from './trading-lab.module.css'
@@ -229,7 +229,7 @@ function getRoundMessage(stats: { total: number; wins: number; wr: number }) {
 }
 
 /* ─── mini SVG chart ─── */
-function MiniChart({ scenario, revealed }: { scenario: LabScenario; revealed: boolean }) {
+const MiniChart = memo(function MiniChart({ scenario, revealed }: { scenario: LabScenario; revealed: boolean }) {
   const vw = 640
   const vh = 360
   const pad = 32
@@ -283,7 +283,7 @@ function MiniChart({ scenario, revealed }: { scenario: LabScenario; revealed: bo
       </defs>
     </svg>
   )
-}
+})
 
 /* ─── main component ─── */
 export default function TradingLabPage() {
