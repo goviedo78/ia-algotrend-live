@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import type { Candle } from '@/lib/algotrend'
 import s from './backtesting.module.css'
@@ -58,7 +58,7 @@ function resultLabel(resultR: number | null, decision: Decision | null): string 
   return 'Cierre flotante'
 }
 
-function BacktestChart({
+const BacktestChart = memo(function BacktestChart({
   candles,
   visibleCount,
   entry,
@@ -141,7 +141,7 @@ function BacktestChart({
       })}
     </svg>
   )
-}
+})
 
 export default function BacktestingPage() {
   const [allCandles, setAllCandles] = useState<Candle[]>([])

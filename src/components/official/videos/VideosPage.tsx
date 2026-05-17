@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import styles from './videos.module.css'
 
 type Video = {
@@ -64,16 +64,18 @@ export function VideosPage() {
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
-  const filteredCategories = CATEGORIES.map(category => ({
-    ...category,
-    videos: category.videos.filter(video =>
-      video.title.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })).filter(category => {
-    const matchesCategory = activeCategory === 'all' || category.id === activeCategory;
-    const hasVideos = category.videos.length > 0;
-    return matchesCategory && hasVideos;
-  })
+  const filteredCategories = useMemo(() => {
+    const query = searchQuery.toLowerCase()
+    return CATEGORIES
+      .map(category => ({
+        ...category,
+        videos: category.videos.filter(video => video.title.toLowerCase().includes(query)),
+      }))
+      .filter(category => {
+        const matchesCategory = activeCategory === 'all' || category.id === activeCategory
+        return matchesCategory && category.videos.length > 0
+      })
+  }, [searchQuery, activeCategory])
 
   return (
     <main className={styles.container}>

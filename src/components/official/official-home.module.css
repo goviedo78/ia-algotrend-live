@@ -50,6 +50,7 @@
   box-shadow: 0 0 36px rgba(244, 78, 28, 0.08);
   transform: rotate(-18deg);
   animation: shardFloat 12s var(--gon-ease-in-out) infinite alternate;
+  will-change: transform;
 }
 
 .shardOne {
@@ -562,6 +563,7 @@
   opacity: 0.72;
   transform: scale(0.88);
   animation: haloPulse 5s ease-in-out infinite;
+  will-change: transform, opacity;
   transition: opacity 260ms var(--gon-ease-out), transform 260ms var(--gon-ease-out);
 }
 
@@ -2282,6 +2284,7 @@
   display: flex;
   width: max-content;
   animation: tickerScroll 28s linear infinite;
+  will-change: transform;
 }
 
 .tickerTrack:hover {
