@@ -27,6 +27,28 @@ export const metadata: Metadata = {
   },
 }
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'LearningResource',
+  name: 'Trading Lab · GONOVI',
+  description: 'Simulador interactivo de decisiones de trading. Escenarios de mercado reales con retroalimentacion inmediata.',
+  url: 'https://gonovi.app/official/lab',
+  educationalLevel: 'Intermediate',
+  learningResourceType: 'Interactive',
+  teaches: ['Lectura de price action', 'Gestion de riesgo', 'Analisis de tendencias', 'Filtro de operaciones'],
+  inLanguage: 'es',
+  provider: {
+    '@type': 'Organization',
+    name: 'GONOVI',
+    url: 'https://gonovi.app',
+  },
+}
+
 export default function LabPage() {
-  return <TradingLabPage />
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <TradingLabPage />
+    </>
+  )
 }
