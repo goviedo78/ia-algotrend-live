@@ -26,9 +26,13 @@ async function sendPush(req: NextRequest, payload: { title: string; body: string
     const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
       : 'https://algotrend.vercel.app'
+    const cronSecret = process.env.CRON_SECRET?.trim()
     await fetch(`${baseUrl}/api/push/send`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {}),
+      },
       body: JSON.stringify(payload),
     })
   } catch (err) {

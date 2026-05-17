@@ -9,7 +9,11 @@ export const revalidate = 3600
 
 export async function GET() {
   try {
-    const data = await getPublicCandlesDelayed({ limit: 500 })
+    const data = await getPublicCandlesDelayed({
+      limit: 500,
+      step: 3600,
+      tag: 'public-candles-btc-1h',
+    })
     return NextResponse.json(
       { code: 0, data },
       {

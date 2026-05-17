@@ -1,0 +1,54 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  text-decoration: none;
+  background: rgba(18, 13, 10, 0.7);
+  border: 1px solid rgba(229, 212, 182, 0.15);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--official-bone, #e5d4b6);
+  transition:
+    transform 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.card:hover {
+  transform: scale(1.02);
+  border-color: rgba(244, 78, 28, 0.4);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.2),
+    0 0 16px rgba(244, 78, 28, 0.15),
+    inset 0 0 12px rgba(244, 78, 28, 0.05);
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: rgba(229, 212, 182, 0.05);
+  color: var(--official-pulse, #f44e1c);
+  margin-bottom: 0.5rem;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #f1dec8;
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  color: rgba(229, 212, 182, 0.65);
+  line-height: 1.4;
+}

@@ -5,10 +5,15 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    const { type, metadata } = await req.json()
-    if (!type) return NextResponse.json({ error: 'type required' }, { status: 400 })
+    const rawBody = await req.json()
+    const events = Array.isArray(rawBody) ? rawBody : [rawBody]
 
-    await logEvent(type, metadata || {})
+    for (const body of events) {
+      const { type, metadata } = body
+      if (!type) continue // Skip invalid events in batch
+      await logEvent(type, metadata || {})
+    }
+
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('[analytics/event]', err)

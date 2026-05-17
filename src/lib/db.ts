@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { revalidateTag } from 'next/cache'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,6 +44,11 @@ export async function getSetting(key: string): Promise<string | null> {
 }
 
 const TABLE = 'algotrend_trades'
+const PUBLIC_TRADES_TAG = 'algotrend-trades'
+
+function revalidatePublicTradeSnapshot() {
+  revalidateTag(PUBLIC_TRADES_TAG, { expire: 0 })
+}
 
 // Returns the inserted trade, or null if a trade for this signal_time already exists.
 // Idempotency is enforced by a UNIQUE index on signal_time.
@@ -87,6 +93,7 @@ export async function openTrade(
     await closeTrade(other.id, openTime, openPrice, 'SIGNAL')
   }
 
+  revalidatePublicTradeSnapshot()
   return data as Trade
 }
 
@@ -104,6 +111,7 @@ export async function updateOpenTradeRisk(
     .single()
 
   if (error) throw new Error(error.message)
+  revalidatePublicTradeSnapshot()
   return data as Trade
 }
 
@@ -128,6 +136,7 @@ export async function closeTrade(
     .single()
 
   if (error) throw new Error(error.message)
+  revalidatePublicTradeSnapshot()
   return data as Trade
 }
 

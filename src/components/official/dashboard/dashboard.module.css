@@ -1,0 +1,227 @@
+.shell {
+  --ink: #0d1122;
+  --panel: rgba(28, 34, 58, 0.76);
+  --line: rgba(229, 212, 182, 0.14);
+  --bone: #e5d4b6;
+  --muted: rgba(229, 212, 182, 0.62);
+  --pulse: #f44e1c;
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  overflow-x: clip;
+  background:
+    radial-gradient(circle at 15% 8%, rgba(244, 78, 28, 0.16), transparent 30rem),
+    radial-gradient(circle at 86% 0%, rgba(229, 212, 182, 0.1), transparent 26rem),
+    linear-gradient(180deg, #1c223a 0%, #11162a 52%, #0d1122 100%);
+  color: var(--bone);
+  padding: 1.25rem 0 4rem;
+}
+
+.noise {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(to right, rgba(79, 85, 112, 0.16) 1px, transparent 1px) 0 0 / 34px 34px,
+    linear-gradient(to bottom, rgba(201, 168, 122, 0.07) 1px, transparent 1px) 0 0 / 34px 34px;
+  mask-image: linear-gradient(to bottom, black 0%, transparent 78%);
+}
+
+.header,
+.summaryGrid,
+.library {
+  width: min(1180px, calc(100vw - 2rem));
+  margin: 0 auto;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 1rem;
+  padding: 1rem 0 2rem;
+}
+
+.header h1 {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-size: clamp(3rem, 8vw, 6.6rem);
+  letter-spacing: -0.08em;
+  line-height: 0.86;
+}
+
+.header p {
+  max-width: 700px;
+  margin: 1rem 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.kicker,
+.backLink,
+.storeLink,
+.scriptBadge {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.kicker,
+.scriptBadge {
+  color: #ff8a60;
+}
+
+.backLink,
+.storeLink {
+  color: #ff8a60;
+  text-decoration: none;
+}
+
+.storeLink {
+  border: 1px solid rgba(229, 212, 182, 0.18);
+  border-radius: 999px;
+  padding: 0.72rem 0.95rem;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.summaryGrid article,
+.scriptCard {
+  border: 1px solid var(--line);
+  border-radius: 1.4rem;
+  background:
+    linear-gradient(180deg, rgba(248, 218, 194, 0.045), transparent 46%),
+    var(--panel);
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgba(229, 212, 182, 0.06), 0 22px 60px rgba(0, 0, 0, 0.24);
+}
+
+.summaryGrid article {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+}
+
+.summaryGrid span {
+  color: rgba(229, 212, 182, 0.52);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.summaryGrid strong {
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: -0.05em;
+}
+
+.library {
+  display: grid;
+  gap: 1rem;
+}
+
+.sectionIntro {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 1rem;
+}
+
+.sectionIntro h2 {
+  margin: 0;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  letter-spacing: -0.06em;
+}
+
+.scriptCard {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1.25rem;
+  padding: clamp(1.2rem, 3vw, 1.8rem);
+}
+
+.scriptMain {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.scriptMain h3 {
+  margin: 0;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-size: clamp(2rem, 5vw, 4rem);
+  letter-spacing: -0.07em;
+  line-height: 0.92;
+}
+
+.scriptMain p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.scriptMain small {
+  color: rgba(229, 212, 182, 0.42);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scriptActions {
+  display: grid;
+  align-content: center;
+  gap: 0.7rem;
+  min-width: 220px;
+}
+
+.primaryAction,
+.secondaryAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  border-radius: 999px;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.primaryAction {
+  background: var(--pulse);
+  color: #11162a;
+  box-shadow: 0 14px 32px rgba(244, 78, 28, 0.18);
+}
+
+.secondaryAction {
+  border: 1px solid rgba(229, 212, 182, 0.18);
+  color: var(--bone);
+}
+
+@media (max-width: 820px) {
+  .header {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryGrid,
+  .scriptCard {
+    grid-template-columns: 1fr;
+  }
+
+  .scriptActions {
+    min-width: 0;
+  }
+}

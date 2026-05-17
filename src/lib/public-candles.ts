@@ -31,6 +31,7 @@ export interface GetPublicCandlesOpts {
   pair?: string
   step?: number
   limit?: number
+  tag?: string
 }
 
 export async function getPublicCandlesDelayed(
@@ -39,12 +40,13 @@ export async function getPublicCandlesDelayed(
   const pair = opts.pair ?? 'btcusd'
   const step = opts.step ?? 3600
   const limit = Math.min(Math.max(opts.limit ?? 500, 1), 1000)
+  const tag = opts.tag ?? `public-candles-${pair}-${step}`
   const endTs = Math.floor(Date.now() / 1000) - DELAY_HOURS * 3600
 
   const url = `https://www.bitstamp.net/api/v2/ohlc/${pair}/?step=${step}&limit=${limit}&end=${endTs}`
 
   const resp = await fetch(url, {
-    next: { revalidate: 3600, tags: ['public-candles-btc-1h'] },
+    next: { revalidate: 3600, tags: [tag] },
   })
 
   if (!resp.ok) {

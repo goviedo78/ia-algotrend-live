@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { logPageview } from '@/lib/analytics'
+import { logEvent, logPageview } from '@/lib/analytics'
 import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const path = body.path || '/'
-    const referrer = body.referrer || null
+    const rawBody = await req.json()
+    const events = Array.isArray(rawBody) ? rawBody : [rawBody]
 
     // Country from Vercel's geo header (free in production)
     const country = req.headers.get('x-vercel-ip-country') || null
@@ -21,7 +20,22 @@ export async function POST(req: NextRequest) {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
     const visitorId = crypto.createHash('sha256').update(`${ip}:${ua}`).digest('hex').substring(0, 16)
 
-    await logPageview({ path, referrer: referrer || undefined, country: country || undefined, device, visitorId })
+    for (const body of events) {
+      const path = body.path || '/'
+      const referrer = body.referrer || null
+
+      if (body.event_type && body.event_type !== 'pageview') {
+        await logEvent(body.event_type, {
+          card_id: body.card_id,
+          card_title: body.card_title,
+          path,
+          device,
+          country,
+        })
+      } else {
+        await logPageview({ path, referrer: referrer || undefined, country: country || undefined, device, visitorId })
+      }
+    }
 
     return NextResponse.json({ ok: true })
   } catch (err) {

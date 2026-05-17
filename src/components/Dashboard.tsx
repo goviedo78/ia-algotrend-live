@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
+import { track } from '@/lib/client-analytics'
 import type { Candle, AlgoTrendResult } from '@/lib/algotrend'
 import type { Trade } from '@/lib/db'
 import StatsPanel from './StatsPanel'
@@ -19,9 +20,8 @@ const MateriaLogo = dynamic(() => import('./brand/MateriaLogo').then(mod => mod.
 // ── Bitstamp config ──────────────────────────────────────────────────────────
 const PAIR = 'btcusd'
 const STEP = 3600          // 1H in seconds
-const REST_URL = `https://www.bitstamp.net/api/v2/ohlc/${PAIR}/?step=${STEP}&limit=1000`
 const WS_URL = 'wss://ws.bitstamp.net'
-const HISTORY_BATCHES = 5   // 5000 candles to satisfy Pine window_size=1000 pipeline
+const TRADES_POLL_INTERVAL_MS = 60_000
 
 const HOME_MATERIA_LIGHTS = [
   { type: 'ambient' as const, color: 0x1b120d, intensity: 0.48 },
@@ -29,15 +29,6 @@ const HOME_MATERIA_LIGHTS = [
   { type: 'directional' as const, color: 0xff6a21, intensity: 0.95, position: [-320, 360, 520] as [number, number, number] },
   { type: 'directional' as const, color: 0xf2dfc3, intensity: 0.32, position: [460, -120, 260] as [number, number, number] },
 ]
-
-// Bitstamp OHLC REST response
-interface BitstampOhlcEntry {
-  timestamp: string
-  open: string; high: string; low: string; close: string; volume: string
-}
-interface BitstampOhlcResponse {
-  data: { pair: string; ohlc: BitstampOhlcEntry[] }
-}
 
 // Bitstamp WebSocket trade message
 interface BitstampTradeData {
@@ -100,43 +91,69 @@ function normalizeTradesResponse(raw: unknown): TradesResponse {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function parseOhlc(entries: BitstampOhlcEntry[]): Candle[] {
-  return entries.map(e => ({
-    time: parseInt(e.timestamp),
-    open: parseFloat(e.open),
-    high: parseFloat(e.high),
-    low: parseFloat(e.low),
-    close: parseFloat(e.close),
-    volume: parseFloat(e.volume),
-  }))
-}
-
 async function fetchHistoricalCandles(): Promise<Candle[]> {
-  // Bitstamp max limit=1000 per request — load multiple batches for Pine parity
-  const batches: Candle[][] = []
-  let nextEnd: number | null = null
-
-  for (let i = 0; i < HISTORY_BATCHES; i++) {
-    const url = nextEnd === null ? REST_URL : `${REST_URL}&end=${nextEnd}`
-    const resp = await fetch(url).then(r => r.json()) as BitstampOhlcResponse
-    const ohlc = resp.data?.ohlc ?? []
-    if (ohlc.length === 0) break
-    batches.unshift(parseOhlc(ohlc))
-    const oldest = parseInt(ohlc[0].timestamp)
-    nextEnd = oldest - 1
-    if (ohlc.length < 1000) break
-  }
-
-  const all = batches.flat()
-  const seen = new Set<number>()
-  return all
-    .filter(c => seen.has(c.time) ? false : (seen.add(c.time), true))
-    .sort((a, b) => a.time - b.time)
+  const resp = await fetch('/api/candles').then(r => r.json()) as { code?: number; data?: Candle[] }
+  if (resp.code !== 0 || !Array.isArray(resp.data)) return []
+  return resp.data
 }
 
 // Snap a unix timestamp to the start of its 1H candle
 function hourFloor(ts: number): number {
   return Math.floor(ts / STEP) * STEP
+}
+
+function signalFromResult(result: AlgoTrendResult): 'LONG' | 'SHORT' | null {
+  return result.longSig ? 'LONG' : result.shortSig ? 'SHORT' : null
+}
+
+function isSignalStillOpen(signal: 'LONG' | 'SHORT', result: AlgoTrendResult, candlesAfterSignal: Candle[]) {
+  const openPrice = result.close
+  let stopLoss = signal === 'LONG' ? result.longStop : result.shortStop
+  let takeProfit: number | null = signal === 'LONG' ? result.longTp : result.shortTp
+  const trailTriggerPct = 1.0
+  const trailOffsetPct = 0.3
+
+  for (const candle of candlesAfterSignal) {
+    const { open: o, high: h, low: l, close: price } = candle
+    const path: ('high' | 'low')[] = Math.abs(o - h) < Math.abs(o - l) ? ['high', 'low'] : ['low', 'high']
+
+    const hitPath = (leg: 'high' | 'low') => {
+      if (signal === 'LONG') {
+        if (leg === 'low' && l <= stopLoss) return true
+        if (leg === 'high' && takeProfit !== null && h >= takeProfit) return true
+        return false
+      }
+      if (leg === 'high' && h >= stopLoss) return true
+      if (leg === 'low' && takeProfit !== null && l <= takeProfit) return true
+      return false
+    }
+
+    if (hitPath(path[0]) || hitPath(path[1])) return false
+
+    if (signal === 'LONG') {
+      const gainPct = ((h - openPrice) / openPrice) * 100
+      if (gainPct >= trailTriggerPct) {
+        const trail = h * (1 - trailOffsetPct / 100)
+        stopLoss = Math.max(openPrice, stopLoss, trail)
+        takeProfit = null
+      }
+    } else {
+      const gainPct = ((openPrice - l) / openPrice) * 100
+      if (gainPct >= trailTriggerPct) {
+        const trail = l * (1 + trailOffsetPct / 100)
+        stopLoss = Math.min(openPrice, stopLoss, trail)
+        takeProfit = null
+      }
+    }
+
+    const closeHit = signal === 'LONG'
+      ? (price <= stopLoss || (takeProfit !== null && price >= takeProfit))
+      : (price >= stopLoss || (takeProfit !== null && price <= takeProfit))
+
+    if (closeHit) return false
+  }
+
+  return true
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -158,14 +175,11 @@ export default function Dashboard() {
   // Accumulate live candle from trades
   const liveCandleRef = useRef<Candle | null>(null)
   const headerRef = useRef<HTMLElement>(null)
+  const tradesRefreshInFlightRef = useRef(false)
 
   // Analytics: track pageview on mount
   useEffect(() => {
-    fetch('/api/analytics/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: '/', referrer: document.referrer || '' }),
-    }).catch(() => {})
+    track({ path: '/', referrer: document.referrer || '' })
   }, [])
 
   // Scroll-collapse: shrink header after 60px scroll
@@ -188,8 +202,11 @@ export default function Dashboard() {
   }, [])
 
   const refreshTrades = useCallback(async () => {
+    if (tradesRefreshInFlightRef.current) return
+    tradesRefreshInFlightRef.current = true
+
     try {
-      const res = await fetch('/api/trades', { cache: 'no-store' })
+      const res = await fetch('/api/trades')
       const raw = await res.json()
       const data = normalizeTradesResponse(raw)
       setTrades(data.trades)
@@ -200,6 +217,8 @@ export default function Dashboard() {
       setTrades([])
       setOpenTrade(null)
       setStats(DEFAULT_STATS)
+    } finally {
+      tradesRefreshInFlightRef.current = false
     }
   }, [])
 
@@ -293,22 +312,63 @@ export default function Dashboard() {
         }
 
         // Check if there are existing trades; if not, run backfill first
-        const tradesRes = await fetch('/api/trades', { cache: 'no-store' })
+        const tradesRes = await fetch('/api/trades')
         const raw = await tradesRes.json()
         const tradesData = normalizeTradesResponse(raw)
 
-        if (tradesData.trades.length === 0) {
-          await fetch('/api/backfill', { method: 'POST' })
-        }
-
-        await refreshTrades()
+        setTrades(tradesData.trades)
+        setOpenTrade(tradesData.openTrade)
+        setStats(tradesData.stats)
         if (!mounted) return
 
         let waited = 0
         const poll = setInterval(() => {
           if (!mounted || engineRef.current || waited > 8000) {
             clearInterval(poll)
-            if (mounted && engineRef.current) setResults(engineRef.current.runAlgoTrend(hist))
+            if (mounted && engineRef.current) {
+              const computed = engineRef.current.runAlgoTrend(hist)
+              setResults(computed)
+
+              void (async () => {
+                const latestKnownTrade = tradesData.trades[0]
+                const latestKnownTime = latestKnownTrade
+                  ? Math.max(
+                      latestKnownTrade.signal_time ?? 0,
+                      latestKnownTrade.open_time ?? 0,
+                      latestKnownTrade.close_time ?? 0,
+                    )
+                  : 0
+
+                if (tradesData.openTrade) return
+
+                const lookbackStart = Math.max(0, computed.length - 13)
+                for (let i = computed.length - 1; i >= lookbackStart; i--) {
+                  const result = computed[i]
+                  const signal = signalFromResult(result)
+                  if (!signal || result.time <= latestKnownTime) continue
+                  if (!isSignalStillOpen(signal, result, hist.slice(i + 1))) break
+
+                  await fetch('/api/signal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      signal,
+                      time: result.time,
+                      price: result.close,
+                      open: hist[i]?.open ?? result.close,
+                      high: hist[i]?.high ?? result.close,
+                      low: hist[i]?.low ?? result.close,
+                      stop: signal === 'LONG' ? result.longStop : result.shortStop,
+                      tp: signal === 'LONG' ? result.longTp : result.shortTp,
+                      probUp: result.probUp,
+                      probDown: result.probDown,
+                    }),
+                  })
+                  await refreshTrades()
+                  break
+                }
+              })()
+            }
           }
           waited += 100
         }, 100)
@@ -362,9 +422,14 @@ export default function Dashboard() {
     return () => { clearTimeout(retryTimer); wsRef.current?.close() }
   }, [handleTrade])
 
-  // Poll trades every 30s
+  // Keep server usage low: cron/webhook update trades, dashboard only refreshes
+  // periodically and never overlaps requests.
   useEffect(() => {
-    const t = setInterval(refreshTrades, 30_000)
+    const t = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        refreshTrades()
+      }
+    }, TRADES_POLL_INTERVAL_MS)
     return () => clearInterval(t)
   }, [refreshTrades])
 

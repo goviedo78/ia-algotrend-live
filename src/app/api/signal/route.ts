@@ -143,9 +143,13 @@ export async function POST(req: NextRequest) {
 
 async function sendPush(req: NextRequest, payload: { title: string; body: string; tag: string }) {
   try {
+    const cronSecret = process.env.CRON_SECRET?.trim()
     await fetch(new URL('/api/push/send', req.url), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {}),
+      },
       body: JSON.stringify(payload),
     })
   } catch (err) {

@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server'
-import { getAllTrades, getOpenTrade, getStats } from '@/lib/db'
+import { getCachedTradeSnapshot } from '@/lib/public-cache'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const trades = await getAllTrades(200)
-    const openTrade = await getOpenTrade()
-    const stats = await getStats()
-    return NextResponse.json({ trades, openTrade, stats }, {
+    const snapshot = await getCachedTradeSnapshot()
+    return NextResponse.json(snapshot, {
       headers: {
-        'Cache-Control': 's-maxage=30, stale-while-revalidate=15',
+        'Cache-Control': 'public, max-age=0, s-maxage=5, must-revalidate',
       },
     })
   } catch (err) {

@@ -39,5 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-data/
+/data/
 *.db
+
+# local code navigation index
+graphify-out/
+.env*.local

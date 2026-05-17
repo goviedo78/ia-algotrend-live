@@ -296,6 +296,29 @@ export async function getTradePerformanceStats() {
 
 // ── Helpers ────────────────────────────────────────────────────────
 
+export async function getCardClickStats() {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
+  const { data } = await supabase
+    .from('algotrend_events')
+    .select('metadata, created_at')
+    .eq('event_type', 'hub_card_click')
+    .gte('created_at', thirtyDaysAgo)
+    .order('created_at', { ascending: false })
+
+  const counts: Record<string, { title: string; clicks: number }> = {}
+  for (const e of data ?? []) {
+    const meta = (e.metadata ?? {}) as Record<string, unknown>
+    const id = (meta.card_id as string) ?? 'unknown'
+    const title = (meta.card_title as string) ?? id
+    if (!counts[id]) counts[id] = { title, clicks: 0 }
+    counts[id].clicks++
+  }
+
+  return Object.entries(counts)
+    .map(([id, { title, clicks }]) => ({ id, title, clicks }))
+    .sort((a, b) => b.clicks - a.clicks)
+}
+
 function cleanReferrer(ref: string): string {
   try {
     const url = new URL(ref)

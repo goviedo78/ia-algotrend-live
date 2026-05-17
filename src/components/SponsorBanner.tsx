@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { track } from '@/lib/client-analytics'
 
 export default function SponsorBanner() {
   const sponsor = {
@@ -17,25 +18,13 @@ export default function SponsorBanner() {
   useEffect(() => {
     if (tracked.current) return
     tracked.current = true
-    fetch('/api/analytics/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: '/sponsor/impression' }),
-    }).catch(() => {})
+    track({ path: '/sponsor/impression' })
     // Also log event server-side
-    fetch('/api/analytics/event', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'sponsor_impression' }),
-    }).catch(() => {})
+    track({ event_type: 'sponsor_impression' })
   }, [])
 
   const handleClick = () => {
-    fetch('/api/analytics/event', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'sponsor_click' }),
-    }).catch(() => {})
+    track({ event_type: 'sponsor_click' })
   }
 
   return (

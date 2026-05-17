@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { runAlgoTrend, type Candle } from '@/lib/algotrend'
 import { createClient } from '@supabase/supabase-js'
+import { revalidateTag } from 'next/cache'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -11,6 +12,7 @@ const supabase = createClient(
 )
 
 const TABLE = 'algotrend_trades'
+const PUBLIC_TRADES_TAG = 'algotrend-trades'
 const PAIR  = 'btcusd'
 const STEP  = 3600
 const HISTORY_BATCHES = 12
@@ -227,6 +229,7 @@ export async function POST() {
   try {
     // Clear existing trades
     await supabase.from(TABLE).delete().neq('id', 0)
+    revalidateTag(PUBLIC_TRADES_TAG, 'max')
 
     const candles = await fetchCandles()
     const results = runAlgoTrend(candles)
@@ -239,6 +242,7 @@ export async function POST() {
     const { error } = await supabase.from(TABLE).insert(trades)
     if (error) throw new Error(error.message)
 
+    revalidateTag(PUBLIC_TRADES_TAG, 'max')
     return NextResponse.json({ ok: true, inserted: trades.length })
   } catch (err) {
     console.error('[backfill]', err)

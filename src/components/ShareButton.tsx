@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { track } from '@/lib/client-analytics'
 
 interface ShareButtonProps {
   price: number | null
@@ -39,11 +40,7 @@ export default function ShareButton(props: ShareButtonProps) {
     const text = buildShareText(props)
 
     // Track share event
-    fetch('/api/analytics/event', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event: 'share', method: typeof navigator.share === 'function' ? 'native' : 'clipboard' }),
-    }).catch(() => {})
+    track({ event_type: 'share', method: typeof navigator.share === 'function' ? 'native' : 'clipboard' })
 
     // Try native share API first
     if (typeof navigator.share === 'function') {
