@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { openTrade, closeTrade, getOpenTrade, updateOpenTradeRisk, type Trade } from '@/lib/db'
 import { notifyOpen, notifyClose } from '@/lib/telegram'
+import { safeExecuteBingxClose, safeExecuteBingxOpen } from '@/lib/bingx'
+import { fetchLatestAtrPercent } from '@/lib/atr'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,9 +62,10 @@ export async function POST(req: NextRequest) {
       const firstHit = hitPath(path[0])
       if (firstHit) {
         const closed = await closeTrade(openTrade_.id, time, firstHit.closePrice, firstHit.hit)
+        await safeExecuteBingxClose(closed)
         await notifyClose(closed)
         await sendPush(req, {
-          title: `⚪ AlgoTrend — Salida ${directionLabel(closed.direction)}`,
+          title: `₿⏱ BTC 1H — ⚪ Salida ${directionLabel(closed.direction)}`,
           body: `Precio: $${closed.close_price?.toLocaleString('es-MX')} | Resultado: ${closed.pnl_pct?.toFixed(2)}% (${closeReasonLabel(closed.close_reason)})`,
           tag: `close-${closed.id}`
         })
@@ -70,9 +73,10 @@ export async function POST(req: NextRequest) {
         const secondHit = hitPath(path[1])
         if (secondHit) {
           const closed = await closeTrade(openTrade_.id, time, secondHit.closePrice, secondHit.hit)
+          await safeExecuteBingxClose(closed)
           await notifyClose(closed)
           await sendPush(req, {
-            title: `⚪ AlgoTrend — Salida ${directionLabel(closed.direction)}`,
+            title: `₿⏱ BTC 1H — ⚪ Salida ${directionLabel(closed.direction)}`,
             body: `Precio: $${closed.close_price?.toLocaleString('es-MX')} | Resultado: ${closed.pnl_pct?.toFixed(2)}% (${closeReasonLabel(closed.close_reason)})`,
             tag: `close-${closed.id}`
           })
@@ -101,9 +105,10 @@ export async function POST(req: NextRequest) {
 
           if (closeHit) {
             const closed = await closeTrade(openTrade_.id, time, price, closeHit)
+            await safeExecuteBingxClose(closed)
             await notifyClose(closed)
             await sendPush(req, {
-              title: `⚪ AlgoTrend — Salida ${directionLabel(closed.direction)}`,
+              title: `₿⏱ BTC 1H — ⚪ Salida ${directionLabel(closed.direction)}`,
               body: `Precio: $${closed.close_price?.toLocaleString('es-MX')} | Resultado: ${closed.pnl_pct?.toFixed(2)}% (${closeReasonLabel(closed.close_reason)})`,
               tag: `close-${closed.id}`
             })
@@ -115,19 +120,21 @@ export async function POST(req: NextRequest) {
     }
 
     if (signal === 'LONG' || signal === 'SHORT') {
-      const trade = await openTrade(signal, time, time, price, stop, tp, null)
+      const atrPct = await fetchLatestAtrPercent()
+      const trade = await openTrade(signal, time, time, price, stop, tp, atrPct)
 
       if (trade) {
         const prob = signal === 'LONG' ? (probUp ?? 0) : (probDown ?? 0)
         const probText = (prob * 100).toFixed(1) + '%'
 
+        await safeExecuteBingxOpen(trade)
         await notifyOpen(trade)
 
         const emoji = signal === 'LONG' ? '🟢' : '🔴'
         const dir = signal === 'LONG' ? 'LARGO' : 'CORTO'
 
         await sendPush(req, {
-          title: `${emoji} AlgoTrend — ${dir} (${probText})`,
+          title: `₿⏱ BTC 1H — ${emoji} ${dir} (${probText})`,
           body: `Entrada: $${price.toLocaleString('es-MX')} | Stop: $${stop.toLocaleString('es-MX')} | Objetivo: ${tp ? '$' + tp.toLocaleString('es-MX') : 'Stop móvil'}`,
           tag: `signal-${time}`,
         })
