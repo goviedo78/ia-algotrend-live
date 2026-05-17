@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(req: NextRequest) {
   try {
     const { password } = await req.json()
-    const expected = process.env.DASHBOARD_PASSWORD || '0102*'
+    const expected = process.env.DASHBOARD_PASSWORD
+    if (!expected) {
+      return NextResponse.json({ error: 'System not configured' }, { status: 500 })
+    }
 
     if (password !== expected) {
       return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 })

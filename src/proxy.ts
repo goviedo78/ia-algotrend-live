@@ -1,0 +1,258 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { rateLimiter } from '@/lib/rate-limit'
+
+// ── Maintenance / Coming-Soon gate ────────────────────────────────
+const BYPASS_COOKIE = '__gonovi_dev'
+const BYPASS_TOKEN = process.env.BYPASS_TOKEN || 'materia'
+
+const OFFICIAL_HOSTS = new Set(['gonovi.app', 'www.gonovi.app', 'localhost', '127.0.0.1'])
+
+function isMaintenancePath(pathname: string, host: string): boolean {
+  if (pathname.startsWith('/official')) return true
+  if (pathname === '/' && OFFICIAL_HOSTS.has(host)) return true
+  return false
+}
+
+function maintenanceResponse(): NextResponse {
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AlgoTrend · Próximamente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{height:100%;background:#0d1122}
+body{
+  min-height:100%;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(ellipse 80% 55% at 18% 18%,rgba(244,78,28,.11) 0%,transparent 55%),
+    radial-gradient(ellipse 55% 45% at 85% 82%,rgba(244,78,28,.07) 0%,transparent 45%),
+    linear-gradient(158deg,#1c223a 0%,#11162a 42%,#0d1122 100%);
+  font-family:'Space Grotesk',system-ui,sans-serif;
+  color:#f0ece4;overflow:hidden;position:relative
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:radial-gradient(circle,rgba(240,236,228,.032) 1px,transparent 1px);
+  background-size:28px 28px;pointer-events:none
+}
+.wrap{
+  position:relative;z-index:1;
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:40px 24px;
+  animation:rise .9s cubic-bezier(.16,1,.3,1) both
+}
+@keyframes rise{
+  from{opacity:0;transform:translateY(22px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.mark{
+  position:relative;width:70px;height:70px;margin-bottom:36px;
+  animation:markIn .9s cubic-bezier(.16,1,.3,1) .08s both
+}
+@keyframes markIn{
+  from{opacity:0;transform:scale(.65)}
+  to{opacity:1;transform:scale(1)}
+}
+.mark-ring{
+  position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 0deg,#f44e1c 0deg,#ff8c5a 90deg,rgba(244,78,28,.12) 210deg,transparent 280deg,#f44e1c 360deg);
+  animation:spin 9s linear infinite
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.mark-fill{
+  position:absolute;inset:2px;border-radius:50%;
+  background:linear-gradient(145deg,#1a2038,#0d1122);
+  display:flex;align-items:center;justify-content:center
+}
+.mark-label{font-size:17px;font-weight:700;letter-spacing:.14em;color:#f0ece4;line-height:1}
+.eyebrow{
+  display:flex;align-items:center;gap:9px;margin-bottom:20px;
+  animation:rise .9s cubic-bezier(.16,1,.3,1) .14s both
+}
+.dot{
+  width:7px;height:7px;border-radius:50%;background:#f44e1c;flex-shrink:0;
+  animation:blink 2.5s ease-in-out infinite
+}
+@keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.65)}}
+.eyebrow-text{font-size:10.5px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:#f44e1c}
+h1{
+  font-size:clamp(3.2rem,10vw,6.8rem);font-weight:700;
+  letter-spacing:-.028em;line-height:.92;
+  background:linear-gradient(158deg,#f0ece4 25%,rgba(240,236,228,.38));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:8px;
+  animation:rise .9s cubic-bezier(.16,1,.3,1) .2s both
+}
+.sub{
+  font-size:clamp(.9rem,2.5vw,1.1rem);font-weight:300;letter-spacing:.02em;
+  color:rgba(240,236,228,.32);margin-bottom:38px;
+  animation:rise .9s cubic-bezier(.16,1,.3,1) .26s both
+}
+.rule{
+  width:48px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(244,78,28,.55),transparent);
+  margin:0 auto 36px;
+  animation:rise .9s cubic-bezier(.16,1,.3,1) .3s both
+}
+.desc{
+  font-size:14.5px;line-height:1.7;color:rgba(240,236,228,.46);
+  max-width:340px;margin-bottom:46px;font-weight:400;
+  animation:rise .9s cubic-bezier(.16,1,.3,1) .34s both
+}
+.badge{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:12px 24px;border:1px solid rgba(244,78,28,.2);border-radius:100px;
+  background:rgba(244,78,28,.055);color:rgba(240,236,228,.58);
+  font-size:13px;font-weight:500;text-decoration:none;letter-spacing:.015em;
+  transition:border-color .22s,background .22s,color .22s;
+  animation:rise .9s cubic-bezier(.16,1,.3,1) .4s both
+}
+.badge:hover{border-color:rgba(244,78,28,.5);background:rgba(244,78,28,.11);color:#f0ece4}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0}
+footer{
+  position:fixed;bottom:20px;left:0;right:0;text-align:center;
+  font-size:10.5px;letter-spacing:.1em;color:rgba(240,236,228,.15)
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mark" aria-hidden="true">
+    <div class="mark-ring"></div>
+    <div class="mark-fill"><span class="mark-label">GON</span></div>
+  </div>
+  <div class="eyebrow">
+    <div class="dot"></div>
+    <span class="eyebrow-text">AlgoTrend &middot; Sistema de Trading</span>
+  </div>
+  <h1>Próximamente</h1>
+  <p class="sub">Nueva experiencia en camino</p>
+  <div class="rule"></div>
+  <p class="desc">El hub oficial de GONOVI AlgoTrend está siendo preparado con cuidado. Tu mesa de trading sigue activa sin interrupciones.</p>
+  <a class="badge" href="https://algotrend.gonovi.app" target="_blank" rel="noreferrer">
+    <span class="live-dot" aria-label="En línea"></span>
+    Mesa en vivo &middot; algotrend.gonovi.app
+  </a>
+</div>
+<footer>GONOVI &copy; 2026</footer>
+</body>
+</html>`
+
+  return new NextResponse(html, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  })
+}
+
+// ── Route classification ──────────────────────────────────────────
+const SENSITIVE_ROUTES = ['/api/backfill', '/api/push/send', '/api/debug']
+const AUTH_ROUTES = ['/api/dashboard/login']
+const DASHBOARD_ROUTES = ['/api/analytics/stats', '/api/dashboard/settings']
+const WEBHOOK_ROUTES = ['/api/cron', '/api/webhook']
+const ANALYTICS_ROUTES = ['/api/analytics/event', '/api/analytics/track']
+const SUBSCRIBE_ROUTES = ['/api/push/subscribe']
+
+function getPreset(pathname: string): string {
+  if (AUTH_ROUTES.some(r => pathname.startsWith(r))) return 'auth'
+  if (SENSITIVE_ROUTES.some(r => pathname.startsWith(r))) return 'sensitive'
+  if (DASHBOARD_ROUTES.some(r => pathname.startsWith(r))) return 'sensitive'
+  if (WEBHOOK_ROUTES.some(r => pathname.startsWith(r))) return 'webhook'
+  if (ANALYTICS_ROUTES.some(r => pathname.startsWith(r))) return 'analytics'
+  if (SUBSCRIBE_ROUTES.some(r => pathname.startsWith(r))) return 'subscribe'
+  return 'public'
+}
+
+export function proxy(req: NextRequest) {
+  const { pathname } = req.nextUrl
+  const host = req.headers.get('host')?.split(':')[0]?.toLowerCase() || ''
+
+  // ── 0. Maintenance gate (non-API page routes) ─────────────────────
+  if (isMaintenancePath(pathname, host)) {
+    const devParam = req.nextUrl.searchParams.get('dev')
+
+    // Grant bypass: set cookie and redirect to the clean URL
+    if (devParam && devParam === BYPASS_TOKEN) {
+      const url = req.nextUrl.clone()
+      url.searchParams.delete('dev')
+      const res = NextResponse.redirect(url)
+      res.cookies.set(BYPASS_COOKIE, BYPASS_TOKEN, {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+        path: '/',
+      })
+      return res
+    }
+
+    // Block if no valid bypass cookie
+    const cookie = req.cookies.get(BYPASS_COOKIE)?.value
+    if (cookie !== BYPASS_TOKEN) {
+      return maintenanceResponse()
+    }
+  }
+
+  // ── 1. Official home rewrite ──────────────────────────────────────
+  if (
+    pathname === '/' &&
+    OFFICIAL_HOSTS.has(host)
+  ) {
+    const url = req.nextUrl.clone()
+    url.pathname = '/official'
+    return NextResponse.rewrite(url)
+  }
+
+  // ── 2. Block debug endpoints in production ────────────────────────
+  if (pathname.startsWith('/api/debug') && process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  // ── 3. Rate limiting by IP ────────────────────────────────────────
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || req.headers.get('x-real-ip')
+    || '127.0.0.1'
+
+  const preset = getPreset(pathname)
+  const { success, remaining, resetIn } = rateLimiter.check(ip, preset)
+
+  if (!success) {
+    return NextResponse.json(
+      { error: 'Too many requests. Try again later.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.ceil(resetIn / 1000)),
+          'X-RateLimit-Remaining': '0',
+        },
+      }
+    )
+  }
+
+  // ── 4. Protect sensitive routes (require admin cookie) ────────────
+  if (SENSITIVE_ROUTES.some(r => pathname.startsWith(r))) {
+    const token = req.cookies.get('algotrend_dash')?.value
+    const cronSecret = process.env.CRON_SECRET?.replace(/\\n/g, '').trim()
+    const authHeader = req.headers.get('authorization')?.trim()
+
+    const expectedPassword = process.env.DASHBOARD_PASSWORD?.replace(/\\n/g, '').trim()
+    const hasAdminCookie = token && token === expectedPassword
+    const hasCronBearer = cronSecret && authHeader === `Bearer ${cronSecret}`
+
+    if (!hasAdminCookie && !hasCronBearer) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+  }
+
+  // ── 5. Pass through with rate limit headers ───────────────────────
+  const response = NextResponse.next()
+  response.headers.set('X-RateLimit-Remaining', String(remaining))
+  return response
+}
+
+export const config = {
+  matcher: ['/', '/official/:path*', '/api/:path*'],
+}

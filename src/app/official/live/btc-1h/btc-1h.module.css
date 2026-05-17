@@ -1,0 +1,361 @@
+.shell {
+  --bone: #e5d4b6;
+  --bone-soft: rgba(229, 212, 182, 0.66);
+  --bone-faint: rgba(229, 212, 182, 0.32);
+  --line: rgba(229, 212, 182, 0.14);
+  --panel: rgba(17, 22, 42, 0.7);
+  --pulse: #f44e1c;
+  --pos: #79bc72;
+  --neg: #f44e1c;
+
+  position: relative;
+  min-height: 100vh;
+  width: min(1320px, calc(100vw - 2rem));
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vw, 3rem) 0 4rem;
+  color: var(--bone);
+  background:
+    radial-gradient(circle at 12% 6%, rgba(244, 78, 28, 0.15), transparent 28rem),
+    radial-gradient(circle at 88% 12%, rgba(241, 222, 200, 0.08), transparent 26rem),
+    linear-gradient(180deg, #1c223a 0%, #11162a 44%, #0d1122 100%);
+}
+
+.head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1.5rem;
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.headLeft h1 {
+  margin: 0.6rem 0 0.5rem;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.headLeft p {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--bone-soft);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.headRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.55rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.42rem 0.7rem;
+  border: 1px solid rgba(244, 78, 28, 0.42);
+  border-radius: 999px;
+  background: rgba(244, 78, 28, 0.1);
+  color: #ff8a60;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.badgeDot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: var(--pulse);
+  box-shadow: 0 0 14px rgba(244, 78, 28, 0.6);
+  animation: dotPulse 1.8s var(--gon-ease-in-out, ease-in-out) infinite;
+}
+
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); opacity: 0.92; }
+  50% { transform: scale(1.4); opacity: 0.45; }
+}
+
+.liveCta,
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 0.95rem;
+  border-radius: 999px;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: transform 180ms var(--gon-ease-out, ease-out),
+    border-color 180ms var(--gon-ease-out, ease-out),
+    color 180ms var(--gon-ease-out, ease-out);
+}
+
+.liveCta {
+  background: var(--pulse);
+  color: #11162a;
+  box-shadow: 0 14px 36px rgba(244, 78, 28, 0.28);
+}
+
+.liveCta:hover {
+  transform: translateY(-2px);
+}
+
+.backLink {
+  border: 1px solid var(--line);
+  color: var(--bone-soft);
+}
+
+.backLink:hover {
+  color: #ff8a60;
+  border-color: rgba(244, 78, 28, 0.48);
+}
+
+.chartCard {
+  position: relative;
+  height: clamp(380px, 56vh, 620px);
+  border: 1px solid var(--line);
+  border-radius: 1.6rem;
+  padding: 0.9rem;
+  background: var(--panel);
+  box-shadow:
+    inset 0 1px 0 rgba(229, 212, 182, 0.06),
+    0 22px 60px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(14px);
+}
+
+.chartCard :global(.lw-chart-host) {
+  width: 100%;
+  height: 100%;
+}
+
+.chartFallback {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  height: 100%;
+  color: var(--bone-faint);
+}
+
+.chartFallback p { margin: 0 0 0.45rem; }
+.chartFallback small { font-size: 0.8rem; }
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.metaCard {
+  border: 1px solid var(--line);
+  border-radius: 1.4rem;
+  padding: 1.2rem;
+  background: var(--panel);
+  box-shadow:
+    inset 0 1px 0 rgba(229, 212, 182, 0.06),
+    0 22px 60px rgba(0, 0, 0, 0.22);
+}
+
+.metaCard h2 {
+  margin: 0.55rem 0 0.9rem;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-size: clamp(1.6rem, 2.6vw, 2.3rem);
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.kicker {
+  display: block;
+  color: #ff8a60;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.metaCard dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 1rem;
+  margin: 0;
+}
+
+.metaCard dl div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.metaCard dt {
+  color: var(--bone-faint);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.metaCard dd {
+  margin: 0;
+  color: var(--bone);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.95rem;
+}
+
+.statsList dd { font-size: 1.15rem; font-weight: 800; }
+
+.metaCard small {
+  display: block;
+  margin-top: 0.85rem;
+  color: var(--bone-faint);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.muted { color: var(--bone-faint); margin: 0; }
+
+.tradesCard {
+  margin-top: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 1.4rem;
+  padding: 1.2rem;
+  background: var(--panel);
+  box-shadow:
+    inset 0 1px 0 rgba(229, 212, 182, 0.06),
+    0 22px 60px rgba(0, 0, 0, 0.22);
+}
+
+.tradesCard > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tradesCard h2 {
+  margin: 0;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-size: clamp(1.25rem, 2vw, 1.6rem);
+  letter-spacing: -0.04em;
+}
+
+.tradesCard small {
+  color: var(--bone-faint);
+  font-size: 0.7rem;
+}
+
+.tradeList {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tradeRow {
+  display: grid;
+  grid-template-columns: 4.2rem 1fr 4.5rem 5rem;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid rgba(229, 212, 182, 0.08);
+  border-radius: 0.9rem;
+  background: rgba(13, 17, 34, 0.6);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.76rem;
+}
+
+.tradeRow time {
+  color: var(--bone-soft);
+}
+
+.tradeRow .reason,
+.reason {
+  color: var(--bone-faint);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tradeRow strong {
+  text-align: right;
+  font-weight: 800;
+}
+
+.long {
+  color: var(--pos);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.short {
+  color: var(--neg);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.pos { color: var(--pos); }
+.neg { color: var(--neg); }
+
+.footer {
+  margin-top: 2.5rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--line);
+  color: var(--bone-faint);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@media (max-width: 880px) {
+  .head {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .headRight {
+    flex-direction: row;
+    align-items: center;
+    align-self: flex-start;
+  }
+
+  .metaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tradesCard > header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tradeRow {
+    grid-template-columns: 3.6rem 1fr 4.8rem;
+    row-gap: 0.25rem;
+  }
+
+  .tradeRow .reason,
+  .reason {
+    grid-column: 2;
+  }
+
+  .tradeRow strong {
+    grid-column: 3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badgeDot { animation: none; }
+}

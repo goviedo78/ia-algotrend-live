@@ -1,0 +1,119 @@
+[
+  {
+    "id": "fusion-x10",
+    "name": "Fusion X10 — 10-in-1 TradingView Indicator Tool",
+    "description": "Indicador de TradingView — Kit de Trading Todo-en-Uno. Deja de cambiar entre indicadores. Opera con un sistema completo construido dentro de una sola herramienta.",
+    "key_features": [
+      "Detección de Order Blocks",
+      "Perfil de Volumen",
+      "EMA Ribbons (Sistema de Tendencia)",
+      "Medias Móviles EMA y SMA",
+      "Estructura de Mercado (BOS y CHOCH)",
+      "Fair Value Gaps (FVG)",
+      "Sesiones Horarias (Timezone)",
+      "Bandas de Bollinger",
+      "VWAP",
+      "Indicador Supertrend"
+    ],
+    "price": "$12.99",
+    "link": "/official/checkout?product=fusion-x10",
+    "category": "Indicator"
+  },
+  {
+    "id": "fusion-x7",
+    "name": "Indicador 7-en-1 para TradingView (Lite)",
+    "description": "Versión lite que integra 7 indicadores esenciales para TradingView. Ideal para empezar con el ecosistema.",
+    "key_features": [
+      "7 Indicadores en 1",
+      "VWAP Institucional",
+      "Zonas Horarias",
+      "Estructura FVG Activable",
+      "Separadores visuales"
+    ],
+    "price": "$12.99",
+    "link": "/official/checkout?product=fusion-x7",
+    "category": "Indicator"
+  },
+  {
+    "id": "volume-profile-pro",
+    "name": "Perfil de Volumen PRO",
+    "description": "Perfil de volumen más completo con opción de rango visible. Permite elegir mostrar las barras a medida que te desplazas en el gráfico.",
+    "key_features": [
+      "Configuración fija de cantidad de barras",
+      "Modo Rango Visible (volumen de lo que ves)"
+    ],
+    "price": "$12.99",
+    "link": "/official/checkout?product=volume-profile-pro",
+    "category": "Indicator"
+  },
+  {
+    "id": "atr-cs-pro",
+    "name": "ATR CS Pro",
+    "description": "Mide el tamaño de las velas contra el ATR (Average True Range). Basado en el método NNFX.",
+    "key_features": [
+      "Basado en Pine Script v5",
+      "Código Abierto (Open Source)",
+      "Filtro de volumen incluido",
+      "Adaptable a cualquier sistema"
+    ],
+    "price": "$12.99",
+    "link": "/official/checkout?product=atr-cs-pro",
+    "category": "Indicator"
+  },
+  {
+    "id": "multigrafico-pro",
+    "name": "Multigráfico PRO G2",
+    "description": "Añade un segundo chart automático debajo del principal para ver más contexto sin cambiar de activo.",
+    "key_features": [
+      "Visualización 2 en 1",
+      "Versión PRO G2 incluye SMA, EMA, FVG y Estructura",
+      "Marca HL/LL de la primera vela (opcional)",
+      "Mejora la toma de decisiones con más contexto"
+    ],
+    "price": "$12.99",
+    "link": "/official/checkout?product=multigrafico-pro",
+    "category": "Tool"
+  },
+  {
+    "id": "ia-algotrend-pro",
+    "name": "🧠 IA AlgoTrend PRO",
+    "description": "Asistente direccional impulsado por Inteligencia Artificial (KNN de 5 Dimensiones). Analiza patrones históricos para identificar zonas de alta probabilidad.",
+    "key_features": [
+      "K-Nearest Neighbors (IA)",
+      "Backtesting de 39.1M escenarios (BTC 1H)",
+      "Panel de Evaluación en Vivo",
+      "Incluye configuración 'El Tanque 30M' para Oro (PF 2.29)",
+      "Filtro de ruido con CHOP y PCA"
+    ],
+    "price": "$12.99",
+    "link": "/official/checkout?product=ia-algotrend-pro",
+    "category": "Indicator (AI)"
+  },
+  {
+    "id": "momentum-x3",
+    "name": "🔱 Momentum x3",
+    "description": "Indicador de panel que combina RSI, ADX y MACD para detectar cambios de impulso antes de que se vuelvan evidentes en el precio.",
+    "key_features": [
+      "Integración 3-en-1 (RSI, ADX, MACD)",
+      "Detección de zonas de agotamiento",
+      "Organizado en un único panel visual"
+    ],
+    "price": "$12.99",
+    "link": "/official/checkout?product=momentum-x3",
+    "category": "Indicator"
+  },
+  {
+    "id": "open-range-breakout",
+    "name": "Open Range Breakout Toolkit (Signal + Strategy)",
+    "description": "Sistema ORB 2 en 1 diseñado para traders que buscan señales de ruptura claras con contexto de sesión y backtesting.",
+    "key_features": [
+      "Indicador de Señal (Overlay)",
+      "Indicador de Estrategia (Backtesting + Riesgo)",
+      "Soporte para sesiones NY y Asia",
+      "Información sobre herramientas integrada"
+    ],
+    "price": "$12.99",
+    "link": "/official/checkout?product=open-range-breakout",
+    "category": "Strategy/Indicator"
+  }
+]

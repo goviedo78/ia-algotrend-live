@@ -1,6 +1,7 @@
-// AlgoTrend Service Worker — push notifications + offline shell
-const CACHE_NAME = 'algotrend-v1'
-const PRECACHE = ['/', '/manifest.json']
+// AlgoTrend Service Worker — push notifications only.
+// Do not cache Next.js chunks: stale app-client bundles can break local/dev previews.
+const CACHE_NAME = 'algotrend-v2'
+const PRECACHE = ['/manifest.json']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -21,6 +22,17 @@ self.addEventListener('activate', (event) => {
 // Network-first, fallback to cache
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
+
+  const url = new URL(event.request.url)
+  const isLocal = ['localhost', '127.0.0.1'].includes(url.hostname)
+  const isNextAsset = url.pathname.startsWith('/_next/')
+  const isApi = url.pathname.startsWith('/api/')
+
+  if (isLocal || isNextAsset || isApi) {
+    event.respondWith(fetch(event.request))
+    return
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
