@@ -1,5 +1,3 @@
-'use client'
-
 import styles from './community.module.css'
 
 const WhatsAppIcon = () => (

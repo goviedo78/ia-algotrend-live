@@ -73,7 +73,7 @@
   padding: 2.5rem;
   text-decoration: none;
   overflow: hidden;
-  transition: all 250ms ease;
+  transition: transform 250ms ease, border-color 250ms ease, box-shadow 250ms ease;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -120,7 +120,7 @@
   border: 1px solid rgba(229, 212, 182, 0.1);
   color: var(--official-bone, #e5d4b6);
   margin-bottom: 0.5rem;
-  transition: all 250ms ease;
+  transition: transform 250ms ease, background-color 250ms ease, border-color 250ms ease, color 250ms ease;
 }
 
 .panel:hover .iconWrapper {

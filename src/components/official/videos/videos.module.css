@@ -82,7 +82,7 @@
   color: var(--official-bone, #e5d4b6);
   font-family: var(--font-space-grotesk), system-ui, sans-serif;
   font-size: 0.95rem;
-  transition: all 200ms ease;
+  transition: border-color 200ms ease, background-color 200ms ease;
   outline: none;
 }
 
@@ -114,7 +114,7 @@
   font-weight: 600;
   letter-spacing: 0.05em;
   cursor: pointer;
-  transition: all 200ms ease;
+  transition: border-color 200ms ease, color 200ms ease, background-color 200ms ease;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
@@ -160,7 +160,7 @@
   border-radius: 16px;
   overflow: hidden;
   text-decoration: none;
-  transition: all 250ms ease;
+  transition: transform 250ms ease, border-color 250ms ease, box-shadow 250ms ease;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -207,7 +207,7 @@
   border: 1px solid rgba(229, 212, 182, 0.2);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1), background-color 250ms cubic-bezier(0.4, 0, 0.2, 1), border-color 250ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1), color 250ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .videoCard:hover .playIcon {

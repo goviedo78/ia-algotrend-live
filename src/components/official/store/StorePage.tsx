@@ -1,5 +1,3 @@
-'use client'
-
 import Link from 'next/link'
 import styles from './store.module.css'
 import productsData from '@/data/official/gumroad-products.json'

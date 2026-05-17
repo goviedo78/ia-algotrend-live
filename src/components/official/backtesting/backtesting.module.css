@@ -179,7 +179,7 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  transition: all 150ms ease;
+  transition: background-color 150ms ease, border-color 150ms ease, opacity 150ms ease;
 }
 
 .chartBtn:hover:not(:disabled) {
@@ -264,7 +264,7 @@
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  transition: all 180ms ease;
+  transition: transform 180ms ease, border-color 180ms ease, color 180ms ease, background-color 180ms ease, opacity 180ms ease;
 }
 
 .choiceBtn:hover:not(:disabled) {
@@ -373,7 +373,7 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   box-shadow: 0 14px 38px rgba(244, 78, 28, 0.22);
-  transition: all 180ms ease;
+  transition: background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
 }
 
 .revealBtn:hover:not(:disabled) {
@@ -452,7 +452,7 @@
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  transition: all 180ms ease;
+  transition: background-color 180ms ease, transform 180ms ease;
 }
 
 .nextBtn:hover {
