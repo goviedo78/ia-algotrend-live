@@ -440,17 +440,19 @@ export default function TradingLabPage() {
     return Array.from(map).sort((a, b) => b[1] - a[1])
   }, [history])
 
-  const wrongAttempts = history.filter((h) => !h.correct)
-  const mistakeSummary = Array.from(
-    wrongAttempts.reduce((acc, item) => {
-      acc.set(item.mistakeTag, (acc.get(item.mistakeTag) ?? 0) + 1)
-      return acc
-    }, new Map<string, number>())
-  ).sort((a, b) => b[1] - a[1])
-
-  const focusItems: Array<[string, number]> = mistakeSummary.length
-    ? mistakeSummary.slice(0, 3)
-    : [['Precision bajo presion', 0], ['Confirmacion de contexto', 0], ['Paciencia selectiva', 0]]
+  const { mistakeSummary, focusItems, wrongAttempts } = useMemo(() => {
+    const wrong = history.filter((h) => !h.correct)
+    const summary = Array.from(
+      wrong.reduce((acc, item) => {
+        acc.set(item.mistakeTag, (acc.get(item.mistakeTag) ?? 0) + 1)
+        return acc
+      }, new Map<string, number>())
+    ).sort((a, b) => b[1] - a[1])
+    const items: Array<[string, number]> = summary.length
+      ? summary.slice(0, 3)
+      : [['Precision bajo presion', 0], ['Confirmacion de contexto', 0], ['Paciencia selectiva', 0]]
+    return { mistakeSummary: summary, focusItems: items, wrongAttempts: wrong }
+  }, [history])
 
   const diffColor: Record<LabScenario['difficulty'], string> = {
     inicial: s.diffInicial, intermedio: s.diffIntermedio, avanzado: s.diffAvanzado,
