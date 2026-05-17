@@ -2,10 +2,15 @@
 
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, useScroll, useTransform } from 'motion/react'
 import styles from './official-home.module.css'
 import { track } from '@/lib/client-analytics'
+
+const nyFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  hour: '2-digit', minute: '2-digit', hour12: false,
+})
 
 const MateriaLogo = dynamic(
   () => import('@/components/brand/MateriaLogo').then((mod) => mod.MateriaLogo),
@@ -60,10 +65,10 @@ const hubCards = [
   },
 ]
 
-function HubCard({ card }: { card: typeof hubCards[number] }) {
-  const handleClick = () => {
+const HubCard = memo(function HubCard({ card }: { card: typeof hubCards[number] }) {
+  const handleClick = useCallback(() => {
     track({ event_type: 'hub_card_click', card_id: card.num, card_title: card.title, path: '/official' })
-  }
+  }, [card.num, card.title])
 
   const inner = (
     <>
@@ -76,11 +81,11 @@ function HubCard({ card }: { card: typeof hubCards[number] }) {
     return <a className={styles.heroNavCard} href={card.href} rel="noreferrer" target="_blank" onClick={handleClick}>{inner}</a>
   }
   return <Link className={styles.heroNavCard} href={card.href} onClick={handleClick}>{inner}</Link>
-}
+})
 
 export default function OfficialHome() {
-  const leftCards = hubCards.filter((c) => c.side === 'left')
-  const rightCards = hubCards.filter((c) => c.side === 'right')
+  const leftCards = useMemo(() => hubCards.filter((c) => c.side === 'left'), [])
+  const rightCards = useMemo(() => hubCards.filter((c) => c.side === 'right'), [])
 
   /* ── Scroll refs ── */
   const containerRef = useRef<HTMLElement>(null)
@@ -102,14 +107,9 @@ export default function OfficialHome() {
   const logoScale = useTransform(scrollYProgress, [0, 1], [1, 1.55])
   const logoX = useTransform(scrollYProgress, [0, 1], ['0vw', '22vw'])
 
-  /* ── Reloj NY en vivo ── */
+  /* ── Reloj NY en vivo (formatter cacheado al nivel de módulo) ── */
   useEffect(() => {
-    const tick = () => setNyTime(
-      new Intl.DateTimeFormat('en-US', {
-        timeZone: 'America/New_York',
-        hour: '2-digit', minute: '2-digit', hour12: false,
-      }).format(new Date())
-    )
+    const tick = () => setNyTime(nyFormatter.format(new Date()))
     tick()
     const id = setInterval(tick, 10_000)
     return () => clearInterval(id)

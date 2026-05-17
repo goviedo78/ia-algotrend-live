@@ -2,8 +2,9 @@ import type { Metadata } from 'next'
 import { DashboardPage } from '@/components/official/dashboard/DashboardPage'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://gonovi.app'),
   title: 'Dashboard Cliente | GONOVI AlgoTrend',
-  description: 'Panel del cliente para descargar scripts Pine Script comprados en GONOVI.',
+  description: 'Panel privado del cliente GONOVI. Descarga y gestiona tus scripts Pine Script adquiridos.',
   robots: { index: false, follow: false },
 }
 
