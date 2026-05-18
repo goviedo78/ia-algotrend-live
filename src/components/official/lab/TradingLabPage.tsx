@@ -440,7 +440,7 @@ export default function TradingLabPage() {
     return Array.from(map).sort((a, b) => b[1] - a[1])
   }, [history])
 
-  const { mistakeSummary, focusItems, wrongAttempts } = useMemo(() => {
+  const { focusItems, wrongAttempts } = useMemo(() => {
     const wrong = history.filter((h) => !h.correct)
     const summary = Array.from(
       wrong.reduce((acc, item) => {
@@ -451,7 +451,7 @@ export default function TradingLabPage() {
     const items: Array<[string, number]> = summary.length
       ? summary.slice(0, 3)
       : [['Precision bajo presion', 0], ['Confirmacion de contexto', 0], ['Paciencia selectiva', 0]]
-    return { mistakeSummary: summary, focusItems: items, wrongAttempts: wrong }
+    return { focusItems: items, wrongAttempts: wrong }
   }, [history])
 
   const diffColor: Record<LabScenario['difficulty'], string> = {
