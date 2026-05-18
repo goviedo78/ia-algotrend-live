@@ -46,5 +46,3 @@ next-env.d.ts
 graphify-out/
 .env*.local
 
-# sensitive lib files (contain credentials, deployed separately)
-src/lib/bingx.ts
