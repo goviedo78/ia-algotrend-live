@@ -51,25 +51,45 @@ body::before{
   to{opacity:1;transform:translateY(0)}
 }
 .mark{
-  position:relative;width:70px;height:70px;margin-bottom:36px;
-  animation:markIn .9s cubic-bezier(.16,1,.3,1) .08s both
+  position:relative;width:160px;height:160px;margin-bottom:42px;
+  display:flex;align-items:center;justify-content:center;
+  animation:markIn 1.1s cubic-bezier(.16,1,.3,1) .08s both
 }
 @keyframes markIn{
-  from{opacity:0;transform:scale(.65)}
-  to{opacity:1;transform:scale(1)}
+  from{opacity:0;transform:scale(.7) translateY(8px)}
+  to{opacity:1;transform:scale(1) translateY(0)}
 }
-.mark-ring{
+.mark-aura{
+  position:absolute;inset:-28%;border-radius:50%;
+  background:
+    radial-gradient(circle at 50% 50%,rgba(244,78,28,.38) 0%,rgba(244,78,28,.14) 30%,transparent 64%),
+    conic-gradient(from 220deg,transparent 0deg,rgba(244,78,28,.22) 70deg,transparent 150deg,transparent 220deg,rgba(244,78,28,.16) 290deg,transparent 360deg);
+  filter:blur(6px);
+  animation:auraSpin 18s linear infinite
+}
+@keyframes auraSpin{to{transform:rotate(360deg)}}
+.mark-breath{
   position:absolute;inset:0;border-radius:50%;
-  background:conic-gradient(from 0deg,#f44e1c 0deg,#ff8c5a 90deg,rgba(244,78,28,.12) 210deg,transparent 280deg,#f44e1c 360deg);
-  animation:spin 9s linear infinite
+  background:radial-gradient(circle at 50% 50%,rgba(244,78,28,.22) 0%,transparent 65%);
+  animation:breath 5s ease-in-out infinite alternate
 }
-@keyframes spin{to{transform:rotate(360deg)}}
-.mark-fill{
-  position:absolute;inset:2px;border-radius:50%;
-  background:linear-gradient(145deg,#1a2038,#0d1122);
-  display:flex;align-items:center;justify-content:center
+@keyframes breath{
+  from{opacity:.55;transform:scale(.9)}
+  to{opacity:1;transform:scale(1.08)}
 }
-.mark-label{font-size:17px;font-weight:700;letter-spacing:.14em;color:#f0ece4;line-height:1}
+.mark-logo{
+  position:relative;width:108px;height:108px;
+  filter:
+    brightness(0) invert(1)
+    drop-shadow(0 0 14px rgba(244,78,28,.55))
+    drop-shadow(0 0 28px rgba(244,78,28,.25))
+    drop-shadow(0 2px 6px rgba(0,0,0,.45));
+  animation:logoFloat 6.5s ease-in-out infinite
+}
+@keyframes logoFloat{
+  0%,100%{transform:translateY(0) rotate(0)}
+  50%{transform:translateY(-4px) rotate(.4deg)}
+}
 .eyebrow{
   display:flex;align-items:center;gap:9px;margin-bottom:20px;
   animation:rise .9s cubic-bezier(.16,1,.3,1) .14s both
@@ -123,8 +143,9 @@ footer{
 <body>
 <div class="wrap">
   <div class="mark" aria-hidden="true">
-    <div class="mark-ring"></div>
-    <div class="mark-fill"><span class="mark-label">GON</span></div>
+    <div class="mark-aura"></div>
+    <div class="mark-breath"></div>
+    <img class="mark-logo" src="/logo-gon-mark-3d.svg" alt="">
   </div>
   <div class="eyebrow">
     <div class="dot"></div>
