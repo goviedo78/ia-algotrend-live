@@ -1,9 +1,10 @@
 -- Official GONOVI schema foundation.
--- Local migration file only. Does not touch existing live desks unless applied.
+-- Prefixed with official_ to avoid conflicts with existing tables (products, orders)
+-- from another system sharing this Supabase project.
 
 create extension if not exists pgcrypto;
 
-create table if not exists public.products (
+create table if not exists public.official_products (
   id uuid primary key default gen_random_uuid(),
   slug text not null unique,
   name text not null,
@@ -17,9 +18,9 @@ create table if not exists public.products (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.licenses (
+create table if not exists public.official_licenses (
   id uuid primary key default gen_random_uuid(),
-  product_id uuid references public.products(id) on delete set null,
+  product_id uuid references public.official_products(id) on delete set null,
   customer_email text,
   tradingview_username text,
   status text not null default 'pending' check (status in ('pending', 'active', 'paused', 'revoked', 'expired')),
@@ -30,10 +31,10 @@ create table if not exists public.licenses (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.orders (
+create table if not exists public.official_orders (
   id uuid primary key default gen_random_uuid(),
-  product_id uuid references public.products(id) on delete set null,
-  license_id uuid references public.licenses(id) on delete set null,
+  product_id uuid references public.official_products(id) on delete set null,
+  license_id uuid references public.official_licenses(id) on delete set null,
   customer_email text,
   provider text not null default 'manual' check (provider in ('manual', 'gumroad', 'stripe', 'crypto')),
   provider_order_id text,
@@ -104,11 +105,11 @@ create table if not exists public.partners (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_products_status on public.products(status);
-create index if not exists idx_licenses_product_id on public.licenses(product_id);
-create index if not exists idx_licenses_tradingview_username on public.licenses(tradingview_username);
-create index if not exists idx_orders_product_id on public.orders(product_id);
-create index if not exists idx_orders_provider_order_id on public.orders(provider_order_id);
+create index if not exists idx_official_products_status on public.official_products(status);
+create index if not exists idx_official_licenses_product_id on public.official_licenses(product_id);
+create index if not exists idx_official_licenses_tradingview_username on public.official_licenses(tradingview_username);
+create index if not exists idx_official_orders_product_id on public.official_orders(product_id);
+create index if not exists idx_official_orders_provider_order_id on public.official_orders(provider_order_id);
 create index if not exists idx_learning_scenarios_module_active on public.learning_scenarios(module, is_active);
 create index if not exists idx_learning_attempts_scenario_id on public.learning_attempts(scenario_id);
 create index if not exists idx_learning_attempts_visitor_id on public.learning_attempts(visitor_id);
@@ -116,9 +117,9 @@ create index if not exists idx_analytics_events_created_at on public.analytics_e
 create index if not exists idx_analytics_events_event_type on public.analytics_events(event_type);
 create index if not exists idx_partners_status on public.partners(status);
 
-alter table public.products enable row level security;
-alter table public.licenses enable row level security;
-alter table public.orders enable row level security;
+alter table public.official_products enable row level security;
+alter table public.official_licenses enable row level security;
+alter table public.official_orders enable row level security;
 alter table public.learning_scenarios enable row level security;
 alter table public.learning_attempts enable row level security;
 alter table public.analytics_events enable row level security;
