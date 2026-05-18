@@ -19,7 +19,7 @@ function maintenanceResponse(): NextResponse {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AlgoTrend · Próximamente</title>
+<title>GONOVI · Próximamente</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -149,15 +149,15 @@ footer{
   </div>
   <div class="eyebrow">
     <div class="dot"></div>
-    <span class="eyebrow-text">AlgoTrend &middot; Sistema de Trading</span>
+    <span class="eyebrow-text">GONOVI &middot; Hub personal</span>
   </div>
   <h1>Próximamente</h1>
   <p class="sub">Nueva experiencia en camino</p>
   <div class="rule"></div>
-  <p class="desc">El hub oficial de GONOVI AlgoTrend está siendo preparado con cuidado. Tu mesa de trading sigue activa sin interrupciones.</p>
-  <a class="badge" href="https://algotrend.gonovi.app" target="_blank" rel="noreferrer">
+  <p class="desc">El hub personal de GONOVI está siendo preparado con cuidado. Los productos del ecosistema siguen activos sin interrupciones.</p>
+  <a class="badge" href="https://oro15.gonovi.app" target="_blank" rel="noreferrer">
     <span class="live-dot" aria-label="En línea"></span>
-    Mesa en vivo &middot; algotrend.gonovi.app
+    Oro 15M en vivo &middot; oro15.gonovi.app
   </a>
 </div>
 <footer>GONOVI &copy; 2026</footer>
