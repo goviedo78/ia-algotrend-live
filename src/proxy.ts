@@ -4,19 +4,8 @@ import { rateLimiter } from '@/lib/rate-limit'
 // ── Maintenance / Coming-Soon gate ────────────────────────────────
 const BYPASS_COOKIE = '__gonovi_dev'
 const BYPASS_TOKEN = process.env.BYPASS_TOKEN || 'materia'
-const OFFICIAL_ENABLED = process.env.OFFICIAL_ENABLED === 'true'
-const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 
 const OFFICIAL_HOSTS = new Set(['gonovi.app', 'www.gonovi.app', 'localhost', '127.0.0.1'])
-
-function getEffectiveHost(req: NextRequest): string {
-  // Prefer X-Forwarded-Host (set by CDN/proxies like Cloudflare) so the gate
-  // still triggers when an upstream proxy rewrites the Host header before
-  // reaching Vercel.
-  const xfHost = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
-  const host = req.headers.get('host')
-  return (xfHost || host || '').split(':')[0].toLowerCase()
-}
 
 function isMaintenancePath(pathname: string, host: string): boolean {
   if (pathname.startsWith('/official')) return true
@@ -180,18 +169,10 @@ function getPreset(pathname: string): string {
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
-  const host = getEffectiveHost(req)
+  const host = req.headers.get('host')?.split(':')[0]?.toLowerCase() || ''
 
   // ── 0. Maintenance gate (non-API page routes) ─────────────────────
   if (isMaintenancePath(pathname, host)) {
-    // Strict production gate: if the site isn't explicitly enabled,
-    // always serve the maintenance screen and refuse any bypass.
-    // This revokes pre-launch cookies and prevents leaking the hub
-    // even if a stale bypass cookie or query token is presented.
-    if (IS_PRODUCTION && !OFFICIAL_ENABLED) {
-      return maintenanceResponse()
-    }
-
     const devParam = req.nextUrl.searchParams.get('dev')
 
     // Grant bypass: set cookie and redirect to the clean URL
