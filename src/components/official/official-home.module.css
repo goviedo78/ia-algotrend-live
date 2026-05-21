@@ -909,22 +909,63 @@
 
   .appCanvas {
     align-content: start;
+    perspective: none;
   }
 
   .materiaBackdrop {
     position: fixed;
-    top: 31%;
-    left: 50%;
-    width: 120vw;
-    max-width: 38rem;
+    top: 38%;
+    left: 76%;
+    width: 78vw;
+    max-width: 25.5rem;
     opacity: 0.28 !important;
     pointer-events: none;
     translate: -50% -50%;
-    z-index: 0;
+    z-index: 3;
+    transition:
+      top 520ms cubic-bezier(0.16, 1, 0.3, 1),
+      left 520ms cubic-bezier(0.16, 1, 0.3, 1),
+      width 520ms cubic-bezier(0.16, 1, 0.3, 1),
+      max-width 520ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 320ms ease,
+      filter 520ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .materiaBackdrop::before {
+    inset: 10%;
+    opacity: 0.95;
+  }
+
+  .materiaBackdropCompact {
+    top: 4.85rem;
+    left: calc(100vw - 4.2rem);
+    width: 5.75rem;
+    max-width: 5.75rem;
+    opacity: 0.46 !important;
+    filter:
+      drop-shadow(0 0 18px rgba(244, 78, 28, 0.38))
+      drop-shadow(0 12px 28px rgba(0, 0, 0, 0.32));
+    z-index: 6;
+  }
+
+  .materiaBackdropCompact::before {
+    inset: -14%;
+    filter: blur(12px);
+  }
+
+  .materiaBackdropCompact .materiaFloat {
+    animation: materiaCornerHop 14s cubic-bezier(0.45, 0, 0.2, 1) infinite alternate;
   }
 
   .profileCard {
+    z-index: 4;
     grid-template-columns: 1fr;
+    min-height: 18.4rem;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 58% 42%, rgba(244, 78, 28, 0.16), transparent 15rem),
+      radial-gradient(circle at 10% 0%, rgba(244, 78, 28, 0.13), transparent 22rem),
+      rgba(255, 255, 255, 0.022);
   }
 
   .profileMark {
@@ -936,7 +977,10 @@
   }
 
   .profileAction {
+    position: relative;
+    z-index: 2;
     width: 100%;
+    margin-top: auto;
   }
 
   .heroNavCard {
@@ -1100,21 +1144,37 @@
   }
 
   .materiaBackdrop {
-    top: 30%;
-    width: min(126vw, 31rem);
+    top: 38%;
+    left: 78%;
+    width: min(82vw, 23rem);
+  }
+
+  .materiaBackdropCompact {
+    top: 4.55rem;
+    left: calc(100vw - 3.55rem);
+    width: 5rem;
+    max-width: 5rem;
   }
 }
 
 @media (max-height: 700px) and (orientation: landscape) {
   .materiaBackdrop {
     position: fixed;
-    top: 14%;
+    top: 48%;
     left: 50%;
-    width: clamp(28rem, 60vw, 42rem);
-    opacity: 0.28 !important;
+    width: min(68vw, 34rem);
+    opacity: 0.3 !important;
     pointer-events: none;
     translate: -50% -50%;
-    z-index: 0;
+    z-index: 1;
+  }
+
+  .materiaBackdropCompact {
+    top: 4.45rem;
+    left: calc(100vw - 4rem);
+    width: 5rem;
+    max-width: 5rem;
+    opacity: 0.48 !important;
   }
 }
 
@@ -1177,6 +1237,24 @@
 
   to {
     transform: translate3d(0.55rem, 0.45rem, 0) rotate(3deg) scale(1.015);
+  }
+}
+
+@keyframes materiaCornerHop {
+  0% {
+    transform: translate3d(-0.35rem, -0.1rem, 0) rotate(-8deg) scale(0.94);
+  }
+
+  38% {
+    transform: translate3d(-1.6rem, 0.85rem, 0) rotate(5deg) scale(1);
+  }
+
+  72% {
+    transform: translate3d(-0.85rem, 2.05rem, 0) rotate(-2deg) scale(0.97);
+  }
+
+  100% {
+    transform: translate3d(-2.05rem, 1.25rem, 0) rotate(7deg) scale(1.02);
   }
 }
 

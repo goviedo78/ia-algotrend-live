@@ -9,11 +9,6 @@ import styles from './official-home.module.css'
 import { track } from '@/lib/client-analytics'
 import { createClient } from '@/lib/supabase/client'
 
-const nyFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/New_York',
-  hour: '2-digit', minute: '2-digit', hour12: false,
-})
-
 const MateriaLogo = dynamic(
   () => import('@/components/brand/MateriaLogo').then((mod) => mod.MateriaLogo),
   {
@@ -108,7 +103,6 @@ export default function OfficialHome() {
   const userMenuRef = useRef<HTMLDivElement>(null)
   const [user, setUser] = useState<{ id: string; email: string } | null | undefined>(undefined)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [nyTime, setNyTime] = useState('')
   const [btcChange, setBtcChange] = useState<{ pct: string; up: boolean } | null>(null)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [installed, setInstalled] = useState(false)
@@ -117,6 +111,7 @@ export default function OfficialHome() {
   const [notificationLoading, setNotificationLoading] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [materiaCompact, setMateriaCompact] = useState(false)
   const prefersReducedMotion = useReducedMotion()
   const materiaRepelX = useMotionValue(0)
   const materiaRepelY = useMotionValue(0)
@@ -239,14 +234,6 @@ export default function OfficialHome() {
     }
   }, [])
 
-  /* ── Reloj NY en vivo (formatter cacheado al nivel de módulo) ── */
-  useEffect(() => {
-    const tick = () => setNyTime(nyFormatter.format(new Date()))
-    tick()
-    const id = setInterval(tick, 10_000)
-    return () => clearInterval(id)
-  }, [])
-
   /* ── PWA install prompt ── */
   /* eslint-disable react-hooks/set-state-in-effect -- Browser API sync: display-mode and install prompt are only available client-side */
   useEffect(() => {
@@ -315,10 +302,12 @@ export default function OfficialHome() {
     track({ path: '/official', referrer: document.referrer || null })
   }, [])
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Menus must close immediately after route changes. */
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMenuOpen(false)
+    setUserMenuOpen(false)
   }, [pathname])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!menuOpen) return
@@ -331,6 +320,36 @@ export default function OfficialHome() {
       document.body.style.overflow = prevOverflow
     }
   }, [menuOpen])
+
+  /* ── Mobile Materia: panel hero → compact floating mark on scroll ── */
+  useEffect(() => {
+    let frame = 0
+    let lastCompact = false
+
+    const syncMateriaMode = () => {
+      frame = 0
+      const nextCompact = window.scrollY > 170
+      if (nextCompact === lastCompact) return
+      lastCompact = nextCompact
+      setMateriaCompact(nextCompact)
+    }
+
+    frame = window.requestAnimationFrame(syncMateriaMode)
+
+    const onScroll = () => {
+      if (frame) return
+      frame = window.requestAnimationFrame(syncMateriaMode)
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll, { passive: true })
+
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [])
 
   /* ── Auth Session ── */
   useEffect(() => {
@@ -367,10 +386,6 @@ export default function OfficialHome() {
     return () => document.removeEventListener('keydown', onKey)
   }, [userMenuOpen])
 
-  useEffect(() => {
-    setUserMenuOpen(false)
-  }, [pathname])
-
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
@@ -394,6 +409,42 @@ export default function OfficialHome() {
       <div className={styles.shardOne} aria-hidden="true" />
       <div className={styles.shardTwo} aria-hidden="true" />
       <div className={styles.shardThree} aria-hidden="true" />
+
+      <motion.div
+        aria-hidden="true"
+        className={`${styles.materiaBackdrop} ${materiaCompact ? styles.materiaBackdropCompact : ''}`}
+        ref={materiaRef}
+        style={{
+          x: materiaX,
+          y: materiaY,
+        }}
+      >
+        <div className={styles.materiaFloat}>
+          <MateriaLogo
+            amplitude={7}
+            autoRotateIdle
+            baseColor={0x120d0a}
+            bloomIntensity={0.2}
+            cameraDistance={2700}
+            className={styles.materiaLogo}
+            cursorTilt
+            enableZoom={false}
+            environmentIntensity={0.18}
+            gyroscope
+            globalPointerHeat
+            heatColor={[0.98, 0.28, 0.08]}
+            heatEmissive={[1, 0.24, 0.02]}
+            heatEmissiveStrength={2.1}
+            heatTintStrength={1.1}
+            height="100%"
+            material={{ clearcoat: 0.32, clearcoatRoughness: 0.38, reflectivity: 0.08, roughness: 0.56 }}
+            preset="brasa"
+            svgUrl="/logo-gon-mark-3d.svg"
+            toneMappingExposure={0.78}
+            transparentBackground
+          />
+        </div>
+      </motion.div>
 
       <section className={styles.appFrame} aria-label="GONOVI Hub">
         <header className={styles.topbar}>
@@ -553,42 +604,6 @@ export default function OfficialHome() {
           </div>
 
           <div className={styles.cardsStage}>
-            <motion.div
-              aria-hidden="true"
-              className={styles.materiaBackdrop}
-              ref={materiaRef}
-              style={{
-                x: materiaX,
-                y: materiaY,
-              }}
-            >
-              <div className={styles.materiaFloat}>
-                <MateriaLogo
-                  amplitude={7}
-                  autoRotateIdle
-                  baseColor={0x120d0a}
-                  bloomIntensity={0.2}
-                  cameraDistance={2700}
-                  className={styles.materiaLogo}
-                  cursorTilt
-                  enableZoom={false}
-                  environmentIntensity={0.18}
-                  gyroscope
-                  globalPointerHeat
-                  heatColor={[0.98, 0.28, 0.08]}
-                  heatEmissive={[1, 0.24, 0.02]}
-                  heatEmissiveStrength={2.1}
-                  heatTintStrength={1.1}
-                  height="100%"
-                  material={{ clearcoat: 0.32, clearcoatRoughness: 0.38, reflectivity: 0.08, roughness: 0.56 }}
-                  preset="brasa"
-                  svgUrl="/logo-gon-mark-3d.svg"
-                  toneMappingExposure={0.78}
-                  transparentBackground
-                />
-              </div>
-            </motion.div>
-
             <nav className={styles.appGrid} aria-label="Herramientas GONOVI">
               {hubCards.map((card) => <HubCard card={card} key={card.title} />)}
             </nav>
