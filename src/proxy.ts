@@ -7,6 +7,7 @@ const BYPASS_COOKIE = '__gonovi_dev'
 const BYPASS_TOKEN = process.env.BYPASS_TOKEN // Sin default para máxima seguridad
 
 const OFFICIAL_HOSTS = new Set(['gonovi.app', 'www.gonovi.app', 'localhost', '127.0.0.1'])
+const PUBLIC_GONOVI_HOSTS = new Set(['gonovi.app', 'www.gonovi.app'])
 
 function isMaintenancePath(pathname: string): boolean {
   // Bloqueamos /official y la raíz en cualquier host si estamos en mantenimiento
@@ -195,6 +196,10 @@ export async function proxy(req: NextRequest) {
   const host = req.headers.get('host')?.split(':')[0]?.toLowerCase() || ''
 
   // ── 0. Maintenance gate (non-API page routes) ─────────────────────
+  if (pathname === '/' && PUBLIC_GONOVI_HOSTS.has(host)) {
+    return maintenanceResponse()
+  }
+
   if (isMaintenancePath(pathname) && OFFICIAL_HOSTS.has(host)) {
     const devParam = req.nextUrl.searchParams.get('dev')
 
