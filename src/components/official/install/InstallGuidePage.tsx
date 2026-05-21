@@ -60,9 +60,7 @@ export default function InstallGuidePage() {
           Como cargar tu Pine Script en TradingView
         </h1>
         <p className={s.heroLead}>
-          Los indicadores AlgoTrend se entregan como script completo de Pine Script por email.
-          El codigo es tuyo para siempre: lo cargas en TradingView, guardas tu version y configuras
-          las alertas segun tu plan.
+          Recibís el Pine Script completo por email. Lo cargás en TradingView, lo guardás y configurás alertas.
         </p>
         <div className={s.heroBadges}>
           <span className={s.badgeAccent}>script completo</span>
@@ -185,7 +183,7 @@ export default function InstallGuidePage() {
           <Link className={s.ctaCard} href="/official">
             <span className={s.ctaCardKicker}>Volver</span>
             <strong>Ir al inicio de GONOVI</strong>
-            <p>Indicadores, academia, comunidad y mas.</p>
+            <p>Indicadores, educación, comunidad y más.</p>
           </Link>
         </div>
       </section>

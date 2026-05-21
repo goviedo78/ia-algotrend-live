@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import styles from './community.module.css'
 
 const WhatsAppIcon = () => (
@@ -15,6 +16,7 @@ const YouTubeIcon = () => (
 export function CommunityPage() {
   return (
     <main className={styles.container}>
+      <Link href="/official" className={styles.backLink}>← Volver a GONOVI</Link>
       <header className={styles.header}>
         <div className={styles.kickerWrapper}>
           <span className={styles.kickerDot} aria-hidden="true" />
@@ -22,8 +24,7 @@ export function CommunityPage() {
         </div>
         <h1 className={styles.title}>Nuestra Comunidad</h1>
         <p className={styles.description}>
-          Únete a la red de traders que utilizan AlgoTrend. Canales oficiales para aprender, 
-          resolver dudas y recibir actualizaciones sobre nuevos indicadores y estrategias.
+          Canales oficiales del ecosistema GONOVI para aprender, resolver dudas y recibir nuevos indicadores.
         </p>
       </header>
 
@@ -67,7 +68,7 @@ export function CommunityPage() {
             <h2 className={styles.panelTitle}>Canal de YouTube</h2>
             <p className={styles.panelDesc}>
               Tutoriales, guías paso a paso, backtesting de estrategias y análisis de mercado 
-              utilizando el ecosistema de herramientas AlgoTrend.
+              utilizando el ecosistema de herramientas GONOVI.
             </p>
             <ul className={styles.features}>
               <li>Video tutoriales de cada indicador</li>

@@ -24,8 +24,8 @@ const PRESETS: Record<string, RateLimitConfig> = {
   // Sensitive endpoints (backfill, push/send, debug)
   sensitive: { maxRequests: 5, windowMs: 60_000 },        // 5 req/min
 
-  // Auth endpoints (login)
-  auth: { maxRequests: 5, windowMs: 3_600_000 },          // 5 req/hour
+  // Auth endpoints (login, OTP)
+  auth: { maxRequests: 5, windowMs: 60_000 },             // 5 req/min
 
   // Analytics/tracking (high volume OK)
   analytics: { maxRequests: 120, windowMs: 60_000 },      // 120 req/min

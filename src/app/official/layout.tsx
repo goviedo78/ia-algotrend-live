@@ -10,7 +10,7 @@ const organizationJsonLd = {
   name: 'GONOVI',
   url: 'https://gonovi.app',
   logo: 'https://gonovi.app/logo-gon-mark-3d.svg',
-  description: 'Sistema de trading algorítmico AlgoTrend para futuros y criptomonedas. Pine Script, señales en vivo, academia interactiva y comunidad de traders.',
+  description: 'Hub oficial de GONOVI: indicadores, señales en vivo, Pine Script, educación interactiva y comunidad de traders.',
   sameAs: [
     'https://www.youtube.com/@gonovi',
     'https://algotrend.gonovi.app',
@@ -25,9 +25,9 @@ const organizationJsonLd = {
 const websiteJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
-  name: 'GONOVI AlgoTrend',
+  name: 'GONOVI',
   url: 'https://gonovi.app',
-  description: 'Hub oficial de GONOVI AlgoTrend: indicadores, academia, backtesting y comunidad de traders.',
+  description: 'Hub oficial de GONOVI: indicadores, educación, backtesting y comunidad de traders.',
   inLanguage: 'es',
   publisher: {
     '@type': 'Organization',

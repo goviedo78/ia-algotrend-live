@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import styles from './videos.module.css'
 
 type Video = {
@@ -79,6 +80,7 @@ export function VideosPage() {
 
   return (
     <main className={styles.container}>
+      <Link href="/official" className={styles.backLink}>← Volver a GONOVI</Link>
       <header className={styles.header}>
         <div className={styles.kickerWrapper}>
           <span className={styles.kickerDot} aria-hidden="true" />
@@ -86,7 +88,7 @@ export function VideosPage() {
         </div>
         <h1 className={styles.title}>Hub de Videos</h1>
         <p className={styles.description}>
-          Tutoriales, guías y operativas en vivo para dominar AlgoTrend y mejorar tu lectura de mercado.
+          Tutoriales, guías y operativas en vivo para mejorar tu lectura de mercado.
         </p>
 
         <div className={styles.searchWrapper}>
@@ -98,6 +100,7 @@ export function VideosPage() {
             type="text" 
             placeholder="Buscar por título..." 
             className={styles.searchInput}
+            maxLength={100}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />

@@ -1,8 +1,10 @@
+import Link from 'next/link'
 import styles from './docs.module.css'
 
 export function DocsPage() {
   return (
     <main className={styles.container}>
+      <Link href="/official" className={styles.backLink}>← Volver a GONOVI</Link>
       <header className={styles.header}>
         <div className={styles.kickerWrapper}>
           <span className={styles.kickerDot} aria-hidden="true" />
@@ -10,8 +12,7 @@ export function DocsPage() {
         </div>
         <h1 className={styles.title}>Guía de Instalación</h1>
         <p className={styles.description}>
-          Añadir tu nuevo script de GONOVI a TradingView es un proceso rápido y directo.
-          Sigue estos 3 pasos para empezar a operar.
+          3 pasos para añadir tu script a TradingView.
         </p>
       </header>
 

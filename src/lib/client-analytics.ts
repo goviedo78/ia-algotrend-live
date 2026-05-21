@@ -29,12 +29,14 @@ function startInterval() {
   if (!flushInterval) {
     flushInterval = setInterval(flushQueue, FLUSH_INTERVAL_MS);
     
-    // Also flush on visibility change (page hide)
-    window.addEventListener('visibilitychange', () => {
+    const handleExit = () => {
       if (document.visibilityState === 'hidden') {
         flushQueue();
       }
-    });
+    };
+
+    window.addEventListener('visibilitychange', handleExit);
+    window.addEventListener('pagehide', flushQueue); // Más fiable en móviles
   }
 }
 

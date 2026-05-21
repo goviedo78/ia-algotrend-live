@@ -266,3 +266,24 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  color: rgba(229, 212, 182, 0.6);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  text-transform: uppercase;
+  margin-bottom: -1rem;
+  transition: color 200ms ease, transform 200ms ease;
+  align-self: flex-start;
+}
+
+.backLink:hover {
+  color: #ff8a60;
+  transform: translateX(-4px);
+}
+

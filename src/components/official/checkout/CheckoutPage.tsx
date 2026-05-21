@@ -161,22 +161,22 @@ export default function CheckoutPage() {
 
           <label>
             <span>Nombre</span>
-            <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Tu nombre" required />
+            <input value={name} maxLength={100} onChange={(event) => setName(event.target.value)} placeholder="Tu nombre" required />
           </label>
 
           <label>
             <span>Email</span>
-            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="tu@email.com" required />
+            <input type="email" maxLength={150} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="tu@email.com" required />
           </label>
 
           <label>
             <span>Usuario TradingView opcional</span>
-            <input value={tradingView} onChange={(event) => setTradingView(event.target.value)} placeholder="referencia opcional" />
+            <input value={tradingView} maxLength={50} onChange={(event) => setTradingView(event.target.value)} placeholder="referencia opcional" />
           </label>
 
           <label>
             <span>Telegram / WhatsApp opcional</span>
-            <input value={telegram} onChange={(event) => setTelegram(event.target.value)} placeholder="@usuario o numero" />
+            <input value={telegram} maxLength={50} onChange={(event) => setTelegram(event.target.value)} placeholder="@usuario o numero" />
           </label>
 
           <div className={s.payments}>

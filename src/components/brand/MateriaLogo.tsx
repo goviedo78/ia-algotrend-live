@@ -93,6 +93,8 @@ export interface MateriaLogoProps {
   heatEmissiveStrength?: number
   /** Intensidad del tinte naranja sobre la superficie en hover. Default 1. */
   heatTintStrength?: number
+  /** Sigue el puntero global aunque el canvas esté detrás de otras capas. Default false. */
+  globalPointerHeat?: boolean
   /** Configuración de luces. Si se pasa, reemplaza el setup default. */
   lights?: LightConfig[]
   /** Exposición del tone mapping. Default 1.55. */
@@ -361,6 +363,7 @@ interface MateriaMeshProps {
   heatEmissive: [number, number, number]
   heatEmissiveStrength: number
   heatTintStrength: number
+  globalPointerHeat: boolean
   entryDoneRef: React.MutableRefObject<boolean>
 }
 
@@ -377,8 +380,10 @@ function MateriaMesh({
   heatEmissive,
   heatEmissiveStrength,
   heatTintStrength,
+  globalPointerHeat,
   entryDoneRef,
 }: MateriaMeshProps) {
+  const { gl } = useThree()
   const tiltGroupRef  = useRef<THREE.Group>(null)
   const groupRef      = useRef<THREE.Group>(null)
   const tiltTarget    = useRef(new THREE.Vector2(0, 0))
@@ -591,6 +596,46 @@ function MateriaMesh({
     window.addEventListener('pointermove', onMove)
     return () => window.removeEventListener('pointermove', onMove)
   }, [cursorTilt])
+
+  // Cuando el logo se usa como fondo detrás de cards translúcidas, R3F no recibe
+  // hover directo porque la UI está encima. Este modo proyecta el puntero global
+  // al rect del canvas y mantiene activo el heat del shader.
+  useEffect(() => {
+    if (!globalPointerHeat) return
+
+    const syncGlobalHeat = (e: PointerEvent) => {
+      const rect = gl.domElement.getBoundingClientRect()
+      const inside =
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom
+
+      if (!inside) {
+        setHovering(false)
+        return
+      }
+
+      targetMouse.current.set(
+        THREE.MathUtils.clamp((e.clientX - rect.left) / rect.width, 0.02, 0.98),
+        THREE.MathUtils.clamp(1 - (e.clientY - rect.top) / rect.height, 0.02, 0.98)
+      )
+      setHovering(true)
+      lastInputRef.current = performance.now() / 1000
+    }
+
+    const clearGlobalHeat = () => setHovering(false)
+
+    window.addEventListener('pointermove', syncGlobalHeat, { passive: true })
+    window.addEventListener('pointerleave', clearGlobalHeat)
+    window.addEventListener('blur', clearGlobalHeat)
+
+    return () => {
+      window.removeEventListener('pointermove', syncGlobalHeat)
+      window.removeEventListener('pointerleave', clearGlobalHeat)
+      window.removeEventListener('blur', clearGlobalHeat)
+    }
+  }, [gl, globalPointerHeat])
 
   // Mobile/touch: no hay hover, así que el dedo se convierte en el punto de calor.
   // Lo hacemos a nivel ventana para que el gesto siga vivo aunque el usuario arrastre
@@ -1037,6 +1082,7 @@ export function MateriaLogo({
   heatEmissive:        heatEmissiveProp,
   heatEmissiveStrength: heatEmissiveStrengthProp,
   heatTintStrength     = 1,
+  globalPointerHeat    = false,
   lights:              lightsProp,
   toneMappingExposure: toneMappingExposureProp,
   environmentIntensity: environmentIntensityProp,
@@ -1148,6 +1194,7 @@ export function MateriaLogo({
             heatEmissive={heatEmissive}
             heatEmissiveStrength={heatEmissiveStrength}
             heatTintStrength={heatTintStrength}
+            globalPointerHeat={globalPointerHeat}
             entryDoneRef={entryDoneRef}
           />
         </Suspense>

@@ -3,13 +3,13 @@ import { VideosPage } from '@/components/official/videos/VideosPage'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://gonovi.app'),
-  title: 'Hub de Videos | GONOVI AlgoTrend',
-  description: 'Tutoriales, guías y operativas en vivo para dominar AlgoTrend y mejorar tu lectura de mercado. Aprende Pine Script, estrategias y gestión de riesgo.',
+  title: 'Hub de Videos | GONOVI',
+  description: 'Tutoriales, guías y operativas en vivo para mejorar tu lectura de mercado. Aprende Pine Script, estrategias y gestión de riesgo.',
   alternates: {
     canonical: 'https://gonovi.app/official/videos',
   },
   openGraph: {
-    title: 'Hub de Videos | GONOVI AlgoTrend',
+    title: 'Hub de Videos | GONOVI',
     description: 'Tutoriales de Pine Script, estrategias de trading y gestión de riesgo. Aprende con la comunidad GONOVI.',
     url: 'https://gonovi.app/official/videos',
     siteName: 'GONOVI',
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Hub de Videos | GONOVI AlgoTrend',
+    title: 'Hub de Videos | GONOVI',
     description: 'Tutoriales de Pine Script, estrategias de trading y gestión de riesgo para traders.',
     images: ['/og-card.png'],
   },

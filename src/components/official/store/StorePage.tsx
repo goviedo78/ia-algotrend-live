@@ -23,6 +23,7 @@ export function StorePage() {
 
   return (
     <main className={styles.container}>
+      <Link href="/official" className={styles.backLink}>← Volver a GONOVI</Link>
       <header className={styles.header}>
         <div className={styles.kickerWrapper}>
           <span className={styles.kickerDot} aria-hidden="true" />
@@ -30,8 +31,7 @@ export function StorePage() {
         </div>
         <h1 className={styles.title}>La Tienda GONOVI</h1>
         <p className={styles.description}>
-          Scripts completos de Pine Script para TradingView. Un pago único te entrega el código fuente
-          por email para conservarlo para siempre, sin suscripción ni acceso revocable.
+          Pine Script completo, pago único. Recibes el código por email para conservarlo siempre.
         </p>
       </header>
 

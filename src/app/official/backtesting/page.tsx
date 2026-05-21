@@ -3,13 +3,13 @@ import BacktestingPage from '@/components/official/backtesting/BacktestingPage'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://gonovi.app'),
-  title: 'Backtesting Libre 5M | GONOVI AlgoTrend',
+  title: 'Backtesting Libre 5M | GONOVI',
   description: 'Practica backtesting manual vela a vela en escenarios de 5 minutos. Valida estrategias con datos históricos reales y métricas profesionales.',
   alternates: {
     canonical: 'https://gonovi.app/official/backtesting',
   },
   openGraph: {
-    title: 'Backtesting Libre 5M | GONOVI AlgoTrend',
+    title: 'Backtesting Libre 5M | GONOVI',
     description: 'Backtesting manual vela a vela con escenarios de mercado reales. Calcula win rate, R ratio y drawdown al instante.',
     url: 'https://gonovi.app/official/backtesting',
     siteName: 'GONOVI',

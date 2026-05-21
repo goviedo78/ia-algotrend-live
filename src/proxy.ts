@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimiter } from '@/lib/rate-limit'
+import { copySupabaseCookies, refreshSession } from '@/lib/supabase/middleware'
 
 // ── Maintenance / Coming-Soon gate ────────────────────────────────
 const BYPASS_COOKIE = '__gonovi_dev'
-const BYPASS_TOKEN = process.env.BYPASS_TOKEN || 'materia'
+const BYPASS_TOKEN = process.env.BYPASS_TOKEN // Sin default para máxima seguridad
 
 const OFFICIAL_HOSTS = new Set(['gonovi.app', 'www.gonovi.app', 'localhost', '127.0.0.1'])
 
-function isMaintenancePath(pathname: string, host: string): boolean {
+function isMaintenancePath(pathname: string): boolean {
+  // Bloqueamos /official y la raíz en cualquier host si estamos en mantenimiento
   if (pathname.startsWith('/official')) return true
-  if (pathname === '/' && OFFICIAL_HOSTS.has(host)) return true
+  if (pathname === '/') return true 
   return false
 }
 
@@ -188,16 +190,16 @@ function getPreset(pathname: string): string {
   return 'public'
 }
 
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
   const host = req.headers.get('host')?.split(':')[0]?.toLowerCase() || ''
 
   // ── 0. Maintenance gate (non-API page routes) ─────────────────────
-  if (isMaintenancePath(pathname, host)) {
+  if (isMaintenancePath(pathname)) {
     const devParam = req.nextUrl.searchParams.get('dev')
 
     // Grant bypass: set cookie and redirect to the clean URL
-    if (devParam && devParam === BYPASS_TOKEN) {
+    if (devParam && BYPASS_TOKEN && devParam === BYPASS_TOKEN) {
       const url = req.nextUrl.clone()
       url.searchParams.delete('dev')
       const res = NextResponse.redirect(url)
@@ -212,10 +214,12 @@ export function proxy(req: NextRequest) {
 
     // Block if no valid bypass cookie
     const cookie = req.cookies.get(BYPASS_COOKIE)?.value
-    if (cookie !== BYPASS_TOKEN) {
+    if (!BYPASS_TOKEN || cookie !== BYPASS_TOKEN) {
       return maintenanceResponse()
     }
   }
+
+  const supabaseResponse = await refreshSession(req)
 
   // ── 1. Official home rewrite ──────────────────────────────────────
   if (
@@ -224,12 +228,15 @@ export function proxy(req: NextRequest) {
   ) {
     const url = req.nextUrl.clone()
     url.pathname = '/official'
-    return NextResponse.rewrite(url)
+    return copySupabaseCookies(supabaseResponse, NextResponse.rewrite(url))
   }
 
   // ── 2. Block debug endpoints in production ────────────────────────
   if (pathname.startsWith('/api/debug') && process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return copySupabaseCookies(
+      supabaseResponse,
+      NextResponse.json({ error: 'Not found' }, { status: 404 })
+    )
   }
 
   // ── 3. Rate limiting by IP ────────────────────────────────────────
@@ -241,15 +248,18 @@ export function proxy(req: NextRequest) {
   const { success, remaining, resetIn } = rateLimiter.check(ip, preset)
 
   if (!success) {
-    return NextResponse.json(
-      { error: 'Too many requests. Try again later.' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': String(Math.ceil(resetIn / 1000)),
-          'X-RateLimit-Remaining': '0',
-        },
-      }
+    return copySupabaseCookies(
+      supabaseResponse,
+      NextResponse.json(
+        { error: 'Too many requests. Try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.ceil(resetIn / 1000)),
+            'X-RateLimit-Remaining': '0',
+          },
+        }
+      )
     )
   }
 
@@ -260,16 +270,19 @@ export function proxy(req: NextRequest) {
     const authHeader = req.headers.get('authorization')?.trim()
 
     const expectedPassword = process.env.DASHBOARD_PASSWORD?.replace(/\\n/g, '').trim()
-    const hasAdminCookie = token && token === expectedPassword
+    const hasAdminCookie = token && expectedPassword && token === expectedPassword
     const hasCronBearer = cronSecret && authHeader === `Bearer ${cronSecret}`
 
     if (!hasAdminCookie && !hasCronBearer) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return copySupabaseCookies(
+        supabaseResponse,
+        NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      )
     }
   }
 
   // ── 5. Pass through with rate limit headers ───────────────────────
-  const response = NextResponse.next()
+  const response = supabaseResponse
   response.headers.set('X-RateLimit-Remaining', String(remaining))
   return response
 }
