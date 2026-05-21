@@ -169,7 +169,14 @@ footer{
 
   return new NextResponse(html, {
     status: 200,
-    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'CDN-Cache-Control': 'no-store',
+      'Vercel-CDN-Cache-Control': 'no-store',
+    },
   })
 }
 
@@ -193,13 +200,11 @@ function getPreset(pathname: string): string {
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
-  const host = req.headers.get('host')?.split(':')[0]?.toLowerCase() || ''
+  const forwardedHost = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
+  const rawHost = forwardedHost || req.headers.get('host') || ''
+  const host = rawHost.split(':')[0]?.toLowerCase() || ''
 
   // ── 0. Maintenance gate (non-API page routes) ─────────────────────
-  if (pathname === '/' && PUBLIC_GONOVI_HOSTS.has(host)) {
-    return maintenanceResponse()
-  }
-
   if (isMaintenancePath(pathname) && OFFICIAL_HOSTS.has(host)) {
     const devParam = req.nextUrl.searchParams.get('dev')
 
@@ -217,9 +222,10 @@ export async function proxy(req: NextRequest) {
       return res
     }
 
-    // Block if no valid bypass cookie
+    // Block if no valid bypass cookie (public gonovi.app hosts only — localhost stays open for dev)
     const cookie = req.cookies.get(BYPASS_COOKIE)?.value
-    if (!BYPASS_TOKEN || cookie !== BYPASS_TOKEN) {
+    const hasValidBypass = BYPASS_TOKEN && cookie === BYPASS_TOKEN
+    if (!hasValidBypass && PUBLIC_GONOVI_HOSTS.has(host)) {
       return maintenanceResponse()
     }
   }
