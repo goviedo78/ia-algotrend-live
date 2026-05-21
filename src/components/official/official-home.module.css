@@ -1179,3 +1179,166 @@
     transform: translate3d(0.55rem, 0.45rem, 0) rotate(3deg) scale(1.015);
   }
 }
+
+/* ── Auth UI (Fase 3) ── */
+.authSkeleton {
+  width: 120px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(229, 212, 182, 0.05);
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+.loginButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 1rem;
+  border: 1px solid var(--official-line);
+  border-radius: 6px;
+  color: var(--official-bone);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+  text-transform: uppercase;
+  background: transparent;
+  transition: background 200ms ease, border-color 200ms ease;
+  white-space: nowrap;
+}
+
+.loginButton:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(229, 212, 182, 0.3);
+}
+
+.userMenuWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.userMenuTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: rgba(229, 212, 182, 0.72);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: color 200ms ease;
+}
+
+.userMenuTrigger:hover,
+.userMenuTrigger[aria-expanded="true"] {
+  color: var(--official-bone);
+}
+
+.userAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(244, 78, 28, 0.15);
+  border: 1px solid rgba(244, 78, 28, 0.3);
+  color: #ff8a60;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+
+.userEmail {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  width: 14px;
+  height: 14px;
+  opacity: 0.6;
+}
+
+.userMenuDropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(13, 17, 34, 0.85);
+  border: 1px solid var(--official-line);
+  border-radius: 12px;
+  padding: 0.5rem;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 100;
+  animation: markIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.userMenuItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--official-bone);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 200ms ease, color 200ms ease;
+}
+
+.userMenuItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.menuLinkDivider {
+  height: 1px;
+  background: var(--official-line);
+  margin: 1rem 0;
+  opacity: 0.5;
+}
+
+.menuLinkButton {
+  display: block;
+  width: 100%;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: none;
+  color: rgba(229, 212, 182, 0.7);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+.menuLinkButton:hover,
+.menuLinkButton:focus-visible {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--official-bone);
+  border-color: rgba(244, 78, 28, 0.24);
+  outline: none;
+}

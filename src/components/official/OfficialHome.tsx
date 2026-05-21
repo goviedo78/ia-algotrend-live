@@ -2,11 +2,12 @@
 
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { memo, useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
 import { motion, useMotionValue, useReducedMotion, useSpring } from 'motion/react'
 import styles from './official-home.module.css'
 import { track } from '@/lib/client-analytics'
+import { createClient } from '@/lib/supabase/client'
 
 const nyFormatter = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/New_York',
@@ -102,7 +103,11 @@ const HubCard = memo(function HubCard({ card }: { card: typeof hubCards[number] 
 
 export default function OfficialHome() {
   const pathname = usePathname()
+  const router = useRouter()
   const materiaRef = useRef<HTMLDivElement>(null)
+  const userMenuRef = useRef<HTMLDivElement>(null)
+  const [user, setUser] = useState<{ id: string; email: string } | null | undefined>(undefined)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [nyTime, setNyTime] = useState('')
   const [btcChange, setBtcChange] = useState<{ pct: string; up: boolean } | null>(null)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
@@ -327,6 +332,56 @@ export default function OfficialHome() {
     }
   }, [menuOpen])
 
+  /* ── Auth Session ── */
+  useEffect(() => {
+    const supabase = createClient()
+    
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user ? { id: data.user.id, email: data.user.email! } : null)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ? { id: session.user.id, email: session.user.email! } : null)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  /* ── User Menu Dropdown ── */
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    if (!userMenuOpen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setUserMenuOpen(false) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [userMenuOpen])
+
+  useEffect(() => {
+    setUserMenuOpen(false)
+  }, [pathname])
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      setUserMenuOpen(false)
+      setMenuOpen(false)
+      router.refresh()
+    } catch (err) {
+      console.error('Logout error', err)
+    }
+  }
+
   return (
     <main
       className={styles.shell}
@@ -354,12 +409,37 @@ export default function OfficialHome() {
             <Link href="/official/soporte" className={pathname === '/official/soporte' ? styles.topnavActive : ''} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
           </nav>
           <div className={styles.session}>
-            <span className={styles.sessionLive}>
-              <span className={styles.pulse} aria-label="Sesión activa" />
-              Sesión activa
-            </span>
-            <span>NY · {nyTime || '––:––'}</span>
-            <span className={styles.sessionId}>Trader · 0427</span>
+            {user === undefined ? (
+              <div className={styles.authSkeleton} aria-hidden="true" />
+            ) : user === null ? (
+              <Link href="/auth" className={styles.loginButton}>Iniciar sesión</Link>
+            ) : (
+              <div className={styles.userMenuWrapper} ref={userMenuRef}>
+                <button 
+                  className={styles.userMenuTrigger} 
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  aria-expanded={userMenuOpen}
+                  aria-controls="user-dropdown"
+                >
+                  <div className={styles.userAvatar}>
+                    {user.email.charAt(0).toUpperCase()}
+                  </div>
+                  <span className={styles.userEmail}>
+                    {user.email.split('@')[0]}
+                  </span>
+                  <svg className={styles.chevron} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+
+                {userMenuOpen && (
+                  <div id="user-dropdown" className={styles.userMenuDropdown} role="menu">
+                    <Link href="/account" className={styles.userMenuItem} role="menuitem">Mi cuenta</Link>
+                    <button onClick={handleLogout} className={styles.userMenuItem} role="menuitem">Cerrar sesión</button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <button
             type="button"
@@ -393,6 +473,17 @@ export default function OfficialHome() {
               <Link href="/official/mercados" className={pathname === '/official/mercados' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/mercados' ? 'page' : undefined}>Mercados</Link>
               <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Estrategias</Link>
               <Link href="/official/soporte" className={pathname === '/official/soporte' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
+
+              <div className={styles.menuLinkDivider} aria-hidden="true" />
+
+              {user === undefined ? null : user === null ? (
+                <Link href="/auth" className={styles.menuLink}>Iniciar sesión</Link>
+              ) : (
+                <>
+                  <Link href="/account" className={styles.menuLink}>Mi cuenta — {user.email.split('@')[0]}</Link>
+                  <button className={styles.menuLinkButton} onClick={handleLogout}>Cerrar sesión</button>
+                </>
+              )}
             </nav>
           </div>
         )}
