@@ -826,6 +826,59 @@
 }
 
 @media (min-width: 768px) {
+  .appFrame {
+    z-index: auto;
+  }
+
+  .materiaBackdrop {
+    z-index: 2;
+    opacity: 0.3;
+    filter:
+      drop-shadow(0 0 34px rgba(244, 78, 28, 0.22))
+      drop-shadow(0 30px 76px rgba(0, 0, 0, 0.34));
+  }
+
+  .topbar,
+  .profileCard,
+  .quickActions,
+  .cardsStage,
+  .appGrid,
+  .bottombar {
+    position: relative;
+    z-index: 5;
+  }
+
+  .profileCard,
+  .heroNavCard,
+  .quickAction {
+    background:
+      linear-gradient(135deg, rgba(240, 236, 228, 0.12), rgba(240, 236, 228, 0.04) 34%, rgba(13, 17, 34, 0.68)),
+      radial-gradient(circle at 14% 0%, rgba(244, 78, 28, 0.08), transparent 58%),
+      rgba(13, 17, 34, 0.9);
+    border-color: rgba(240, 236, 228, 0.14);
+    box-shadow:
+      inset 0 1px 0 rgba(240, 236, 228, 0.1),
+      inset 0 -1px 0 rgba(13, 17, 34, 0.42),
+      0 20px 50px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(36px) saturate(1.35) brightness(0.88);
+    -webkit-backdrop-filter: blur(36px) saturate(1.35) brightness(0.88);
+    isolation: isolate;
+  }
+
+  .heroNavCard::before {
+    background:
+      linear-gradient(135deg, rgba(240, 236, 228, 0.1), transparent 34%),
+      radial-gradient(circle at 80% 12%, rgba(244, 78, 28, 0.08), transparent 34%),
+      rgba(13, 17, 34, 0.66);
+    opacity: 0.94;
+    transform: none;
+  }
+
+  .heroNavCard > * {
+    position: relative;
+    z-index: 1;
+  }
+
   .profileCard {
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
@@ -963,9 +1016,17 @@
     min-height: 18.4rem;
     overflow: hidden;
     background:
-      radial-gradient(circle at 58% 42%, rgba(244, 78, 28, 0.16), transparent 15rem),
-      radial-gradient(circle at 10% 0%, rgba(244, 78, 28, 0.13), transparent 22rem),
-      rgba(255, 255, 255, 0.022);
+      linear-gradient(135deg, rgba(240, 236, 228, 0.11), rgba(240, 236, 228, 0.035) 34%, rgba(13, 17, 34, 0.68)),
+      radial-gradient(circle at 58% 42%, rgba(244, 78, 28, 0.12), transparent 15rem),
+      radial-gradient(circle at 10% 0%, rgba(244, 78, 28, 0.09), transparent 22rem),
+      rgba(13, 17, 34, 0.9);
+    border-color: rgba(240, 236, 228, 0.14);
+    box-shadow:
+      inset 0 1px 0 rgba(240, 236, 228, 0.1),
+      inset 0 -1px 0 rgba(13, 17, 34, 0.42),
+      0 20px 50px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(28px) saturate(1.28) brightness(0.9);
+    -webkit-backdrop-filter: blur(28px) saturate(1.28) brightness(0.9);
   }
 
   .profileMark {
@@ -984,7 +1045,18 @@
   }
 
   .heroNavCard {
+    background:
+      linear-gradient(135deg, rgba(240, 236, 228, 0.11), rgba(240, 236, 228, 0.035) 34%, rgba(13, 17, 34, 0.68)),
+      radial-gradient(circle at 14% 0%, rgba(244, 78, 28, 0.08), transparent 58%),
+      rgba(13, 17, 34, 0.9);
+    border-color: rgba(240, 236, 228, 0.14);
+    box-shadow:
+      inset 0 1px 0 rgba(240, 236, 228, 0.1),
+      inset 0 -1px 0 rgba(13, 17, 34, 0.42),
+      0 18px 42px rgba(0, 0, 0, 0.26);
     padding: 0.82rem;
+    backdrop-filter: blur(28px) saturate(1.28) brightness(0.9);
+    -webkit-backdrop-filter: blur(28px) saturate(1.28) brightness(0.9);
   }
 
   .quickActions {
