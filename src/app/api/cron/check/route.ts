@@ -77,9 +77,12 @@ async function sendPushDirect(payload: { title: string; body: string; tag: strin
 
 export async function GET(req: NextRequest) {
   try {
-    // Verify cron secret (Fail-Closed)
+    // Verify cron secret (Fail-Closed). Sanitize the env value: strip literal
+    // backslash-n sequences and surrounding whitespace, matching how
+    // DASHBOARD_PASSWORD is validated. Some env edits paste in trailing "\n"
+    // characters that otherwise break the strict Bearer comparison.
     const authHeader = req.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
+    const cronSecret = process.env.CRON_SECRET?.replace(/\\n/g, '').trim()
     if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
