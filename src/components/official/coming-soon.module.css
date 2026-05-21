@@ -1,0 +1,246 @@
+.page {
+  position: relative;
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 80% 55% at 18% 18%, rgba(244, 78, 28, 0.11) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 45% at 85% 82%, rgba(244, 78, 28, 0.07) 0%, transparent 45%),
+    linear-gradient(158deg, #1c223a 0%, #11162a 42%, #0d1122 100%);
+  color: #f0ece4;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+}
+
+.page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(240, 236, 228, 0.032) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+}
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  max-width: 520px;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 24px;
+  text-align: center;
+  animation: rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mark {
+  position: relative;
+  display: flex;
+  width: clamp(130px, 30vw, 160px);
+  height: clamp(130px, 30vw, 160px);
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 42px;
+  animation: markIn 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
+}
+
+.markAura {
+  position: absolute;
+  inset: -28%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(244, 78, 28, 0.38) 0%, rgba(244, 78, 28, 0.14) 30%, transparent 64%),
+    conic-gradient(from 220deg, transparent 0deg, rgba(244, 78, 28, 0.22) 70deg, transparent 150deg, transparent 220deg, rgba(244, 78, 28, 0.16) 290deg, transparent 360deg);
+  filter: blur(6px);
+  animation: auraSpin 18s linear infinite;
+}
+
+.markBreath {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(244, 78, 28, 0.22) 0%, transparent 65%);
+  animation: breath 5s ease-in-out infinite alternate;
+}
+
+.markLogo {
+  position: relative;
+  width: clamp(88px, 20vw, 108px);
+  height: clamp(88px, 20vw, 108px);
+  filter:
+    brightness(0) invert(1)
+    drop-shadow(0 0 14px rgba(244, 78, 28, 0.55))
+    drop-shadow(0 0 28px rgba(244, 78, 28, 0.25))
+    drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+  animation: logoFloat 6.5s ease-in-out infinite;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 20px;
+  color: #f44e1c;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  animation: rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.14s both;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f44e1c;
+  animation: blink 2.5s ease-in-out infinite;
+}
+
+.page h1 {
+  margin: 0 0 8px;
+  background: linear-gradient(158deg, #f0ece4 25%, rgba(240, 236, 228, 0.38));
+  background-clip: text;
+  font-size: clamp(3.2rem, 10vw, 6.8rem);
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 0.92;
+  -webkit-text-fill-color: transparent;
+  animation: rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+
+.sub {
+  margin: 0 0 38px;
+  color: rgba(240, 236, 228, 0.32);
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  animation: rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.26s both;
+}
+
+.rule {
+  width: 48px;
+  height: 1px;
+  margin: 0 auto 36px;
+  background: linear-gradient(90deg, transparent, rgba(244, 78, 28, 0.55), transparent);
+  animation: rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+
+.desc {
+  max-width: 340px;
+  margin: 0 0 46px;
+  color: rgba(240, 236, 228, 0.46);
+  font-size: 14.5px;
+  font-weight: 400;
+  line-height: 1.7;
+  animation: rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.34s both;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(244, 78, 28, 0.2);
+  border-radius: 100px;
+  background: rgba(244, 78, 28, 0.055);
+  color: rgba(240, 236, 228, 0.58);
+  padding: 12px 24px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.015em;
+  text-decoration: none;
+  transition: border-color 0.22s, background 0.22s, color 0.22s;
+  animation: rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
+}
+
+.badge:hover {
+  border-color: rgba(244, 78, 28, 0.5);
+  background: rgba(244, 78, 28, 0.11);
+  color: #f0ece4;
+}
+
+.liveDot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+.footer {
+  position: fixed;
+  right: 0;
+  bottom: 20px;
+  left: 0;
+  color: rgba(240, 236, 228, 0.15);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes markIn {
+  from {
+    opacity: 0;
+    transform: scale(0.7) translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes auraSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes breath {
+  from {
+    opacity: 0.55;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes logoFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+
+  50% {
+    transform: translateY(-4px) rotate(0.4deg);
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.35;
+    transform: scale(0.65);
+  }
+}

@@ -195,7 +195,7 @@ export async function proxy(req: NextRequest) {
   const host = req.headers.get('host')?.split(':')[0]?.toLowerCase() || ''
 
   // ── 0. Maintenance gate (non-API page routes) ─────────────────────
-  if (isMaintenancePath(pathname)) {
+  if (isMaintenancePath(pathname) && OFFICIAL_HOSTS.has(host)) {
     const devParam = req.nextUrl.searchParams.get('dev')
 
     // Grant bypass: set cookie and redirect to the clean URL
