@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { safeExecuteBingxClose } from '@/lib/bingx'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -76,7 +77,11 @@ export async function openTrade(
     throw new Error(error.message)
   }
 
-  // Insert succeeded — close any other OPEN trade (legacy or different signal_time)
+  // Insert succeeded — close any other OPEN trade (legacy or different signal_time).
+  // We also mirror the close on the BingX VST account so the exchange position
+  // stays in sync with the app. Without this, when the app flips trades via
+  // openTrade() the previous BingX position stays open and gets misattributed
+  // to the new trade (see incident with phantom trade #282 / #283).
   const { data: others } = await supabase
     .from(TABLE)
     .select()
@@ -85,6 +90,7 @@ export async function openTrade(
 
   for (const other of (others ?? []) as Trade[]) {
     await closeTrade(other.id, openTime, openPrice, 'SIGNAL')
+    await safeExecuteBingxClose(other)
   }
 
   return data as Trade
