@@ -16,3 +16,11 @@ Claude and Gemini are connected to visible tmux panes for this project. When del
 ## GONOVI Brand Boundary
 
 GONOVI is Gonzalo Oviedo's personal brand and YouTube/channel ecosystem. `gonovi.app` is the personal landing/hub for the GONOVI brand. AlgoTrend is only one product/indicator inside that ecosystem, not the parent brand. Do not label GONOVI pages as AlgoTrend, do not turn `gonovi.app` into the BTC 1H dashboard, and do not use "Fusion Engine Live" as public brand language; it is only the historical project/repo name. Live product subdomains such as `algotrend.gonovi.app`, `oro15.gonovi.app`, and `oro300.gonovi.app` are separate product apps.
+
+## GONOVI Maintenance & Architecture Strict Rules (CRITICAL)
+
+1. **AlgoTrend BTC 1H is a DEMO**: It is merely a demo of the indicator. It will NEVER be the main page.
+2. **gonovi.app is the MAIN LANDING**: This is the primary site that will contain all necessary elements, including the AlgoTrend demo.
+3. **MAINTENANCE WALL IS ACTIVE**: The site is currently behind a "Próximamente" (Coming Soon) screen. **DO NOT REMOVE** the "Próximamente" screen until the user EXPLICITLY orders you to do so.
+4. **Bypass URL**: The active testing route where the main page is actually functioning is the bypass URL: `/?dev=materia`.
+5. **ABSOLUTE MANDATE**: These rules CAN NEVER BE OMITTED. NEVER point `gonovi.app` to another project. JAMÁS deben quitar el cartel de Próximamente hasta recibir la orden explícita.

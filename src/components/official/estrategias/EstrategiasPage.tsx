@@ -193,7 +193,7 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
           <nav className={shellStyles.topnav} aria-label="Navegación principal">
             <Link href="/official" className={pathname === '/official' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official' ? 'page' : undefined}>Hub</Link>
             <Link href="/official/mercados" className={pathname === '/official/mercados' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/mercados' ? 'page' : undefined}>Mercados</Link>
-            <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Estrategias</Link>
+            <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Motores IA</Link>
             <Link href="/official/soporte" className={pathname === '/official/soporte' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
           </nav>
           <div className={shellStyles.session}>
