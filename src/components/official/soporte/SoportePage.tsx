@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import shellStyles from '../official-home.module.css'
+import { createClient } from '@/lib/supabase/client'
 import styles from './soporte.module.css'
 
 const nyFormatter = new Intl.DateTimeFormat('en-US', {
@@ -38,6 +39,16 @@ export function SoportePage() {
     fetchBtc()
     const id = setInterval(fetchBtc, 30_000)
     return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      const userEmail = data.user?.email
+      if (userEmail) {
+        setFormData(prev => prev.email === '' ? { ...prev, email: userEmail } : prev)
+      }
+    }).catch(() => { /* silent */ })
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {

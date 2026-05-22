@@ -11,9 +11,10 @@ interface User {
 
 interface AccountPanelProps {
   user: User
+  supportTicketsCount: number
 }
 
-export function AccountPanel({ user }: AccountPanelProps) {
+export function AccountPanel({ user, supportTicketsCount }: AccountPanelProps) {
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -71,7 +72,13 @@ export function AccountPanel({ user }: AccountPanelProps) {
           <div className={styles.cardGlow} aria-hidden="true" />
           <div className={styles.cardContent}>
             <h2 className={styles.cardTitle}>Mi soporte</h2>
-            <p className={styles.cardDesc}>Sin tickets abiertos.</p>
+            <p className={styles.cardDesc}>
+              {supportTicketsCount === 0
+                ? 'Sin tickets abiertos.'
+                : supportTicketsCount === 1
+                  ? '1 ticket abierto'
+                  : `${supportTicketsCount} tickets abiertos`}
+            </p>
             <span className={styles.cta}>Abrir soporte →</span>
           </div>
         </Link>

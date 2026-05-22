@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function AccountPage() {
   let user = null;
+  let supportTicketsCount = 0;
 
   try {
     // Attempt to load the user using the server client that Codex is building.
@@ -18,6 +19,16 @@ export default async function AccountPage() {
     const supabase = await createServerClient()
     const { data } = await supabase.auth.getUser()
     user = data.user
+
+    if (user) {
+      const { count } = await supabase
+        .from('gonovi_support_tickets')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('status', 'open')
+
+      supportTicketsCount = count ?? 0
+    }
   } catch {
     console.warn('[Account UI] Auth API is not ready yet, using mock user for UI development.')
     // Para que la UI se pueda probar (screenshots) mientras Codex hace la infra,
@@ -34,7 +45,7 @@ export default async function AccountPage() {
   return (
     <main className={shellStyles.shell}>
       <div className={shellStyles.noise} />
-      <AccountPanel user={{ id: user.id, email: user.email! }} />
+      <AccountPanel user={{ id: user.id, email: user.email! }} supportTicketsCount={supportTicketsCount} />
     </main>
   )
 }
