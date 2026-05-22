@@ -322,7 +322,74 @@
   pointer-events: none;
   translate: -50% -50%;
   transform-origin: 58% 54%;
-  will-change: transform, opacity;
+  will-change: transform, opacity, filter;
+  transition:
+    opacity 1200ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 1200ms cubic-bezier(0.16, 1, 0.3, 1),
+    scale 1400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Fase 1: LOADING — logo en primer plano (encima del overlay borroso) ── */
+.materiaBackdrop[data-phase="loading"] {
+  z-index: 70;
+  opacity: 1;
+  scale: 0.82;
+  filter:
+    drop-shadow(0 0 64px rgba(244, 78, 28, 0.48))
+    drop-shadow(0 32px 88px rgba(0, 0, 0, 0.5));
+}
+
+/* ── Fase 2: BACKGROUND — logo al fondo, debajo del glass (cards lo blurrean) ── */
+.materiaBackdrop[data-phase="background"] {
+  z-index: 1;
+  opacity: 0.5;
+  scale: 1;
+}
+
+/* Overlay de splash: blur sobre TODO el viewport excepto el logo (que está en z-index 70) */
+.splashOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(13, 17, 34, 0.62);
+  backdrop-filter: blur(34px) saturate(0.85) brightness(0.78);
+  -webkit-backdrop-filter: blur(34px) saturate(0.85) brightness(0.78);
+  pointer-events: none;
+  animation: splashOverlayIn 280ms ease-out;
+}
+
+/* Cartel "Cargando..." debajo del logo, por encima del overlay y del logo */
+.splashLabel {
+  position: fixed;
+  bottom: 22%;
+  left: 50%;
+  z-index: 80;
+  transform: translateX(-50%);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--official-bone, #f0ece4);
+  opacity: 0.78;
+  pointer-events: none;
+  text-shadow: 0 0 12px rgba(244, 78, 28, 0.4);
+  animation: splashLabelPulse 1.4s ease-in-out infinite alternate;
+}
+
+.splashDots {
+  margin-left: 0.45rem;
+  color: var(--official-pulse, #f44e1c);
+}
+
+@keyframes splashOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes splashLabelPulse {
+  from { opacity: 0.55; }
+  to   { opacity: 0.95; }
 }
 
 .materiaBackdrop::before {
@@ -341,11 +408,26 @@
 .materiaFallback {
   width: 100%;
   height: 100%;
+  pointer-events: none;
+}
+
+/* Asegurar que el <canvas> de Three.js no capture clicks */
+.materiaLogo canvas,
+.materiaBackdrop canvas {
+  pointer-events: none !important;
+}
+
+/* Fallback total: cualquier descendiente del logo es click-through */
+.materiaBackdrop,
+.materiaBackdrop * {
+  pointer-events: none !important;
 }
 
 .materiaFloat {
   width: 100%;
   height: 100%;
+  opacity: 1;
+  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1);
   animation: materiaIdle 9s var(--gon-ease-in-out, ease-in-out) infinite alternate;
   transform-origin: 50% 52%;
 }
@@ -519,20 +601,26 @@
 .quickActions {
   position: relative;
   z-index: 2;
-  display: grid;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
   width: min(100%, 940px);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.65rem;
   margin-inline: auto;
 }
 
+/* MicroExpander: círculo (48px) → pill al hover/expanded */
 .quickAction {
   display: inline-flex;
-  min-width: 0;
-  min-height: 2.85rem;
   align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
+  justify-content: flex-start;
+  gap: 0;
+  min-width: 2.85rem;
+  max-width: 2.85rem;
+  height: 2.85rem;
+  padding: 0;
+  overflow: hidden;
   border: 1px solid rgba(240, 236, 228, 0.08);
   border-radius: 999px;
   background:
@@ -549,13 +637,20 @@
   letter-spacing: 0.11em;
   text-transform: uppercase;
   transition:
-    border-color 180ms var(--gon-ease-out, ease-out),
-    color 180ms var(--gon-ease-out, ease-out),
-    transform 180ms var(--gon-ease-out, ease-out),
-    background 180ms var(--gon-ease-out, ease-out),
-    box-shadow 180ms var(--gon-ease-out, ease-out);
+    max-width 460ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 220ms var(--gon-ease-out, ease-out),
+    color 220ms var(--gon-ease-out, ease-out),
+    transform 220ms var(--gon-ease-out, ease-out),
+    background 220ms var(--gon-ease-out, ease-out),
+    box-shadow 220ms var(--gon-ease-out, ease-out);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+
+/* Estado expandido: hover o data-expanded forzado */
+.quickAction:hover:not(:disabled),
+.quickAction[data-expanded="true"] {
+  max-width: 18rem;
 }
 
 .quickAction:hover:not(:disabled) {
@@ -587,8 +682,8 @@
 
 .quickIcon {
   display: grid;
-  width: 1rem;
-  height: 1rem;
+  width: 2.85rem;
+  height: 2.85rem;
   flex: 0 0 auto;
   place-items: center;
   color: var(--official-pulse);
@@ -609,11 +704,26 @@
 }
 
 .quickLabel {
-  min-width: 0;
+  max-width: 0;
+  opacity: 0;
+  padding-right: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  transition:
+    max-width 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 240ms ease-out 80ms,
+    padding-right 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
+.quickAction:hover:not(:disabled) .quickLabel,
+.quickAction[data-expanded="true"] .quickLabel {
+  max-width: 14rem;
+  opacity: 1;
+  padding-right: 1.15rem;
+}
+
+/* Mobile / touch: arrancan colapsados (3 círculos centrados).
+   El doble-tap del componente expande sólo el botón con data-expanded="true". */
 
 .cardsStage {
   position: relative;
@@ -814,10 +924,6 @@
 @media (min-width: 360px) {
   .appGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .quickActions {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .heroNavCard {

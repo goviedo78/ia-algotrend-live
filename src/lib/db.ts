@@ -59,10 +59,11 @@ export async function openTrade(
   openPrice: number,
   stopLoss: number,
   takeProfit: number | null,
-  atrPct: number | null
+  atrPct: number | null,
+  tableName: string = TABLE
 ): Promise<Trade | null> {
   const { data, error } = await supabase
-    .from(TABLE)
+    .from(tableName)
     .insert({
       direction,
       signal_time: signalTime,
@@ -84,13 +85,13 @@ export async function openTrade(
 
   // Insert succeeded — close any other OPEN trade (legacy or different signal_time)
   const { data: others } = await supabase
-    .from(TABLE)
+    .from(tableName)
     .select()
     .eq('status', 'OPEN')
     .neq('id', data.id)
 
   for (const other of (others ?? []) as Trade[]) {
-    await closeTrade(other.id, openTime, openPrice, 'SIGNAL')
+    await closeTrade(other.id, openTime, openPrice, 'SIGNAL', tableName)
   }
 
   revalidatePublicTradeSnapshot()
@@ -100,10 +101,11 @@ export async function openTrade(
 export async function updateOpenTradeRisk(
   id: number,
   stopLoss: number,
-  takeProfit: number | null
+  takeProfit: number | null,
+  tableName: string = TABLE
 ): Promise<Trade> {
   const { data, error } = await supabase
-    .from(TABLE)
+    .from(tableName)
     .update({ stop_loss: stopLoss, take_profit: takeProfit })
     .eq('id', id)
     .eq('status', 'OPEN')
@@ -119,9 +121,10 @@ export async function closeTrade(
   id: number,
   closeTime: number,
   closePrice: number,
-  reason: CloseReason
+  reason: CloseReason,
+  tableName: string = TABLE
 ): Promise<Trade> {
-  const { data: trade } = await supabase.from(TABLE).select().eq('id', id).single()
+  const { data: trade } = await supabase.from(tableName).select().eq('id', id).single()
   const t = trade as Trade
 
   const mult   = t.direction === 'LONG' ? 1 : -1
@@ -129,7 +132,7 @@ export async function closeTrade(
   const pnlUsd = (closePrice - t.open_price) * mult
 
   const { data, error } = await supabase
-    .from(TABLE)
+    .from(tableName)
     .update({ close_time: closeTime, close_price: closePrice, close_reason: reason, pnl_usd: pnlUsd, pnl_pct: pnlPct, status: 'CLOSED' })
     .eq('id', id)
     .select()
@@ -140,18 +143,18 @@ export async function closeTrade(
   return data as Trade
 }
 
-export async function getOpenTrade(): Promise<Trade | null> {
-  const { data } = await supabase.from(TABLE).select().eq('status', 'OPEN').maybeSingle()
+export async function getOpenTrade(tableName: string = TABLE): Promise<Trade | null> {
+  const { data } = await supabase.from(tableName).select().eq('status', 'OPEN').maybeSingle()
   return (data as Trade) ?? null
 }
 
-export async function getAllTrades(limit = 200): Promise<Trade[]> {
-  const { data } = await supabase.from(TABLE).select().order('open_time', { ascending: false }).limit(limit)
+export async function getAllTrades(limit = 200, tableName: string = TABLE): Promise<Trade[]> {
+  const { data } = await supabase.from(tableName).select().order('open_time', { ascending: false }).limit(limit)
   return (data ?? []) as Trade[]
 }
 
-export async function getStats() {
-  const { data } = await supabase.from(TABLE).select().eq('status', 'CLOSED').order('id', { ascending: true })
+export async function getStats(tableName: string = TABLE) {
+  const { data } = await supabase.from(tableName).select().eq('status', 'CLOSED').order('id', { ascending: true })
   const closed   = (data ?? []) as Trade[]
   const total    = closed.length
   const wins     = closed.filter(t => (t.pnl_usd ?? 0) > 0).length

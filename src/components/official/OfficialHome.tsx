@@ -111,7 +111,19 @@ export default function OfficialHome() {
   const [notificationLoading, setNotificationLoading] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  // En touch devices: primer tap expande el botón (preview del label), segundo tap confirma.
+  const [confirmingAction, setConfirmingAction] = useState<'install' | 'notify' | 'share' | null>(null)
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [materiaCompact, setMateriaCompact] = useState(false)
+  // Splash de entrada del logo 3D:
+  //   loading    → logo en primer plano (z-index alto), fondo borroso, cartel "Cargando..."
+  //   background → logo al fondo de todo (debajo de cards), se ve a través del glass
+  const [materiaPhase, setMateriaPhase] = useState<'loading' | 'background'>('loading')
+
+  useEffect(() => {
+    const t = setTimeout(() => setMateriaPhase('background'), 2200)
+    return () => clearTimeout(t)
+  }, [])
   const prefersReducedMotion = useReducedMotion()
   const materiaRepelX = useMotionValue(0)
   const materiaRepelY = useMotionValue(0)
@@ -125,6 +137,8 @@ export default function OfficialHome() {
 
   const handleMateriaRepel = useCallback((event: PointerEvent<HTMLElement>) => {
     if (prefersReducedMotion) return
+    // Durante el splash, el logo debe quedar quieto en el centro
+    if (materiaPhase === 'loading') return
 
     const materia = materiaRef.current
     if (!materia) return
@@ -149,7 +163,46 @@ export default function OfficialHome() {
 
     materiaRepelX.set((deltaX / distance) * maxPush * force)
     materiaRepelY.set((deltaY / distance) * maxPush * force * 0.82)
-  }, [materiaRepelX, materiaRepelY, prefersReducedMotion, resetMateriaRepel])
+  }, [materiaRepelX, materiaRepelY, prefersReducedMotion, resetMateriaRepel, materiaPhase])
+
+  // Quick-action confirm gate para touch: en desktop ejecuta directo; en touch
+  // requiere doble tap (primer tap expande+preview, segundo tap confirma).
+  // Auto-cierra a los 3s sin segundo tap.
+  const requestActionConfirm = useCallback(
+    (id: 'install' | 'notify' | 'share', action: () => void) => {
+      if (typeof window === 'undefined') return action()
+      const isTouch = window.matchMedia('(hover: none)').matches
+      if (!isTouch) return action()
+      if (confirmingAction === id) {
+        if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+        setConfirmingAction(null)
+        action()
+        return
+      }
+      setConfirmingAction(id)
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+      confirmTimerRef.current = setTimeout(() => setConfirmingAction(null), 3000)
+    },
+    [confirmingAction]
+  )
+
+  // Cierra el preview si tapeás fuera de la barra de acciones rápidas
+  useEffect(() => {
+    if (!confirmingAction) return
+    const close = (e: Event) => {
+      const target = e.target as Element | null
+      if (target?.closest(`.${styles.quickActions}`)) return
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+      setConfirmingAction(null)
+    }
+    document.addEventListener('pointerdown', close)
+    return () => document.removeEventListener('pointerdown', close)
+  }, [confirmingAction])
+
+  // Cleanup del timer al desmontar
+  useEffect(() => () => {
+    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+  }, [])
 
   const handleInstall = useCallback(async () => {
     if (installed) return
@@ -413,10 +466,12 @@ export default function OfficialHome() {
       <motion.div
         aria-hidden="true"
         className={`${styles.materiaBackdrop} ${materiaCompact ? styles.materiaBackdropCompact : ''}`}
+        data-phase={materiaPhase}
         ref={materiaRef}
         style={{
           x: materiaX,
           y: materiaY,
+          pointerEvents: 'none',
         }}
       >
         <div className={styles.materiaFloat}>
@@ -446,6 +501,16 @@ export default function OfficialHome() {
         </div>
       </motion.div>
 
+      {/* Splash de bienvenida: overlay borroso + cartel "Cargando..." mientras el 3D entra */}
+      {materiaPhase === 'loading' && (
+        <>
+          <div className={styles.splashOverlay} aria-hidden="true" />
+          <div className={styles.splashLabel} role="status" aria-live="polite">
+            Cargando<span className={styles.splashDots}>···</span>
+          </div>
+        </>
+      )}
+
       <section className={styles.appFrame} aria-label="GONOVI Hub">
         <header className={styles.topbar}>
           <div className={styles.brand}>
@@ -456,7 +521,7 @@ export default function OfficialHome() {
           <nav className={styles.topnav} aria-label="Navegación principal">
             <Link href="/official" className={pathname === '/official' ? styles.topnavActive : ''} aria-current={pathname === '/official' ? 'page' : undefined}>Hub</Link>
             <Link href="/official/mercados" className={pathname === '/official/mercados' ? styles.topnavActive : ''} aria-current={pathname === '/official/mercados' ? 'page' : undefined}>Mercados</Link>
-            <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? styles.topnavActive : ''} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Estrategias</Link>
+            <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? styles.topnavActive : ''} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Motores IA</Link>
             <Link href="/official/soporte" className={pathname === '/official/soporte' ? styles.topnavActive : ''} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
           </nav>
           <div className={styles.session}>
@@ -522,7 +587,7 @@ export default function OfficialHome() {
             >
               <Link href="/official" className={pathname === '/official' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official' ? 'page' : undefined}>Hub</Link>
               <Link href="/official/mercados" className={pathname === '/official/mercados' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/mercados' ? 'page' : undefined}>Mercados</Link>
-              <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Estrategias</Link>
+              <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Motores IA</Link>
               <Link href="/official/soporte" className={pathname === '/official/soporte' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
 
               <div className={styles.menuLinkDivider} aria-hidden="true" />
@@ -574,8 +639,9 @@ export default function OfficialHome() {
             <button
               className={styles.quickAction}
               data-mobile-label="App"
+              data-expanded={(installed || confirmingAction === 'install') ? 'true' : undefined}
               disabled={installed || (!deferredPrompt && typeof navigator !== 'undefined' && !/iPad|iPhone|iPod/.test(navigator.userAgent))}
-              onClick={handleInstall}
+              onClick={() => requestActionConfirm('install', handleInstall)}
               type="button"
             >
               <span className={styles.quickIcon} aria-hidden="true">
@@ -586,8 +652,9 @@ export default function OfficialHome() {
             <button
               className={`${styles.quickAction} ${notificationsEnabled ? styles.quickActionActive : ''}`}
               data-mobile-label="Alertas"
+              data-expanded={(notificationsEnabled || notificationLoading || confirmingAction === 'notify') ? 'true' : undefined}
               disabled={notificationLoading || notificationState === 'unsupported' || notificationState === 'denied'}
-              onClick={handleNotifications}
+              onClick={() => requestActionConfirm('notify', handleNotifications)}
               type="button"
             >
               <span className={styles.quickIcon} aria-hidden="true">
@@ -595,7 +662,7 @@ export default function OfficialHome() {
               </span>
               <span className={styles.quickLabel}>{notificationsEnabled ? 'Alertas activas' : notificationLoading ? 'Activando...' : 'Activar notificaciones'}</span>
             </button>
-            <button className={styles.quickAction} data-mobile-label="Share" onClick={handleShare} type="button">
+            <button className={styles.quickAction} data-mobile-label="Share" data-expanded={(shareCopied || confirmingAction === 'share') ? 'true' : undefined} onClick={() => requestActionConfirm('share', handleShare)} type="button">
               <span className={styles.quickIcon} aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M4 12v8h16v-8M16 6l-4-4-4 4M12 2v14" /></svg>
               </span>
