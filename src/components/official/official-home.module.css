@@ -431,10 +431,25 @@
   pointer-events: none !important;
 }
 
-/* Fallback total: cualquier descendiente del logo es click-through */
-.materiaBackdrop,
-.materiaBackdrop * {
+/* Click-through total mientras el logo NO es clickeable.
+   En estado floating el backdrop y el menú emergente sí reciben clicks,
+   pero el canvas Three.js (.materiaFloat) sigue siendo transparente para
+   no absorber drags accidentales. */
+.materiaBackdrop:not([data-phase="floating"]),
+.materiaBackdrop:not([data-phase="floating"]) * {
   pointer-events: none !important;
+}
+
+.materiaBackdrop[data-phase="floating"] {
+  pointer-events: auto !important;
+}
+.materiaBackdrop[data-phase="floating"] .materiaFloat,
+.materiaBackdrop[data-phase="floating"] .materiaFloat * {
+  pointer-events: none;
+}
+.materiaBackdrop[data-phase="floating"] .logoMenu,
+.materiaBackdrop[data-phase="floating"] .logoMenu * {
+  pointer-events: auto;
 }
 
 .materiaFloat {
