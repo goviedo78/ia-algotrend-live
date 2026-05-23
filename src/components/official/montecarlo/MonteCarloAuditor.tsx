@@ -403,72 +403,125 @@ export default function MonteCarloAuditor() {
     // Dynamic import: jsPDF (~150KB) solo se descarga si el user pulsa el botón.
     const { jsPDF } = await import('jspdf')
 
+    // Carga el logo desde /public (mismo origin) y lo convierte a dataURL para embeber.
+    const logoDataUrl = await fetch('/logo-gon.png')
+      .then((r) => (r.ok ? r.blob() : null))
+      .then(
+        (blob) =>
+          new Promise<string | null>((resolve) => {
+            if (!blob) return resolve(null)
+            const reader = new FileReader()
+            reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null)
+            reader.onerror = () => resolve(null)
+            reader.readAsDataURL(blob)
+          }),
+      )
+      .catch(() => null)
+
     const estrategia = sanitizeForExcel(strategyName || 'Estrategia de Trading').slice(
       0,
       STRATEGY_NAME_MAX,
     )
     const fecha = new Date()
 
+    // Paleta GONOVI (Materia)
+    const INK: [number, number, number] = [13, 17, 34]       // --official-ink (azul oscuro)
+    const CREAM: [number, number, number] = [240, 236, 228]  // --official-cream (pastel fondo)
+    const BONE: [number, number, number] = [229, 212, 182]   // --official-bone
+    const PULSE: [number, number, number] = [244, 78, 28]    // --official-pulse (naranja acento)
+    const MUTED: [number, number, number] = [80, 75, 65]     // text secundario
+
     const doc = new jsPDF({ unit: 'pt', format: 'a4' })
     const pageW = doc.internal.pageSize.getWidth()
+    const pageH = doc.internal.pageSize.getHeight()
     const marginX = 48
 
-    // === Header naranja Materia ===
-    doc.setFillColor(244, 78, 28) // --official-pulse
-    doc.rect(0, 0, pageW, 96, 'F')
+    // === Fondo cream general ===
+    doc.setFillColor(...CREAM)
+    doc.rect(0, 0, pageW, pageH, 'F')
+
+    // === Header azul ink ===
+    const headerH = 110
+    doc.setFillColor(...INK)
+    doc.rect(0, 0, pageW, headerH, 'F')
+    // Acento naranja inferior del header
+    doc.setFillColor(...PULSE)
+    doc.rect(0, headerH - 3, pageW, 3, 'F')
+
+    // Logo GONOVI (si cargó). Si no, fallback a brand dot + texto.
+    if (logoDataUrl) {
+      try {
+        // 40x40 pt aprox en el header
+        doc.addImage(logoDataUrl, 'PNG', marginX, 28, 40, 40)
+      } catch {
+        // si addImage falla por formato, seguimos con el texto
+      }
+    } else {
+      // Fallback decorativo: círculo naranja
+      doc.setFillColor(...PULSE)
+      doc.circle(marginX + 12, 48, 8, 'F')
+    }
+
+    // Brand text + título
+    doc.setTextColor(...BONE)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.text('GONOVI · HUB', marginX + 56, 44)
 
     doc.setTextColor(255, 255, 255)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(22)
-    doc.text('PROYECTO MONTECARLO', marginX, 48)
+    doc.setFontSize(20)
+    doc.text('PROYECTO MONTECARLO', marginX + 56, 66)
 
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    doc.text('Auditoría Estocástica · gonovi.app', marginX, 70)
+    doc.setTextColor(...BONE)
+    doc.setFontSize(8)
+    doc.text('Auditoría Estocástica · gonovi.app', marginX + 56, 82)
 
     // Fecha derecha
-    doc.setFontSize(9)
     const fechaStr = fecha.toLocaleString('es-AR', {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     })
-    doc.text(fechaStr, pageW - marginX, 70, { align: 'right' })
+    doc.setFontSize(9)
+    doc.text(fechaStr, pageW - marginX, 66, { align: 'right' })
 
-    // === Bloque estrategia ===
-    let y = 140
-    doc.setTextColor(31, 41, 55)
+    // === Bloque estrategia (section header en naranja) ===
+    let y = headerH + 40
+    doc.setTextColor(...PULSE)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(11)
+    doc.setFontSize(10)
     doc.text('ESTRATEGIA AUDITADA', marginX, y)
-    y += 18
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(13)
+    y += 20
+    doc.setTextColor(...INK)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(15)
     doc.text(estrategia, marginX, y)
     y += 14
+    doc.setFont('helvetica', 'normal')
     doc.setFontSize(9)
-    doc.setTextColor(107, 114, 128)
+    doc.setTextColor(...MUTED)
     doc.text(`${data.nTrades} operaciones procesadas · 10.000 simulaciones`, marginX, y)
 
-    // === Veredicto destacado ===
-    y += 30
+    // === Veredicto destacado (color funcional según resultado) ===
+    y += 32
     const veredictoColor: [number, number, number] =
       data.veredicto === 'EXTREMADAMENTE ROBUSTO' ? [16, 185, 129]
       : data.veredicto === 'RIESGO MODERADO' ? [245, 158, 11]
       : [239, 68, 68]
     doc.setFillColor(...veredictoColor)
-    doc.rect(marginX, y, pageW - marginX * 2, 48, 'F')
+    doc.rect(marginX, y, pageW - marginX * 2, 50, 'F')
     doc.setTextColor(255, 255, 255)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(9)
     doc.text('VEREDICTO', marginX + 16, y + 18)
-    doc.setFontSize(16)
-    doc.text(data.veredicto, marginX + 16, y + 38)
+    doc.setFontSize(17)
+    doc.text(data.veredicto, marginX + 16, y + 40)
 
-    // === Métricas en tabla simple ===
-    y += 80
-    doc.setTextColor(31, 41, 55)
+    // === Métricas (section header en naranja) ===
+    y += 84
+    doc.setTextColor(...PULSE)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(11)
+    doc.setFontSize(10)
     doc.text('MÉTRICAS', marginX, y)
     y += 6
 
@@ -489,24 +542,26 @@ export default function MonteCarloAuditor() {
     doc.setFont('helvetica', 'normal')
     metricas.forEach(([label, value]) => {
       y += 22
-      doc.setDrawColor(229, 231, 235)
+      // Línea separadora suave en tono ink alpha
+      doc.setDrawColor(180, 175, 165)
+      doc.setLineWidth(0.4)
       doc.line(marginX, y + 4, pageW - marginX, y + 4)
-      doc.setTextColor(75, 85, 99)
+      doc.setTextColor(...MUTED)
       doc.text(label, marginX, y)
-      doc.setTextColor(17, 24, 39)
+      doc.setTextColor(...INK)
       doc.setFont('helvetica', 'bold')
       doc.text(value, pageW - marginX, y, { align: 'right' })
       doc.setFont('helvetica', 'normal')
     })
 
     // === Footer ===
-    const pageH = doc.internal.pageSize.getHeight()
-    doc.setDrawColor(244, 78, 28)
-    doc.line(marginX, pageH - 48, pageW - marginX, pageH - 48)
-    doc.setTextColor(107, 114, 128)
+    doc.setDrawColor(...PULSE)
+    doc.setLineWidth(1)
+    doc.line(marginX, pageH - 52, pageW - marginX, pageH - 52)
+    doc.setTextColor(...MUTED)
     doc.setFontSize(8)
-    doc.text('Generado por GONOVI · Proyecto Montecarlo · gonovi.app/official/montecarlo', marginX, pageH - 32)
-    doc.text('No constituye asesoría financiera. Resultados pasados no garantizan futuros.', marginX, pageH - 20)
+    doc.text('Generado por GONOVI · Proyecto Montecarlo · gonovi.app/official/montecarlo', marginX, pageH - 36)
+    doc.text('No constituye asesoría financiera. Resultados pasados no garantizan futuros.', marginX, pageH - 22)
 
     const safe = estrategia.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40)
     doc.save(`montecarlo-${safe}-${fecha.getTime()}.pdf`)
