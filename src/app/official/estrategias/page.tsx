@@ -3,8 +3,8 @@ import { EstrategiasPage } from '@/components/official/estrategias/EstrategiasPa
 import { getAllTrades, getOpenTrade } from '@/lib/db'
 
 export const metadata = {
-  title: 'Estrategias | GONOVI',
-  description: 'Cómo está construida cada estrategia y para qué mercado/timeframe sirve.',
+  title: 'Resultados en vivo | GONOVI',
+  description: 'Rendimiento mensual y operaciones abiertas de BTC 1H, Oro 15M y Oro 30M.',
 }
 
 export const dynamic = 'force-dynamic'

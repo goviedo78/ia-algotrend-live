@@ -78,7 +78,7 @@ export default function NotFound() {
           fontWeight: 500,
         }}
       >
-        Volver al Hub
+        Volver al Inicio
       </Link>
     </main>
   )

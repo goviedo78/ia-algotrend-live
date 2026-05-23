@@ -4,13 +4,13 @@ import OfficialHome from '@/components/official/OfficialHome'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://gonovi.app'),
-  title: 'GONOVI · Hub Oficial',
-  description: 'El hub oficial de GONOVI: indicadores, demos, educación interactiva, partners y comunidad de trading.',
+  title: 'GONOVI · Inicio',
+  description: 'Inicio oficial de GONOVI: indicadores, demos, educación interactiva, partners y comunidad de trading.',
   alternates: {
     canonical: 'https://gonovi.app/official',
   },
   openGraph: {
-    title: 'GONOVI · Hub Oficial',
+    title: 'GONOVI · Inicio',
     description: 'Indicadores, educación interactiva y ecosistema de trading visual para la comunidad GONOVI.',
     url: 'https://gonovi.app/official',
     siteName: 'GONOVI',
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'GONOVI · Hub Oficial',
+    title: 'GONOVI · Inicio',
     description: 'Indicadores con Pine Script, Trading Lab, instalación en TradingView y comunidad GONOVI.',
     images: ['/og-card.png'],
   },

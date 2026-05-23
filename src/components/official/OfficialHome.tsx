@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { memo, useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
-import { motion, useMotionValue, useReducedMotion, useSpring } from 'motion/react'
+import { motion, useMotionValue, useReducedMotion } from 'motion/react'
 import styles from './official-home.module.css'
 import { track } from '@/lib/client-analytics'
 import { createClient } from '@/lib/supabase/client'
@@ -42,17 +42,17 @@ const hubCards = [
     side: 'left' as const, external: true,
   },
   {
-    num: '02', label: 'Simulador',
-    title: 'Trading Lab',
-    text: 'Escenarios de mercado con resultado en R.',
-    href: '/official/lab',
+    num: '02', label: 'Resultados',
+    title: 'Resultados en vivo',
+    text: 'Rendimiento mensual de BTC 1H, Oro 15M y Oro 30M.',
+    href: '/official/estrategias',
     side: 'left' as const, external: false,
   },
   {
-    num: '03', label: 'Análisis',
-    title: 'Backtesting',
-    text: 'Valida estrategias con datos históricos BTC 5M.',
-    href: '/official/backtesting',
+    num: '03', label: 'Simulador',
+    title: 'Trading Lab',
+    text: 'Escenarios de mercado con resultado en R.',
+    href: '/official/lab',
     side: 'left' as const, external: false,
   },
   {
@@ -63,14 +63,28 @@ const hubCards = [
     side: 'right' as const, external: false,
   },
   {
-    num: '05', label: 'Educación',
+    num: '05', label: 'Backtest',
+    title: 'Backtesting',
+    text: 'Valida estrategias con datos históricos BTC 5M.',
+    href: '/official/backtesting',
+    side: 'left' as const, external: false,
+  },
+  {
+    num: '06', label: 'Auditoría',
+    title: 'Auditoría Montecarlo',
+    text: 'Stress test, drawdown extremo y probabilidad de ruina.',
+    href: '/official/montecarlo',
+    side: 'right' as const, external: false,
+  },
+  {
+    num: '07', label: 'Educación',
     title: 'Videos y Tutoriales',
     text: 'Análisis, setups y masterclasses en YouTube.',
     href: '/official/videos',
     side: 'right' as const, external: false,
   },
   {
-    num: '06', label: 'Licencia',
+    num: '08', label: 'Licencia',
     title: 'Obtener Script',
     text: 'Código fuente Pine Script completo, entrega inmediata.',
     href: '/official/checkout',
@@ -154,8 +168,6 @@ export default function OfficialHome() {
   const prefersReducedMotion = useReducedMotion()
   const materiaRepelX = useMotionValue(0)
   const materiaRepelY = useMotionValue(0)
-  const materiaX = useSpring(materiaRepelX, { stiffness: 86, damping: 18, mass: 0.65 })
-  const materiaY = useSpring(materiaRepelY, { stiffness: 86, damping: 18, mass: 0.65 })
 
   const resetMateriaRepel = useCallback(() => {
     materiaRepelX.set(0)
@@ -571,7 +583,7 @@ export default function OfficialHome() {
               </Link>
               <Link href="/official/estrategias" className={styles.logoMenuItem} onClick={() => setLogoMenuOpen(false)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
-                Rendimiento de Motores
+                Resultados en vivo
               </Link>
             </div>
           </div>
@@ -588,17 +600,17 @@ export default function OfficialHome() {
         </>
       )}
 
-      <section className={styles.appFrame} aria-label="GONOVI Hub">
+      <section className={styles.appFrame} aria-label="GONOVI Inicio">
         <header className={styles.topbar}>
           <div className={styles.brand}>
             <span className={styles.brandDot} aria-hidden="true" />
             GONOVI
-            <span className={styles.brandVersion}>HUB</span>
+            <span className={styles.brandVersion}>INICIO</span>
           </div>
           <nav className={styles.topnav} aria-label="Navegación principal">
-            <Link href="/official" className={pathname === '/official' ? styles.topnavActive : ''} aria-current={pathname === '/official' ? 'page' : undefined}>Hub</Link>
+            <Link href="/official" className={pathname === '/official' ? styles.topnavActive : ''} aria-current={pathname === '/official' ? 'page' : undefined}>Inicio</Link>
             <Link href="/official/montecarlo" className={pathname === '/official/montecarlo' ? styles.topnavActive : ''} aria-current={pathname === '/official/montecarlo' ? 'page' : undefined}>Auditoría</Link>
-            <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? styles.topnavActive : ''} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Motores IA</Link>
+            <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? styles.topnavActive : ''} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Resultados</Link>
             <Link href="/official/soporte" className={pathname === '/official/soporte' ? styles.topnavActive : ''} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
           </nav>
           <div className={styles.session}>
@@ -662,9 +674,9 @@ export default function OfficialHome() {
               onClick={(e) => e.stopPropagation()}
               aria-label="Navegación principal móvil"
             >
-              <Link href="/official" className={pathname === '/official' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official' ? 'page' : undefined}>Hub</Link>
+              <Link href="/official" className={pathname === '/official' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official' ? 'page' : undefined}>Inicio</Link>
               <Link href="/official/montecarlo" className={pathname === '/official/montecarlo' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/montecarlo' ? 'page' : undefined}>Auditoría</Link>
-              <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Motores IA</Link>
+              <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Resultados</Link>
               <Link href="/official/soporte" className={pathname === '/official/soporte' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
 
               <div className={styles.menuLinkDivider} aria-hidden="true" />
@@ -703,7 +715,7 @@ export default function OfficialHome() {
               />
             </div>
             <div className={styles.profileContent}>
-              <span className={styles.profileEyebrow}>GONOVI · HUB</span>
+              <span className={styles.profileEyebrow}>GONOVI · INICIO</span>
               <h1>Trading algorítmico BTC 1H</h1>
               <p>Indicadores · Lab · Educación</p>
             </div>

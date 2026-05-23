@@ -466,7 +466,7 @@ export default function MonteCarloAuditor() {
     doc.setTextColor(...BONE)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(10)
-    doc.text('GONOVI · HUB', marginX + 56, 44)
+    doc.text('GONOVI · INICIO', marginX + 56, 44)
 
     doc.setTextColor(255, 255, 255)
     doc.setFontSize(20)
@@ -653,12 +653,12 @@ export default function MonteCarloAuditor() {
           <div className={shellStyles.brand}>
             <span className={shellStyles.brandDot} aria-hidden="true" />
             GONOVI
-            <span className={shellStyles.brandVersion}>HUB</span>
+            <span className={shellStyles.brandVersion}>INICIO</span>
           </div>
           <nav className={shellStyles.topnav} aria-label="Navegación principal">
-            <Link href="/official" className={pathname === '/official' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official' ? 'page' : undefined}>Hub</Link>
+            <Link href="/official" className={pathname === '/official' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official' ? 'page' : undefined}>Inicio</Link>
             <Link href="/official/montecarlo" className={pathname === '/official/montecarlo' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/montecarlo' ? 'page' : undefined}>Auditoría</Link>
-            <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Motores IA</Link>
+            <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Resultados</Link>
             <Link href="/official/soporte" className={pathname === '/official/soporte' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
           </nav>
           <div className={shellStyles.session}>
