@@ -77,8 +77,8 @@ const hubCards = [
     side: 'right' as const, external: false,
   },
   {
-    num: '07', label: 'Auditor',
-    title: 'Monte Carlo',
+    num: '07', label: 'Auditoría',
+    title: 'Proyecto Montecarlo',
     text: 'Simulaciones estocásticas y verificación de overfitting.',
     href: '/official/montecarlo',
     side: 'right' as const, external: false,
