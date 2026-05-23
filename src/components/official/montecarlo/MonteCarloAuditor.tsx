@@ -2,6 +2,8 @@
 
 import { useMemo, useState, type ChangeEvent } from 'react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
   Upload,
   TrendingUp,
@@ -13,6 +15,7 @@ import {
   Database,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import shellStyles from '../official-home.module.css'
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false })
 
@@ -284,6 +287,7 @@ const runMonteCarloSim = (returns: number[]): AuditData => {
 }
 
 export default function MonteCarloAuditor() {
+  const pathname = usePathname()
   const [loading, setLoading] = useState(false)
   const [strategyName, setStrategyName] = useState('')
   const [data, setData] = useState<AuditData | null>(null)
@@ -466,13 +470,71 @@ export default function MonteCarloAuditor() {
   )
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-slate-950 text-slate-100 min-h-screen rounded-2xl border border-slate-900 shadow-2xl">
+    <main className={shellStyles.shell}>
+      <div className={shellStyles.noise} />
+      <section className={shellStyles.appFrame} aria-label="Proyecto Montecarlo">
+        <header className={shellStyles.topbar}>
+          <div className={shellStyles.brand}>
+            <span className={shellStyles.brandDot} aria-hidden="true" />
+            GONOVI
+            <span className={shellStyles.brandVersion}>HUB</span>
+          </div>
+          <nav className={shellStyles.topnav} aria-label="Navegación principal">
+            <Link href="/official" className={pathname === '/official' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official' ? 'page' : undefined}>Hub</Link>
+            <Link href="/official/montecarlo" className={pathname === '/official/montecarlo' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/montecarlo' ? 'page' : undefined}>Auditoría</Link>
+            <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Motores IA</Link>
+            <Link href="/official/soporte" className={pathname === '/official/soporte' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
+          </nav>
+          <div className={shellStyles.session}>
+            <span>Auditoría estocástica · Demo</span>
+          </div>
+        </header>
+
+        <div className="max-w-6xl mx-auto p-6 text-slate-100" style={{ position: 'relative', zIndex: 2 }}>
+          <Link
+            href="/official"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              color: '#f44e1c',
+              fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              marginBottom: '1.5rem',
+            }}
+          >
+            ← Volver a GONOVI
+          </Link>
+
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-400 via-indigo-400 to-emerald-400 bg-clip-text text-transparent">
+        <h1
+          className="text-4xl font-extrabold"
+          style={{
+            fontFamily: 'var(--font-space-grotesk), system-ui, sans-serif',
+            background: 'linear-gradient(135deg, #f44e1c 0%, #f4a01c 50%, #e5d4b6 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            letterSpacing: '0.02em',
+          }}
+        >
           PROYECTO MONTECARLO
         </h1>
-        <p className="text-slate-400 mt-2">
-          Auditoría Estocástica & Filtro de Overfitting en Tiempo Real
+        <p
+          className="mt-2"
+          style={{
+            color: 'rgba(229, 212, 182, 0.7)',
+            fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
+            fontSize: '0.78rem',
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+          }}
+        >
+          Auditoría Estocástica · Filtro de Overfitting
         </p>
       </div>
 
@@ -813,6 +875,8 @@ export default function MonteCarloAuditor() {
           </div>
         </div>
       )}
-    </div>
+        </div>
+      </section>
+    </main>
   )
 }

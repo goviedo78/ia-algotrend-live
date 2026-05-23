@@ -76,13 +76,6 @@ const hubCards = [
     href: '/official/checkout',
     side: 'right' as const, external: false,
   },
-  {
-    num: '07', label: 'Auditoría',
-    title: 'Proyecto Montecarlo',
-    text: 'Simulaciones estocásticas y verificación de overfitting.',
-    href: '/official/montecarlo',
-    side: 'right' as const, external: false,
-  },
 ]
 
 const HubCard = memo(function HubCard({ card }: { card: typeof hubCards[number] }) {
@@ -527,7 +520,7 @@ export default function OfficialHome() {
           </div>
           <nav className={styles.topnav} aria-label="Navegación principal">
             <Link href="/official" className={pathname === '/official' ? styles.topnavActive : ''} aria-current={pathname === '/official' ? 'page' : undefined}>Hub</Link>
-            <Link href="/official/mercados" className={pathname === '/official/mercados' ? styles.topnavActive : ''} aria-current={pathname === '/official/mercados' ? 'page' : undefined}>Mercados</Link>
+            <Link href="/official/montecarlo" className={pathname === '/official/montecarlo' ? styles.topnavActive : ''} aria-current={pathname === '/official/montecarlo' ? 'page' : undefined}>Auditoría</Link>
             <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? styles.topnavActive : ''} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Motores IA</Link>
             <Link href="/official/soporte" className={pathname === '/official/soporte' ? styles.topnavActive : ''} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
           </nav>
@@ -593,7 +586,7 @@ export default function OfficialHome() {
               aria-label="Navegación principal móvil"
             >
               <Link href="/official" className={pathname === '/official' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official' ? 'page' : undefined}>Hub</Link>
-              <Link href="/official/mercados" className={pathname === '/official/mercados' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/mercados' ? 'page' : undefined}>Mercados</Link>
+              <Link href="/official/montecarlo" className={pathname === '/official/montecarlo' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/montecarlo' ? 'page' : undefined}>Auditoría</Link>
               <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Motores IA</Link>
               <Link href="/official/soporte" className={pathname === '/official/soporte' ? styles.menuLinkActive : styles.menuLink} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
 
