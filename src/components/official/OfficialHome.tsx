@@ -162,10 +162,19 @@ export default function OfficialHome() {
     materiaRepelY.set(0)
   }, [materiaRepelX, materiaRepelY])
 
+  // Al entrar en floating, anclamos el logo en la esquina (CSS) y limpiamos
+  // cualquier x/y residual del repel previo para que no haya salto inicial.
+  useEffect(() => {
+    if (materiaPhase === 'floating') resetMateriaRepel()
+  }, [materiaPhase, resetMateriaRepel])
+
   const handleMateriaRepel = useCallback((event: PointerEvent<HTMLElement>) => {
     if (prefersReducedMotion) return
-    // Durante el splash, el logo debe quedar quieto en el centro
+    // Durante el splash, el logo debe quedar quieto en el centro.
     if (materiaPhase === 'loading') return
+    // En floating, el logo está anclado en la esquina inferior derecha
+    // (position: fixed por CSS). NO debe moverse con el cursor.
+    if (materiaPhase === 'floating') return
     // Con el menú abierto, congelamos el logo para que el panel quede anclado.
     if (logoMenuOpen) return
 
