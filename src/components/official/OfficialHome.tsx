@@ -76,6 +76,13 @@ const hubCards = [
     href: '/official/checkout',
     side: 'right' as const, external: false,
   },
+  {
+    num: '07', label: 'Auditor',
+    title: 'Monte Carlo',
+    text: 'Simulaciones estocásticas y verificación de overfitting.',
+    href: '/official/montecarlo',
+    side: 'right' as const, external: false,
+  },
 ]
 
 const HubCard = memo(function HubCard({ card }: { card: typeof hubCards[number] }) {
