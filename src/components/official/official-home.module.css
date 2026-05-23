@@ -365,9 +365,9 @@
   position: fixed;
   inset: 0;
   z-index: 55;
-  background: rgba(10, 13, 24, 0.78);
-  backdrop-filter: blur(52px) saturate(0.85) brightness(0.65);
-  -webkit-backdrop-filter: blur(52px) saturate(0.85) brightness(0.65);
+  background: rgba(10, 13, 24, 0.88);
+  backdrop-filter: blur(96px) saturate(0.75) brightness(0.55);
+  -webkit-backdrop-filter: blur(96px) saturate(0.75) brightness(0.55);
   pointer-events: none;
   animation: splashOverlayIn 280ms ease-out;
 }
@@ -1126,6 +1126,10 @@
     max-width: none !important;
     opacity: 1 !important;
     z-index: 70 !important;
+    /* Forzamos translate explícito para que el centrado no quede roto
+       si algún transform externo se inyecta sobre el contenedor. */
+    translate: -50% -50% !important;
+    transform: none !important;
   }
 
   .materiaBackdrop::before {
@@ -1677,10 +1681,14 @@
 
 @media (max-width: 768px) {
   .materiaBackdrop[data-phase="floating"] {
+    top: auto !important;
+    left: auto !important;
     bottom: 1.5rem !important;
     right: 1.5rem !important;
     width: 90px !important;
     height: 90px !important;
+    translate: 0 0 !important;
+    transform: none !important;
   }
 }
 

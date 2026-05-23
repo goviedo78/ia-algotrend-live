@@ -525,8 +525,9 @@ export default function OfficialHome() {
         data-phase={materiaPhase}
         ref={materiaRef}
         style={{
-          x: materiaX,
-          y: materiaY,
+          // Los motion values x/y se aplicaban como transform y rompían el
+          // translate de centrado en mobile. El repel hoy está deshabilitado
+          // en todas las phases, así que se quitan para que el CSS gane.
           pointerEvents: materiaPhase === 'floating' ? 'auto' : 'none',
           cursor: materiaPhase === 'floating' ? 'pointer' : 'default',
         }}
