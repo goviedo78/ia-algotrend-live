@@ -554,6 +554,44 @@ export default function MonteCarloAuditor() {
       doc.setFont('helvetica', 'normal')
     })
 
+    // === Cómo leer los percentiles ===
+    y += 36
+    doc.setTextColor(...PULSE)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.text('CÓMO LEER LOS PERCENTILES', marginX, y)
+
+    const explicaciones: Array<[string, string]> = [
+      [
+        'Mediana (p50)',
+        'El caso promedio de racha de pérdidas. La mitad de los traders sufrirán este drawdown o menos.',
+      ],
+      [
+        'Extremo (p95)',
+        'Tu límite de seguridad. Hay 95% de probabilidad de que tu peor drawdown nunca supere este valor. Solo 1 de cada 20 traders tendrá una secuencia tan mala que lo cruce.',
+      ],
+      [
+        'Cisne Negro (p99)',
+        'Escenario de mala suerte extrema: 1 entre 100 traders sufre algo así. Si este número te asusta, bajá el tamaño de posición.',
+      ],
+    ]
+    const usableWidth = pageW - marginX * 2
+
+    explicaciones.forEach(([titulo, texto]) => {
+      y += 16
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(9)
+      doc.setTextColor(...INK)
+      doc.text(titulo, marginX, y)
+      y += 4
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8.5)
+      doc.setTextColor(...MUTED)
+      const wrapped = doc.splitTextToSize(texto, usableWidth)
+      doc.text(wrapped, marginX, y + 10)
+      y += 10 + wrapped.length * 10
+    })
+
     // === Footer ===
     doc.setDrawColor(...PULSE)
     doc.setLineWidth(1)
@@ -993,20 +1031,35 @@ export default function MonteCarloAuditor() {
                 <ShieldAlert className="w-5 h-5 text-indigo-400" />
                 Estadísticas Clave del Peor Escenario
               </h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                  <span className="text-slate-400 text-sm">Mediana del Drawdown (Percentil 50%)</span>
-                  <span className="font-bold text-emerald-400">{data.dd50.toFixed(2)}%</span>
+              <div className="space-y-5">
+                <div className="border-b border-slate-800 pb-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300 text-sm font-semibold">Mediana · Percentil 50%</span>
+                    <span className="font-bold text-emerald-400 text-lg">{data.dd50.toFixed(2)}%</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    El caso promedio de racha de pérdidas. La mitad de los traders sufrirán este drawdown o menos.
+                  </p>
                 </div>
-                <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                  <span className="text-slate-400 text-sm">Drawdown Extremo (Percentil 95%)</span>
-                  <span className="font-bold text-amber-500">{data.dd95.toFixed(2)}%</span>
+                <div className="border-b border-slate-800 pb-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300 text-sm font-semibold">Extremo · Percentil 95%</span>
+                    <span className="font-bold text-amber-500 text-lg">{data.dd95.toFixed(2)}%</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    Tu límite de seguridad. Hay 95% de probabilidad de que tu peor drawdown nunca supere este valor.
+                    Solo 1 de cada 20 traders tendrá una secuencia tan mala que lo cruce.
+                  </p>
                 </div>
-                <div className="flex justify-between items-center pb-2">
-                  <span className="text-slate-400 text-sm">
-                    Cisne Negro / Peor Racha Posible (Percentil 99%)
-                  </span>
-                  <span className="font-bold text-rose-500">{data.dd99.toFixed(2)}%</span>
+                <div className="pb-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300 text-sm font-semibold">Cisne Negro · Percentil 99%</span>
+                    <span className="font-bold text-rose-500 text-lg">{data.dd99.toFixed(2)}%</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    Escenario de mala suerte extrema: 1 entre 100 traders sufre algo así. Si este número te asusta,
+                    bajá el tamaño de posición.
+                  </p>
                 </div>
               </div>
             </div>
