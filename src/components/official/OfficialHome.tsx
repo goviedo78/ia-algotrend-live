@@ -132,6 +132,25 @@ export default function OfficialHome() {
     const t = setTimeout(() => setMateriaPhase('floating'), 2200)
     return () => clearTimeout(t)
   }, [router])
+
+  // Cierra el menú del logo al clickear fuera o presionar Escape.
+  useEffect(() => {
+    if (!logoMenuOpen) return
+    const handlePointer = (e: globalThis.PointerEvent) => {
+      const wrap = materiaRef.current
+      if (!wrap) return
+      if (!wrap.contains(e.target as Node)) setLogoMenuOpen(false)
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLogoMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', handlePointer)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointer)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [logoMenuOpen])
   const prefersReducedMotion = useReducedMotion()
   const materiaRepelX = useMotionValue(0)
   const materiaRepelY = useMotionValue(0)
@@ -147,6 +166,8 @@ export default function OfficialHome() {
     if (prefersReducedMotion) return
     // Durante el splash, el logo debe quedar quieto en el centro
     if (materiaPhase === 'loading') return
+    // Con el menú abierto, congelamos el logo para que el panel quede anclado.
+    if (logoMenuOpen) return
 
     const materia = materiaRef.current
     if (!materia) return
@@ -181,7 +202,7 @@ export default function OfficialHome() {
 
     materiaRepelX.set((deltaX / distance) * maxPush * force)
     materiaRepelY.set((deltaY / distance) * maxPush * force * 0.82)
-  }, [materiaRepelX, materiaRepelY, prefersReducedMotion, resetMateriaRepel, materiaPhase])
+  }, [materiaRepelX, materiaRepelY, prefersReducedMotion, resetMateriaRepel, materiaPhase, logoMenuOpen])
 
   // Quick-action confirm gate para touch: en desktop ejecuta directo; en touch
   // requiere doble tap (primer tap expande+preview, segundo tap confirma).
@@ -486,7 +507,10 @@ export default function OfficialHome() {
         role="button"
         tabIndex={materiaPhase === 'floating' ? 0 : -1}
         onClick={() => {
-          if (materiaPhase === 'floating') setLogoMenuOpen(!logoMenuOpen)
+          if (materiaPhase !== 'floating') return
+          // Al abrir, volvemos el logo al centro para que el panel quede anclado.
+          if (!logoMenuOpen) resetMateriaRepel()
+          setLogoMenuOpen((open) => !open)
         }}
         className={`${styles.materiaBackdrop} ${materiaCompact ? styles.materiaBackdropCompact : ''}`}
         data-phase={materiaPhase}
@@ -531,11 +555,11 @@ export default function OfficialHome() {
               <span>GONOVI</span>
             </div>
             <div className={styles.logoMenuLinks}>
-              <Link href="/official/montecarlo" className={styles.logoMenuItem}>
+              <Link href="/official/montecarlo" className={styles.logoMenuItem} onClick={() => setLogoMenuOpen(false)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 Auditoría Estocástica
               </Link>
-              <Link href="/official/estrategias" className={styles.logoMenuItem}>
+              <Link href="/official/estrategias" className={styles.logoMenuItem} onClick={() => setLogoMenuOpen(false)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
                 Rendimiento de Motores
               </Link>
