@@ -118,12 +118,20 @@ export default function OfficialHome() {
   // Splash de entrada del logo 3D:
   //   loading    → logo en primer plano (z-index alto), fondo borroso, cartel "Cargando..."
   //   background → logo al fondo de todo (debajo de cards), se ve a través del glass
-  const [materiaPhase, setMateriaPhase] = useState<'loading' | 'background'>('loading')
+  const [materiaPhase, setMateriaPhase] = useState<'loading' | 'floating'>('loading')
+  const [logoMenuOpen, setLogoMenuOpen] = useState(false)
 
   useEffect(() => {
-    const t = setTimeout(() => setMateriaPhase('background'), 2200)
+    // ── Truco de caché: Descargar en background (prefetch) las subpáginas pesadas
+    // mientras el usuario mira la animación de carga, asegurando navegación ultra-fluida.
+    router.prefetch('/official/mercados')
+    router.prefetch('/official/estrategias')
+    router.prefetch('/official/montecarlo')
+    router.prefetch('/official/lab')
+
+    const t = setTimeout(() => setMateriaPhase('floating'), 2200)
     return () => clearTimeout(t)
-  }, [])
+  }, [router])
   const prefersReducedMotion = useReducedMotion()
   const materiaRepelX = useMotionValue(0)
   const materiaRepelY = useMotionValue(0)
@@ -464,14 +472,20 @@ export default function OfficialHome() {
       <div className={styles.shardThree} aria-hidden="true" />
 
       <motion.div
-        aria-hidden="true"
+        aria-hidden="false"
+        role="button"
+        tabIndex={materiaPhase === 'floating' ? 0 : -1}
+        onClick={() => {
+          if (materiaPhase === 'floating') setLogoMenuOpen(!logoMenuOpen)
+        }}
         className={`${styles.materiaBackdrop} ${materiaCompact ? styles.materiaBackdropCompact : ''}`}
         data-phase={materiaPhase}
         ref={materiaRef}
         style={{
           x: materiaX,
           y: materiaY,
-          pointerEvents: 'none',
+          pointerEvents: materiaPhase === 'floating' ? 'auto' : 'none',
+          cursor: materiaPhase === 'floating' ? 'pointer' : 'default',
         }}
       >
         <div className={styles.materiaFloat}>
@@ -499,6 +513,25 @@ export default function OfficialHome() {
             transparentBackground
           />
         </div>
+
+        {logoMenuOpen && materiaPhase === 'floating' && (
+          <div className={styles.logoMenu} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.logoMenuHeader}>
+              <span className={styles.brandDot} aria-hidden="true" />
+              <span>GONOVI</span>
+            </div>
+            <div className={styles.logoMenuLinks}>
+              <Link href="/official/montecarlo" className={styles.logoMenuItem}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Auditoría Estocástica
+              </Link>
+              <Link href="/official/estrategias" className={styles.logoMenuItem}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+                Rendimiento de Motores
+              </Link>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Splash de bienvenida: overlay borroso + cartel "Cargando..." mientras el 3D entra */}
