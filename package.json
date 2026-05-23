@@ -17,6 +17,7 @@
     "@supabase/supabase-js": "^2.103.3",
     "apexcharts": "^5.13.0",
     "better-sqlite3": "^12.9.0",
+    "jspdf": "^4.2.1",
     "lightweight-charts": "^5.1.0",
     "lucide-react": "^1.16.0",
     "motion": "^12.38.0",

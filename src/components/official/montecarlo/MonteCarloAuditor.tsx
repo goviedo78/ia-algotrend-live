@@ -397,36 +397,119 @@ export default function MonteCarloAuditor() {
     }
   }
 
-  const downloadReport = () => {
+  const downloadReport = async () => {
     if (!data) return
-    const payload = {
-      producto: 'Proyecto Montecarlo · GONOVI',
-      estrategia: sanitizeForExcel(strategyName || 'Estrategia de Trading').slice(0, STRATEGY_NAME_MAX),
-      fecha: new Date().toISOString(),
-      metricas: {
-        cantidad_trades: data.nTrades,
-        win_rate_pct: parseFloat((data.winRate * 100).toFixed(2)),
-        esperanza_matematica_pct: parseFloat(data.expectancy.toFixed(2)),
-        sharpe_ratio: parseFloat(data.sharpe.toFixed(2)),
-        k_ratio: parseFloat(data.kRatio.toFixed(3)),
-        probabilidad_profit_pct: parseFloat(data.probProfit.toFixed(2)),
-        probabilidad_ruina_pct: parseFloat(data.probRuin.toFixed(2)),
-        drawdown_p50_pct: parseFloat(data.dd50.toFixed(2)),
-        drawdown_p95_pct: parseFloat(data.dd95.toFixed(2)),
-        drawdown_p99_pct: parseFloat(data.dd99.toFixed(2)),
-        mediana_capital_final_usd: Math.round(data.medianCap),
-        veredicto: data.veredicto,
-      },
-    }
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `montecarlo-${payload.estrategia.replace(/[^a-zA-Z0-9_-]/g, '_')}-${Date.now()}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+
+    // Dynamic import: jsPDF (~150KB) solo se descarga si el user pulsa el botón.
+    const { jsPDF } = await import('jspdf')
+
+    const estrategia = sanitizeForExcel(strategyName || 'Estrategia de Trading').slice(
+      0,
+      STRATEGY_NAME_MAX,
+    )
+    const fecha = new Date()
+
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+    const pageW = doc.internal.pageSize.getWidth()
+    const marginX = 48
+
+    // === Header naranja Materia ===
+    doc.setFillColor(244, 78, 28) // --official-pulse
+    doc.rect(0, 0, pageW, 96, 'F')
+
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(22)
+    doc.text('PROYECTO MONTECARLO', marginX, 48)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.text('Auditoría Estocástica · gonovi.app', marginX, 70)
+
+    // Fecha derecha
+    doc.setFontSize(9)
+    const fechaStr = fecha.toLocaleString('es-AR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    })
+    doc.text(fechaStr, pageW - marginX, 70, { align: 'right' })
+
+    // === Bloque estrategia ===
+    let y = 140
+    doc.setTextColor(31, 41, 55)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text('ESTRATEGIA AUDITADA', marginX, y)
+    y += 18
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(13)
+    doc.text(estrategia, marginX, y)
+    y += 14
+    doc.setFontSize(9)
+    doc.setTextColor(107, 114, 128)
+    doc.text(`${data.nTrades} operaciones procesadas · 10.000 simulaciones`, marginX, y)
+
+    // === Veredicto destacado ===
+    y += 30
+    const veredictoColor: [number, number, number] =
+      data.veredicto === 'EXTREMADAMENTE ROBUSTO' ? [16, 185, 129]
+      : data.veredicto === 'RIESGO MODERADO' ? [245, 158, 11]
+      : [239, 68, 68]
+    doc.setFillColor(...veredictoColor)
+    doc.rect(marginX, y, pageW - marginX * 2, 48, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.text('VEREDICTO', marginX + 16, y + 18)
+    doc.setFontSize(16)
+    doc.text(data.veredicto, marginX + 16, y + 38)
+
+    // === Métricas en tabla simple ===
+    y += 80
+    doc.setTextColor(31, 41, 55)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text('MÉTRICAS', marginX, y)
+    y += 6
+
+    const metricas: Array<[string, string]> = [
+      ['Win Rate', `${(data.winRate * 100).toFixed(2)}%`],
+      ['Esperanza matemática', `${data.expectancy >= 0 ? '+' : ''}${data.expectancy.toFixed(2)}%`],
+      ['Sharpe Ratio', data.sharpe.toFixed(2)],
+      ['K-Ratio', data.kRatio.toFixed(3)],
+      ['Probabilidad de profit', `${data.probProfit.toFixed(2)}%`],
+      ['Probabilidad de ruina', `${data.probRuin.toFixed(2)}%`],
+      ['Drawdown mediano (p50)', `${data.dd50.toFixed(2)}%`],
+      ['Drawdown extremo (p95)', `${data.dd95.toFixed(2)}%`],
+      ['Cisne negro (p99)', `${data.dd99.toFixed(2)}%`],
+      ['Mediana capital final', `$${Math.round(data.medianCap).toLocaleString('es-AR')}`],
+    ]
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    metricas.forEach(([label, value]) => {
+      y += 22
+      doc.setDrawColor(229, 231, 235)
+      doc.line(marginX, y + 4, pageW - marginX, y + 4)
+      doc.setTextColor(75, 85, 99)
+      doc.text(label, marginX, y)
+      doc.setTextColor(17, 24, 39)
+      doc.setFont('helvetica', 'bold')
+      doc.text(value, pageW - marginX, y, { align: 'right' })
+      doc.setFont('helvetica', 'normal')
+    })
+
+    // === Footer ===
+    const pageH = doc.internal.pageSize.getHeight()
+    doc.setDrawColor(244, 78, 28)
+    doc.line(marginX, pageH - 48, pageW - marginX, pageH - 48)
+    doc.setTextColor(107, 114, 128)
+    doc.setFontSize(8)
+    doc.text('Generado por GONOVI · Proyecto Montecarlo · gonovi.app/official/montecarlo', marginX, pageH - 32)
+    doc.text('No constituye asesoría financiera. Resultados pasados no garantizan futuros.', marginX, pageH - 20)
+
+    const safe = estrategia.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40)
+    doc.save(`montecarlo-${safe}-${fecha.getTime()}.pdf`)
   }
 
   const growthChartOptions = useMemo(
@@ -589,7 +672,7 @@ export default function MonteCarloAuditor() {
             type="button"
             className="mt-2 w-full bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 disabled:bg-slate-900 disabled:text-slate-700 transition-colors"
           >
-            Descargar reporte (.json)
+            Descargar reporte (.pdf)
           </button>
 
           {saveStatus === 'success' && (
