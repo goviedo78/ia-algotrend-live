@@ -159,13 +159,23 @@ export default function OfficialHome() {
     const distance = Math.hypot(deltaX, deltaY) || 1
     const isCoarsePointer = event.pointerType !== 'mouse' || window.matchMedia('(pointer: coarse)').matches
     const maxDistance = isCoarsePointer ? 340 : 520
+    // Captura: dentro de este radio el logo se "rinde" y queda quieto para
+    // poder clickearlo. Fuera, sigue el repel normal.
+    const captureRadius = isCoarsePointer ? 110 : 140
 
     if (distance > maxDistance) {
       resetMateriaRepel()
       return
     }
 
-    const proximity = 1 - distance / maxDistance
+    if (distance < captureRadius) {
+      resetMateriaRepel()
+      return
+    }
+
+    // Suavizado: la fuerza arranca en 0 al borde del captureRadius y
+    // alcanza el máximo en maxDistance, evitando saltos visuales.
+    const proximity = 1 - (distance - captureRadius) / (maxDistance - captureRadius)
     const force = proximity * proximity * (3 - 2 * proximity)
     const maxPush = isCoarsePointer ? 34 : 78
 

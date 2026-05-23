@@ -360,13 +360,6 @@
     drop-shadow(0 32px 88px rgba(0, 0, 0, 0.5));
 }
 
-/* ── Fase 2: BACKGROUND — logo al fondo, debajo del glass (cards lo blurrean) ── */
-.materiaBackdrop[data-phase="background"] {
-  z-index: 1;
-  opacity: 0.5;
-  scale: 1;
-}
-
 /* Overlay de splash: blur sobre TODO el viewport excepto el logo (que está en z-index 70) */
 .splashOverlay {
   position: fixed;
