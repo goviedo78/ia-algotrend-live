@@ -1666,6 +1666,15 @@
   filter: drop-shadow(0 0 32px rgba(244, 78, 28, 0.6)) drop-shadow(0 16px 32px rgba(0, 0, 0, 0.6));
 }
 
+/* Quieto: matar todas las animaciones idle/hop del logo cuando está fijo en
+   la esquina. Antes la regla .materiaBackdropCompact .materiaFloat aplicaba
+   materiaCornerHop (translate ±2rem + rotación) y .materiaFloat tenía
+   materiaIdle (respiración 9s) — ambas dan sensación de "vuelo". */
+.materiaBackdrop[data-phase="floating"] .materiaFloat {
+  animation: none !important;
+  transform: none !important;
+}
+
 @media (max-width: 768px) {
   .materiaBackdrop[data-phase="floating"] {
     bottom: 1.5rem !important;
