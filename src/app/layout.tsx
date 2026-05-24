@@ -23,27 +23,27 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'IA AlgoTrend · Live Trading Desk',
-  description: 'Mesa de monitoreo en vivo para la estrategia Algotrend en BTC/USD.',
+  title: 'GONOVI · Hub Oficial',
+  description: 'Hub oficial de GONOVI: indicadores, Trading Lab, auditoría Montecarlo, educación y comunidad.',
   manifest: '/manifest.json',
   openGraph: {
-    title: 'IA AlgoTrend · Live Trading Desk',
-    description: 'Monitor probabilístico BTC 1H con señales automáticas, historial en vivo y gestión de riesgo.',
+    title: 'GONOVI · Hub Oficial',
+    description: 'Indicadores, educación interactiva y ecosistema de trading visual para la comunidad GONOVI.',
     url: 'https://gonovi.app',
-    siteName: 'IA AlgoTrend',
+    siteName: 'GONOVI',
     images: [{ url: '/og-card.png', width: 1200, height: 630 }],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'IA AlgoTrend · Live Trading Desk',
-    description: 'Motor de IA para BTC en vivo con Win Rate 74%+',
+    title: 'GONOVI · Hub Oficial',
+    description: 'Indicadores con Pine Script, Trading Lab, auditoría Montecarlo y comunidad GONOVI.',
     images: ['/og-card.png'],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'IA AlgoTrend',
+    title: 'GONOVI',
   },
 };
 

@@ -1,11 +1,13 @@
 {
-  "name": "🧠 IA AlgoTrend — BTC Live",
-  "short_name": "AlgoTrend",
-  "description": "Mesa de monitoreo en vivo para la estrategia IA AlgoTrend en BTC/USD.",
-  "start_url": "/",
+  "id": "/?gonovi-hub",
+  "name": "GONOVI · Hub Oficial",
+  "short_name": "GONOVI",
+  "description": "Hub oficial de GONOVI: indicadores, Trading Lab, auditoría Montecarlo, educación y comunidad.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0b1220",
-  "theme_color": "#289eff",
+  "background_color": "#0d1122",
+  "theme_color": "#11162A",
   "orientation": "portrait-primary",
   "icons": [
     {
