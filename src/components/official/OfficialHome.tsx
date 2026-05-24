@@ -136,14 +136,28 @@ export default function OfficialHome() {
   const [logoMenuOpen, setLogoMenuOpen] = useState(false)
 
   useEffect(() => {
-    // ── Truco de caché: Descargar en background (prefetch) las subpáginas pesadas
-    // mientras el usuario mira la animación de carga, asegurando navegación ultra-fluida.
-    router.prefetch('/official/mercados')
-    router.prefetch('/official/estrategias')
-    router.prefetch('/official/montecarlo')
-    router.prefetch('/official/lab')
+    // ── Truco de caché: durante el splash (~4.4s) prefetcheamos TODAS las
+    // subpáginas del hub para que cualquier navegación posterior sea
+    // instantánea. Next.js cachea el RSC payload + bundle JS por ruta.
+    const subpages = [
+      '/official/estrategias',
+      '/official/montecarlo',
+      '/official/lab',
+      '/official/backtesting',
+      '/official/academia',
+      '/official/videos',
+      '/official/checkout',
+      '/official/soporte',
+      '/official/instalacion',
+      '/official/store',
+      '/official/community',
+      '/official/dashboard',
+      '/account',
+      '/auth',
+    ]
+    subpages.forEach((path) => router.prefetch(path))
 
-    const t = setTimeout(() => setMateriaPhase('floating'), 2200)
+    const t = setTimeout(() => setMateriaPhase('floating'), 4400)
     return () => clearTimeout(t)
   }, [router])
 
