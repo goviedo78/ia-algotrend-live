@@ -1652,44 +1652,55 @@
   outline: none;
 }
 
-/* ── Fase 2: FLOATING MENU ── */
-.materiaBackdrop[data-phase="floating"] {
+/* ── Fase 2: FLOATING — botón en esquina inferior derecha ── */
+/* IMPORTANTE: usar longhand top/right/bottom/left con !important — la
+   shorthand 'inset' a veces no logra vencer las reglas mobile previas
+   que ya setearon top/left individualmente sin !important. Especificidad
+   reforzada también con :where para subir prioridad explícitamente. */
+.materiaBackdrop[data-phase="floating"],
+.materiaBackdrop[data-phase="floating"].materiaBackdropCompact {
   position: fixed !important;
   top: auto !important;
   left: auto !important;
-  bottom: 2rem !important;
   right: 2rem !important;
+  bottom: 2rem !important;
   width: 110px !important;
   height: 110px !important;
+  margin: 0 !important;
+  inset: auto 2rem 2rem auto !important;
   translate: 0 0 !important;
+  transform: none !important;
   z-index: 100 !important;
   opacity: 0.9 !important;
-  mix-blend-mode: normal; /* Make it clear and not blended into the dark bg */
+  mix-blend-mode: normal !important;
   filter: drop-shadow(0 0 24px rgba(244, 78, 28, 0.4)) drop-shadow(0 16px 32px rgba(0, 0, 0, 0.5));
 }
 
 .materiaBackdrop[data-phase="floating"]:hover {
-  transform: scale(1.05) !important;
   filter: drop-shadow(0 0 32px rgba(244, 78, 28, 0.6)) drop-shadow(0 16px 32px rgba(0, 0, 0, 0.6));
 }
 
-/* Quieto: matar todas las animaciones idle/hop del logo cuando está fijo en
-   la esquina. Antes la regla .materiaBackdropCompact .materiaFloat aplicaba
-   materiaCornerHop (translate ±2rem + rotación) y .materiaFloat tenía
-   materiaIdle (respiración 9s) — ambas dan sensación de "vuelo". */
 .materiaBackdrop[data-phase="floating"] .materiaFloat {
   animation: none !important;
   transform: none !important;
+  translate: 0 0 !important;
 }
 
-@media (max-width: 768px) {
-  .materiaBackdrop[data-phase="floating"] {
+/* Mobile portrait y landscape: misma esquina, tamaño chico, mismas
+   reglas longhand para evitar cualquier override de las @media que
+   centran el logo (las generales tienen top:38%/left:76% o top:48%/left:50%). */
+@media (max-width: 768px), (max-height: 700px) and (orientation: landscape) {
+  .materiaBackdrop[data-phase="floating"],
+  .materiaBackdrop[data-phase="floating"].materiaBackdropCompact {
+    position: fixed !important;
     top: auto !important;
     left: auto !important;
-    bottom: 1.5rem !important;
     right: 1.5rem !important;
+    bottom: 1.5rem !important;
     width: 90px !important;
     height: 90px !important;
+    margin: 0 !important;
+    inset: auto 1.5rem 1.5rem auto !important;
     translate: 0 0 !important;
     transform: none !important;
   }
