@@ -186,15 +186,64 @@ const runLogLinregress = (
   return { slope, stdErrSlope }
 }
 
-// Mulberry32: PRNG determinista (semilla 42) -> auditorías reproducibles.
-const seededRandom = (seed = 42) => {
-  let a = seed
-  return () => {
-    let t = (a += 0x6d2b79f5)
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+// MT19937 (Mersenne Twister) — idéntico al PRNG de NumPy.
+// Con semilla 42 produce los mismos resultados que np.random.seed(42),
+// garantizando que el web y el Python den auditorías bit-a-bit idénticas.
+class MT19937 {
+  private mt: number[]
+  private index: number
+  constructor(seed: number) {
+    this.mt = new Array(624)
+    this.index = 624
+    this.mt[0] = seed >>> 0
+    for (let i = 1; i < 624; i++) {
+      const s = this.mt[i - 1] ^ (this.mt[i - 1] >>> 30)
+      this.mt[i] = (Math.imul(1812433253, s) + i) >>> 0
+    }
   }
+  private twist() {
+    for (let i = 0; i < 624; i++) {
+      const y = (this.mt[i] & 0x80000000) | (this.mt[(i + 1) % 624] & 0x7fffffff)
+      this.mt[i] = (this.mt[(i + 397) % 624] ^ (y >>> 1)) >>> 0
+      if (y % 2 !== 0) this.mt[i] = (this.mt[i] ^ 0x9908b0df) >>> 0
+    }
+    this.index = 0
+  }
+  next(): number {
+    if (this.index >= 624) this.twist()
+    let y = this.mt[this.index++]
+    y ^= y >>> 11
+    y ^= (y << 7) & 0x9d2c5680
+    y ^= (y << 15) & 0xefc60000
+    y ^= y >>> 18
+    return y >>> 0
+  }
+}
+
+// Muestreo uniforme en [0, max] inclusive — idéntico a np.random.randint(0, max+1).
+const rkInterval = (max: number, mt: MT19937): number => {
+  if (max === 0) return 0
+  let mask = max >>> 0
+  mask |= mask >>> 1
+  mask |= mask >>> 2
+  mask |= mask >>> 4
+  mask |= mask >>> 8
+  mask |= mask >>> 16
+  while (true) {
+    const val = (mt.next() & mask) >>> 0
+    if (val <= max) return val
+  }
+}
+
+// Percentil con interpolación lineal — igual a np.percentile(arr, q, method="linear").
+const getPercentile = (sortedArr: number[], q: number): number => {
+  if (sortedArr.length === 0) return 0
+  const idx = (sortedArr.length - 1) * (q / 100.0)
+  const low = Math.floor(idx)
+  const high = Math.ceil(idx)
+  const frac = idx - low
+  if (high >= sortedArr.length) return sortedArr[low]
+  return sortedArr[low] + frac * (sortedArr[high] - sortedArr[low])
 }
 
 const findCols = (
@@ -589,16 +638,17 @@ const runMonteCarloSim = (
   let ruin30 = 0
   let ruin50 = 0
   const samplePaths: number[][] = []
-  const rng = seededRandom(42)
+  const mt = new MT19937(42) // PRNG idéntico a NumPy → resultados reproducibles cross-platform
   const blockSize = Math.max(1, Math.floor(Math.sqrt(nTrades) / 2))
   const nBlocks = Math.ceil(nTrades / blockSize)
+  const maxValForInterval = nTrades - blockSize
   const sourceReturns = isPercent ? returnsPct : returnsMoney!
 
   for (let i = 0; i < iterations; i++) {
     // Block Bootstrap: tomar nBlocks bloques contiguos de tamaño blockSize
     const simReturns: number[] = []
     for (let b = 0; b < nBlocks; b++) {
-      const start = Math.floor(rng() * (nTrades - blockSize + 1))
+      const start = rkInterval(maxValForInterval, mt)
       for (let o = 0; o < blockSize; o++) {
         if (simReturns.length < nTrades) {
           simReturns.push(sourceReturns[start + o])
@@ -633,12 +683,13 @@ const runMonteCarloSim = (
     if (i < 30) samplePaths.push(simPath)
   }
 
+  // Percentiles con interpolación lineal NumPy-compatible (vs nearest-rank).
   const sortedDD = [...maxDrawdowns].sort((a, b) => a - b)
   const sortedBal = [...finalBalances].sort((a, b) => a - b)
-  const dd50 = sortedDD[Math.floor(iterations * 0.5)]
-  const dd95 = sortedDD[Math.floor(iterations * 0.95)]
-  const dd99 = sortedDD[Math.floor(iterations * 0.99)]
-  const medianCap = sortedBal[Math.floor(iterations * 0.5)]
+  const dd50 = getPercentile(sortedDD, 50)
+  const dd95 = getPercentile(sortedDD, 95)
+  const dd99 = getPercentile(sortedDD, 99)
+  const medianCap = getPercentile(sortedBal, 50)
   const probProfit =
     (finalBalances.filter((b) => b > initialCapital).length / iterations) * 100
   const probRuin20 = (ruin20 / iterations) * 100
@@ -667,6 +718,68 @@ const clampNumber = (val: number, min: number, max: number, fallback: number) =>
   if (!Number.isFinite(val)) return fallback
   return Math.min(max, Math.max(min, val))
 }
+
+// Tooltip rico con descripción + ejemplo. Hover desktop + focus/tap mobile.
+function InfoTooltip({ title, body, example }: { title: string; body: string; example: string }) {
+  return (
+    <span className="relative inline-block group ml-1.5 align-middle">
+      <span
+        role="button"
+        aria-label={`Info: ${title}`}
+        tabIndex={0}
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-700 hover:bg-blue-500 focus:bg-blue-500 text-slate-200 text-[10px] font-bold cursor-help focus:outline-none focus:ring-1 focus:ring-blue-400 transition-colors"
+      >
+        ?
+      </span>
+      <div
+        role="tooltip"
+        className="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 absolute z-50 left-1/2 -translate-x-1/2 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] p-3 bg-slate-950 border border-slate-700 rounded-lg shadow-xl text-xs text-slate-300 leading-relaxed pointer-events-none transition-opacity duration-150"
+      >
+        <p className="font-bold text-slate-100 mb-1.5">{title}</p>
+        <p className="mb-2">{body}</p>
+        <p className="text-[11px] text-emerald-400 italic">{example}</p>
+      </div>
+    </span>
+  )
+}
+
+const TOOLTIPS = {
+  capital: {
+    title: 'Capital inicial',
+    body: 'Dinero con el que arranca la simulación. Afecta el cálculo de comisiones en modo $ y la mediana del capital final. No afecta los porcentajes de drawdown.',
+    example: 'Ej: $10,000 = cuenta retail típica. $25,000 = mínimo para PDT en US. $100,000 = Prop Firm Funded.',
+  },
+  commission: {
+    title: 'Comisión + Slippage (%)',
+    body: 'Costo total que descuento a cada operación: comisión del broker + slippage de ejecución (diferencia entre precio ideal y real). Sumalos.',
+    example: 'Ej: BTC Binance Futures = 0.04% maker + 0.02% slippage. Forex retail = 0.5%. Acciones IBKR = 0.005%.',
+  },
+  inputType: {
+    title: 'Tipo de rendimiento',
+    body: 'Cómo está expresado el PnL en tu CSV. "Auto" lo detecto leyendo la columna (símbolos %, $, magnitudes). Forzá manual si la detección falla.',
+    example: 'Ej Percent: +2.5%, -1.8%. Ej Money: +$120, -$80, +1500 USD.',
+  },
+  iterations: {
+    title: 'Iteraciones',
+    body: 'Cantidad de trayectorias alternativas que simulo con Block Bootstrap. Más iteraciones = percentiles más precisos pero más tiempo de cálculo (en navegador).',
+    example: 'Ej: 1,000 = rápido para iterar. 10,000 = estándar académico (recomendado). 50,000 = máxima precisión.',
+  },
+  pnlCol: {
+    title: 'Columna de Rendimiento (PnL)',
+    body: 'Obligatoria. La columna de tu CSV que tiene la ganancia o pérdida neta de cada operación cerrada.',
+    example: 'Ej: "P&L %", "Net Profit", "PyG Netas %", "Rendimiento", "Profit/Loss". La auto-detecto pero podés cambiarla si me equivoco.',
+  },
+  typeCol: {
+    title: 'Columna de Tipo de operación',
+    body: 'Opcional. Si tu CSV mezcla filas de entradas + salidas + ajustes administrativos (swap/fee/funding/deposit), uso esta columna para filtrar solo las salidas reales. Si tu CSV ya viene limpio, dejala en "Ninguna".',
+    example: 'Ej: TradingView exporta "Entrada larga / Salida larga / Salida corta" en columna Tipo — solo cuento las Salidas para no duplicar trades.',
+  },
+  dateCol: {
+    title: 'Columna de Fecha',
+    body: 'Opcional pero MUY recomendada. Detecto el rango temporal del backtest para anualizar el Sharpe Ratio correctamente. Sin fechas, asumo 1 año por defecto y el Sharpe puede salir sesgado.',
+    example: 'Ej: "Fecha/Hora", "DateTime", "Timestamp", "Exit Date". Si tu CSV cubre 2 años el Sharpe se divide entre √2 — no es lo mismo que asumir 1 año.',
+  },
+} as const
 
 const PHASE_BORDER: Record<PhaseStatus, string> = {
   check: 'border-emerald-500',
@@ -1206,7 +1319,10 @@ export default function MonteCarloAuditor() {
           {/* Ajustes del stress-test */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
-              <label className="block text-xs text-slate-400 font-semibold mb-1">Capital inicial ($)</label>
+              <label className="flex items-center text-xs text-slate-400 font-semibold mb-1">
+                Capital inicial ($)
+                <InfoTooltip {...TOOLTIPS.capital} />
+              </label>
               <input
                 type="number"
                 min={1}
@@ -1221,7 +1337,10 @@ export default function MonteCarloAuditor() {
               />
             </div>
             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
-              <label className="block text-xs text-slate-400 font-semibold mb-1">Comisión + slippage (%)</label>
+              <label className="flex items-center text-xs text-slate-400 font-semibold mb-1">
+                Comisión + slippage (%)
+                <InfoTooltip {...TOOLTIPS.commission} />
+              </label>
               <input
                 type="number"
                 min={0}
@@ -1236,7 +1355,10 @@ export default function MonteCarloAuditor() {
               />
             </div>
             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
-              <label className="block text-xs text-slate-400 font-semibold mb-1">Tipo de rendimiento</label>
+              <label className="flex items-center text-xs text-slate-400 font-semibold mb-1">
+                Tipo de rendimiento
+                <InfoTooltip {...TOOLTIPS.inputType} />
+              </label>
               <select
                 value={settings.inputType}
                 onChange={(e) => setSettings((s) => ({
@@ -1251,7 +1373,10 @@ export default function MonteCarloAuditor() {
               </select>
             </div>
             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
-              <label className="block text-xs text-slate-400 font-semibold mb-1">Iteraciones</label>
+              <label className="flex items-center text-xs text-slate-400 font-semibold mb-1">
+                Iteraciones
+                <InfoTooltip {...TOOLTIPS.iterations} />
+              </label>
               <input
                 type="number"
                 min={MIN_ITERATIONS}
@@ -1267,48 +1392,68 @@ export default function MonteCarloAuditor() {
             </div>
           </div>
 
-          {/* Selectores manuales de columnas (solo si hay CSV cargado) */}
+          {/* Selectores manuales de columnas dentro de acordeón "Avanzado" */}
           {parsed && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
-                <label className="block text-xs text-slate-400 font-semibold mb-1">Columna Rendimiento (PnL)</label>
-                <select
-                  value={settings.pnlCol}
-                  onChange={(e) => setSettings((s) => ({ ...s, pnlCol: parseInt(e.target.value, 10) }))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
-                >
-                  {parsed.headers.map((h, idx) => (
-                    <option key={idx} value={idx}>{h.trim() || `Columna ${idx + 1}`}</option>
-                  ))}
-                </select>
+            <details className="mb-6 bg-slate-900/40 border border-slate-800 rounded-xl group">
+              <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-slate-300 hover:text-slate-100 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  ⚙️ Ajustes avanzados · Mapeo de columnas del CSV
+                  <span className="text-[10px] font-normal text-slate-500 hidden sm:inline">
+                    (auto-detectado · solo cambiar si la detección falla)
+                  </span>
+                </span>
+                <span className="text-slate-500 text-xs transition-transform group-open:rotate-180">▼</span>
+              </summary>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 px-4 pb-4">
+                <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
+                  <label className="flex items-center text-xs text-slate-400 font-semibold mb-1">
+                    Columna Rendimiento (PnL)
+                    <InfoTooltip {...TOOLTIPS.pnlCol} />
+                  </label>
+                  <select
+                    value={settings.pnlCol}
+                    onChange={(e) => setSettings((s) => ({ ...s, pnlCol: parseInt(e.target.value, 10) }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                  >
+                    {parsed.headers.map((h, idx) => (
+                      <option key={idx} value={idx}>{h.trim() || `Columna ${idx + 1}`}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
+                  <label className="flex items-center text-xs text-slate-400 font-semibold mb-1">
+                    Columna Tipo (opcional)
+                    <InfoTooltip {...TOOLTIPS.typeCol} />
+                  </label>
+                  <select
+                    value={settings.typeCol}
+                    onChange={(e) => setSettings((s) => ({ ...s, typeCol: parseInt(e.target.value, 10) }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value={-1}>Ninguna (procesar todo)</option>
+                    {parsed.headers.map((h, idx) => (
+                      <option key={idx} value={idx}>{h.trim() || `Columna ${idx + 1}`}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
+                  <label className="flex items-center text-xs text-slate-400 font-semibold mb-1">
+                    Columna Fecha (opcional)
+                    <InfoTooltip {...TOOLTIPS.dateCol} />
+                  </label>
+                  <select
+                    value={settings.dateCol}
+                    onChange={(e) => setSettings((s) => ({ ...s, dateCol: parseInt(e.target.value, 10) }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value={-1}>Ninguna (sin fechas)</option>
+                    {parsed.headers.map((h, idx) => (
+                      <option key={idx} value={idx}>{h.trim() || `Columna ${idx + 1}`}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
-                <label className="block text-xs text-slate-400 font-semibold mb-1">Columna Tipo (opcional)</label>
-                <select
-                  value={settings.typeCol}
-                  onChange={(e) => setSettings((s) => ({ ...s, typeCol: parseInt(e.target.value, 10) }))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
-                >
-                  <option value={-1}>Ninguna (procesar todo)</option>
-                  {parsed.headers.map((h, idx) => (
-                    <option key={idx} value={idx}>{h.trim() || `Columna ${idx + 1}`}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
-                <label className="block text-xs text-slate-400 font-semibold mb-1">Columna Fecha (opcional)</label>
-                <select
-                  value={settings.dateCol}
-                  onChange={(e) => setSettings((s) => ({ ...s, dateCol: parseInt(e.target.value, 10) }))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
-                >
-                  <option value={-1}>Ninguna (sin fechas)</option>
-                  {parsed.headers.map((h, idx) => (
-                    <option key={idx} value={idx}>{h.trim() || `Columna ${idx + 1}`}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            </details>
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -1516,7 +1661,8 @@ export default function MonteCarloAuditor() {
                   Block Bootstrap muestrea bloques contiguos de operaciones (tamaño √n/2) preservando rachas reales,
                   mientras randomiza el orden. Más realista que bootstrap simple (que rompe la autocorrelación).
                   Sharpe anualizado con {data.years.toFixed(2)} años detectados del CSV. K-Ratio sobre log-curve.
-                  PRNG Mulberry32 (semilla 42) → resultados reproducibles entre ejecuciones.
+                  PRNG Mersenne Twister (MT19937, semilla 42) — idéntico al de NumPy → resultados bit-a-bit
+                  reproducibles entre web y Python. Percentiles con interpolación lineal NumPy-compatible.
                 </div>
               </div>
             </div>
