@@ -1273,77 +1273,24 @@
     letter-spacing: 0.08em;
   }
 
-  .quickAction {
-    position: relative;
-    width: 3.05rem;
-    height: 3.05rem;
-    min-height: 0;
-    gap: 0;
-    border-radius: 999px;
-    padding: 0;
-    background:
-      linear-gradient(145deg, rgba(240, 236, 228, 0.06), rgba(255, 255, 255, 0.015)),
-      rgba(255, 255, 255, 0.025);
-    letter-spacing: 0;
+  /* MOBILE: mismo efecto MicroExpander que desktop — colapsado es círculo,
+     al tap (data-expanded=true por 3s) expande a pill con label visible.
+     Solo limitamos el max-width al ancho de pantalla para que la pill
+     expandida no se salga. El TSX maneja el comportamiento táctil:
+     tap → setConfirmingAction(id) → data-expanded="true" + ejecuta acción. */
+  .quickAction[data-expanded="true"] {
+    max-width: min(13rem, calc(100vw - 4rem));
   }
-
-  .quickAction::after {
-    content: attr(data-mobile-label);
-    position: absolute;
-    left: 50%;
-    bottom: -1.18rem;
-    color: rgba(229, 212, 182, 0.58);
-    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
-    font-size: 0.52rem;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-    opacity: 0;
-    text-transform: uppercase;
-    transform: translateX(-50%) translateY(-0.2rem);
-    transition: opacity 180ms var(--gon-ease-out, ease-out), transform 180ms var(--gon-ease-out, ease-out);
-    white-space: nowrap;
+  .quickAction[data-expanded="true"] .quickLabel {
+    max-width: min(10rem, calc(100vw - 6rem));
   }
-
-  .quickAction:hover::after,
-  .quickAction:focus-visible::after {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-
-  .quickAction:nth-child(2) {
-    transform: translateY(-0.28rem);
-    border-color: rgba(244, 78, 28, 0.22);
-    box-shadow:
-      inset 0 1px 0 rgba(240, 236, 228, 0.05),
-      0 10px 22px rgba(244, 78, 28, 0.08);
-  }
-
-  .quickAction:hover:not(:disabled) {
-    transform: translateY(-0.34rem) scale(1.04);
-  }
-
-  .quickAction:nth-child(2):hover:not(:disabled) {
-    transform: translateY(-0.5rem) scale(1.05);
-  }
-
-  .quickLabel {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
   .quickIcon {
-    width: 1.1rem;
-    height: 1.1rem;
+    width: 1rem;
+    height: 1rem;
   }
-
   .quickIcon svg {
-    width: 1.1rem;
-    height: 1.1rem;
+    width: 1rem;
+    height: 1rem;
   }
 
   .heroNavCard strong {
