@@ -796,6 +796,74 @@ const TOOLTIPS = {
     body: 'Opcional pero MUY recomendada. Detecto el rango temporal del backtest para anualizar el Sharpe Ratio correctamente. Sin fechas, asumo 1 año por defecto y el Sharpe puede salir sesgado.',
     example: 'Ej: "Fecha/Hora", "DateTime", "Timestamp", "Exit Date". Si tu CSV cubre 2 años el Sharpe se divide entre √2 — no es lo mismo que asumir 1 año.',
   },
+  // === Métricas top ===
+  capitalDisplay: {
+    title: 'Capital inicial',
+    body: 'El dinero con el que arranca la simulación. Todas las trayectorias parten desde acá. Cambiarlo afecta cuántos dólares finales tenés, pero NO cambia los porcentajes de drawdown ni de riesgo.',
+    example: 'Ej: con $10,000 y +5% terminás en $10,500. Con $100,000 terminás en $105,000. El % de riesgo es el mismo.',
+  },
+  medianCap: {
+    title: '¿Cuánto vas a tener al final?',
+    body: 'El resultado del trader "del medio" después de simular miles de futuros posibles. La mitad de los traders terminan con MÁS dinero que esto, la otra mitad con MENOS. Uso la mediana (no el promedio) porque es más honesta cuando hay pocos casos muy buenos o muy malos.',
+    example: 'Ej: $12,500 sobre $10,000 inicial → la mitad de los traders terminan con más de $12.5k, la otra mitad con menos.',
+  },
+  probProfit: {
+    title: '¿Cuán seguido te hace ganar plata?',
+    body: 'De cada 100 simulaciones, en cuántas el trader terminó con más capital del que arrancó. Es la probabilidad de que tu cuenta CREZCA al final del período. NO es lo mismo que el % de aciertos por trade.',
+    example: 'Ej: 85% → 85 de cada 100 traders salen en verde al final. Los otros 15 pierden plata. Una estrategia "rentable" casi nunca llega al 100% — siempre hay rachas que te tocan.',
+  },
+  winRate: {
+    title: '¿Qué porcentaje de trades ganan?',
+    body: 'De todas tus operaciones, cuántas cerraron en ganancia. CUIDADO: un win rate alto NO significa ganar plata si las pérdidas son más grandes que las ganancias. Lo que importa es combinarlo con la Esperanza Matemática.',
+    example: 'Ej: 70% win con ganancia $10 / pérdida $50 → PERDÉS. 35% win con ganancia $200 / pérdida $50 → GANÁS mucho. El win rate solo no dice nada.',
+  },
+  // === 5 Fases de auditoría ===
+  phaseExpectancy: {
+    title: 'Fase 1: Esperanza Matemática',
+    body: 'Cuánta plata ganás (o perdés) EN PROMEDIO por cada operación, contando las ganadoras y perdedoras juntas. Es el dato más importante: si es negativo, vas a perder a largo plazo NO IMPORTA qué digan las otras métricas. Pensalo como el "sueldo promedio por trade".',
+    example: 'Ej: +0.5% × 200 trades/año = +100% anual compuesto. Esperanza -0.1% = perdés 20% al año sin remedio. Esperanza 0% = casino perfecto, no ganás ni perdés.',
+  },
+  phaseSharpe: {
+    title: 'Fase 2: Sharpe Ratio (eficiencia)',
+    body: 'Mide si tus ganancias vienen "fáciles" (curva estable) o "sufridas" (cuenta sube y baja como montaña rusa). Un Sharpe alto = más fácil de aguantar emocionalmente. Es el mismo indicador que usan los hedge funds para comparar fondos.',
+    example: 'Ej: 2.5+ = institucional excelente. 1.5 = pro retail muy bueno. 1.0 = aceptable. <0.5 = inestable, vas a salirte por miedo en la primera mala racha.',
+  },
+  phaseKRatio: {
+    title: 'Fase 3: K-Ratio (¿crece parejo o a saltos?)',
+    body: 'Mide si tu cuenta crece de manera regular (línea recta hacia arriba) o si depende de pocos golpes de suerte (planos largos + saltos grandes). Una curva pareja es más sostenible — no estás dependiendo de que se repita ese trade increíble del año pasado.',
+    example: 'Ej: K 2.5 = crecimiento parejo y sostenible. 1.0 = aceptable con períodos planos. <0.5 = depende de 2-3 trades extraordinarios, frágil. Es el "índice de regularidad" de tu equity curve.',
+  },
+  phaseRuin: {
+    title: 'Fase 4: Riesgo de Ruina simulado',
+    body: 'De los miles de futuros posibles, en cuántos perderías tanta plata que prácticamente arrancás de cero. Uso 3 umbrales pensados en escenarios reales: 20% (te echan de Prop Firm), 30% (frontera retail típica), 50% (mitad del capital quemado).',
+    example: 'Ej: 0% en los 3 = sólido. 2% en >30% = aceptable, pero 1 de cada 50 va a quemar la cuenta. 10%+ en >50% = NO operar.',
+  },
+  phaseDD95: {
+    title: 'Fase 5: Peor Escenario Extremo (p95)',
+    body: 'La caída máxima que vas a sufrir en el 95% de los futuros posibles. Solo 1 de cada 20 traders va a tener una racha PEOR que esta. Si el backtest decía DD 5% pero acá da 25%, tu estrategia tiene OVERFITTING (aprendió de memoria el pasado y no sirve para el futuro).',
+    example: 'Ej: backtest 8% / p95 12% → sólida. Backtest 8% / p95 35% → catastrófico, NO usar en real. La diferencia entre los 2 mide qué tan "real" es tu backtest.',
+  },
+  // === Percentiles del peor escenario ===
+  dd50Display: {
+    title: 'Caída Mediana (p50)',
+    body: 'La caída que va a sufrir el trader "del medio". La mitad de los futuros tienen rachas peores que esto, la otra mitad mejores. Es el "caso normal" de la peor pérdida que vas a soportar antes de recuperarte.',
+    example: 'Ej: p50 = 8% → en un año normal vas a tener una racha en que la cuenta cae 8% desde su máximo antes de empezar a recuperar.',
+  },
+  dd95Display: {
+    title: 'Caída Extrema (p95)',
+    body: 'Tu límite de seguridad. En el 95% de los futuros, tu peor pérdida NO supera este número. Si te preparás emocionalmente y financieramente para este nivel, estás cubierto en 19 de cada 20 escenarios posibles.',
+    example: 'Ej: p95 = 22% → en 19 de cada 20 traders, la peor caída va a ser <22%. Solo 1 de 20 va a sufrir más. Si bajás el tamaño de posición a la mitad, este número también se divide a la mitad.',
+  },
+  dd99Display: {
+    title: 'Cisne Negro (p99)',
+    body: 'El escenario casi-imposible pero posible. 1 de cada 100 traders va a tener una racha tan mala como esta. Es el evento extremo que nadie ve venir (crisis, flash crash, etc). Si este número te da miedo, reducí el tamaño de cada operación.',
+    example: 'Ej: p99 = 38% → 1 de 100 traders va a perder casi 40% de la cuenta. Con $10k operando, podrías ver caer la cuenta a $6,200 antes de recuperar.',
+  },
+  veredicto: {
+    title: 'Veredicto final',
+    body: 'Resumen automático combinando la Esperanza Matemática (¿la estrategia gana plata?) con la Caída Extrema p95 (¿qué tan duro es el peor caso?). Es la conclusión rápida sobre si podés operar esta estrategia con tranquilidad.',
+    example: 'Niveles: ✅ Excelente (p95<10%) · ⚠️ Moderada (10-20%) · 🔶 Elevado (20-35%) · ❌ Crítico (>35% o esperanza ≤ 0).',
+  },
 } as const
 
 const PHASE_BORDER: Record<PhaseStatus, string> = {
@@ -1558,46 +1626,67 @@ export default function MonteCarloAuditor() {
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">Capital inicial</span>
+                    <span className="inline-flex items-center text-xs text-slate-500 uppercase font-semibold">
+                      Capital inicial
+                      <InfoTooltip {...TOOLTIPS.capitalDisplay} align="left" />
+                    </span>
                     <div className="text-2xl font-bold mt-1 text-slate-200">
                       ${data.initialCapital.toLocaleString('es-AR')}
                     </div>
                   </div>
                   <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">Mediana capital final</span>
+                    <span className="inline-flex items-center text-xs text-slate-500 uppercase font-semibold">
+                      Mediana capital final
+                      <InfoTooltip {...TOOLTIPS.medianCap} align="right" />
+                    </span>
                     <div className="text-2xl font-bold mt-1 text-blue-400">
                       ${Math.round(data.medianCap).toLocaleString('es-ES')}
                     </div>
                   </div>
                   <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">Frecuencia rentable</span>
+                    <span className="inline-flex items-center text-xs text-slate-500 uppercase font-semibold">
+                      Frecuencia rentable
+                      <InfoTooltip {...TOOLTIPS.probProfit} align="left" />
+                    </span>
                     <div className="text-2xl font-bold mt-1">{data.probProfit.toFixed(1)}%</div>
                   </div>
                   <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">Win Rate</span>
+                    <span className="inline-flex items-center text-xs text-slate-500 uppercase font-semibold">
+                      Win Rate
+                      <InfoTooltip {...TOOLTIPS.winRate} align="right" />
+                    </span>
                     <div className="text-2xl font-bold mt-1">{(data.winRate * 100).toFixed(1)}%</div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h2 className="text-xl font-bold text-slate-300">Detalle Individual de Estudios</h2>
-                  {data.phases.map((p, idx) => (
-                    <div
-                      key={p.key}
-                      className={`p-4 rounded-xl border-l-4 bg-slate-900/60 ${PHASE_BORDER[p.status]}`}
-                    >
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-bold flex items-center gap-2">
-                          {p.emoji} Fase {idx + 1}: {p.name}
-                        </span>
-                        <span className={`text-xs px-2 py-0.5 rounded font-bold ${PHASE_BADGE[p.status]}`}>
-                          {p.statusText}
-                        </span>
+                  {data.phases.map((p, idx) => {
+                    const phaseTooltip =
+                      p.key === 'expectancy' ? TOOLTIPS.phaseExpectancy
+                      : p.key === 'sharpe' ? TOOLTIPS.phaseSharpe
+                      : p.key === 'kratio' ? TOOLTIPS.phaseKRatio
+                      : p.key === 'ruin' ? TOOLTIPS.phaseRuin
+                      : TOOLTIPS.phaseDD95
+                    return (
+                      <div
+                        key={p.key}
+                        className={`p-4 rounded-xl border-l-4 bg-slate-900/60 ${PHASE_BORDER[p.status]}`}
+                      >
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-bold flex items-center gap-2">
+                            {p.emoji} Fase {idx + 1}: {p.name}
+                            <InfoTooltip {...phaseTooltip} align="left" />
+                          </span>
+                          <span className={`text-xs px-2 py-0.5 rounded font-bold ${PHASE_BADGE[p.status]}`}>
+                            {p.statusText}
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold text-slate-200">{p.val}</p>
+                        <p className="text-xs text-slate-400 mt-1">{p.note}</p>
                       </div>
-                      <p className="text-sm font-semibold text-slate-200">{p.val}</p>
-                      <p className="text-xs text-slate-400 mt-1">{p.note}</p>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 <div className="bg-slate-900/80 border border-slate-800 p-6 rounded-2xl text-center space-y-2">
@@ -1611,7 +1700,7 @@ export default function MonteCarloAuditor() {
                     <XCircle className="w-10 h-10 text-rose-400 mx-auto" />
                   )}
                   <h3
-                    className={`font-extrabold text-xl ${
+                    className={`font-extrabold text-xl inline-flex items-center justify-center ${
                       data.veredicto === 'RESISTENCIA EXCELENTE' ? 'text-emerald-400'
                       : data.veredicto === 'RESISTENCIA MODERADA' ? 'text-amber-400'
                       : data.veredicto === 'RIESGO ELEVADO' ? 'text-orange-400'
@@ -1619,6 +1708,7 @@ export default function MonteCarloAuditor() {
                     }`}
                   >
                     {data.veredictoTitle}
+                    <InfoTooltip {...TOOLTIPS.veredicto} align="center" />
                   </h3>
                   <p className="text-sm text-slate-400">{data.veredictoText}</p>
                 </div>
@@ -1643,7 +1733,10 @@ export default function MonteCarloAuditor() {
                   <div className="space-y-5">
                     <div className="border-b border-slate-800 pb-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-300 text-sm font-semibold">Mediana · Percentil 50%</span>
+                        <span className="inline-flex items-center text-slate-300 text-sm font-semibold">
+                          Mediana · Percentil 50%
+                          <InfoTooltip {...TOOLTIPS.dd50Display} align="left" />
+                        </span>
                         <span className="font-bold text-emerald-400 text-lg">{data.dd50.toFixed(2)}%</span>
                       </div>
                       <p className="text-xs text-slate-500 mt-1 leading-relaxed">
@@ -1652,7 +1745,10 @@ export default function MonteCarloAuditor() {
                     </div>
                     <div className="border-b border-slate-800 pb-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-300 text-sm font-semibold">Extremo · Percentil 95%</span>
+                        <span className="inline-flex items-center text-slate-300 text-sm font-semibold">
+                          Extremo · Percentil 95%
+                          <InfoTooltip {...TOOLTIPS.dd95Display} align="left" />
+                        </span>
                         <span className="font-bold text-amber-500 text-lg">{data.dd95.toFixed(2)}%</span>
                       </div>
                       <p className="text-xs text-slate-500 mt-1 leading-relaxed">
@@ -1662,7 +1758,10 @@ export default function MonteCarloAuditor() {
                     </div>
                     <div className="pb-1">
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-300 text-sm font-semibold">Cisne Negro · Percentil 99%</span>
+                        <span className="inline-flex items-center text-slate-300 text-sm font-semibold">
+                          Cisne Negro · Percentil 99%
+                          <InfoTooltip {...TOOLTIPS.dd99Display} align="left" />
+                        </span>
                         <span className="font-bold text-rose-500 text-lg">{data.dd99.toFixed(2)}%</span>
                       </div>
                       <p className="text-xs text-slate-500 mt-1 leading-relaxed">
