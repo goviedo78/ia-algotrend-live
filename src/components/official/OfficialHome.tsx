@@ -533,7 +533,7 @@ export default function OfficialHome() {
           if (!logoMenuOpen) resetMateriaRepel()
           setLogoMenuOpen((open) => !open)
         }}
-        className={`${styles.materiaBackdrop} ${materiaCompact ? styles.materiaBackdropCompact : ''}`}
+        className={`${styles.materiaBackdrop} ${materiaCompact && materiaPhase !== 'floating' ? styles.materiaBackdropCompact : ''}`}
         data-phase={materiaPhase}
         ref={materiaRef}
         style={{

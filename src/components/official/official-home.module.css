@@ -1696,12 +1696,16 @@
 }
 
 .logoMenu {
-  position: absolute;
-  bottom: calc(100% + 16px);
-  right: 0;
+  /* Anclado al viewport (no al logo) para no salirse de pantalla en mobile.
+     Desktop: logo en bottom:2rem + 110px alto + 16px gap = ~190px.
+     Mobile: logo en bottom:1.5rem + 90px alto + 16px gap = ~150px.  */
+  position: fixed;
+  bottom: calc(2rem + 110px + 16px);
+  right: 2rem;
+  max-width: calc(100vw - 3rem);
   width: max-content;
   min-width: 220px;
-  background: rgba(13, 17, 34, 0.85);
+  background: rgba(13, 17, 34, 0.92);
   border: 1px solid var(--official-line);
   border-radius: 16px;
   padding: 0.75rem;
@@ -1714,6 +1718,15 @@
   flex-direction: column;
   gap: 0.5rem;
   cursor: default;
+}
+
+@media (max-width: 768px) {
+  .logoMenu {
+    bottom: calc(1.5rem + 90px + 16px);
+    right: 1.5rem;
+    min-width: 180px;
+    max-width: calc(100vw - 2rem);
+  }
 }
 
 .logoMenuHeader {
