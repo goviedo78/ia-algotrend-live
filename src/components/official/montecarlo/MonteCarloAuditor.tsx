@@ -720,9 +720,26 @@ const clampNumber = (val: number, min: number, max: number, fallback: number) =>
 }
 
 // Tooltip rico con descripción + ejemplo. Hover desktop + focus/tap mobile.
-function InfoTooltip({ title, body, example }: { title: string; body: string; example: string }) {
+// Usa "named group" /tip para no engancharse con groups ancestros (ej. el <details>).
+// align controla la posición horizontal en grids para que no se solapen entre sí.
+type TooltipAlign = 'left' | 'center' | 'right'
+function InfoTooltip({
+  title,
+  body,
+  example,
+  align = 'center',
+}: {
+  title: string
+  body: string
+  example: string
+  align?: TooltipAlign
+}) {
+  const alignCls =
+    align === 'left' ? 'left-0'
+    : align === 'right' ? 'right-0'
+    : 'left-1/2 -translate-x-1/2'
   return (
-    <span className="relative inline-block group ml-1.5 align-middle">
+    <span className="relative inline-block group/tip ml-1.5 align-middle">
       <span
         role="button"
         aria-label={`Info: ${title}`}
@@ -733,7 +750,7 @@ function InfoTooltip({ title, body, example }: { title: string; body: string; ex
       </span>
       <div
         role="tooltip"
-        className="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 absolute z-50 left-1/2 -translate-x-1/2 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] p-3 bg-slate-950 border border-slate-700 rounded-lg shadow-xl text-xs text-slate-300 leading-relaxed pointer-events-none transition-opacity duration-150"
+        className={`invisible opacity-0 group-hover/tip:visible group-hover/tip:opacity-100 group-focus-within/tip:visible group-focus-within/tip:opacity-100 absolute z-50 bottom-full mb-2 ${alignCls} w-64 max-w-[calc(100vw-2rem)] p-3 bg-slate-950 border border-slate-700 rounded-lg shadow-xl text-xs text-slate-300 leading-relaxed pointer-events-none transition-opacity duration-150`}
       >
         <p className="font-bold text-slate-100 mb-1.5">{title}</p>
         <p className="mb-2">{body}</p>
@@ -1321,7 +1338,7 @@ export default function MonteCarloAuditor() {
             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
               <label className="flex items-center text-xs text-slate-400 font-semibold mb-1">
                 Capital inicial ($)
-                <InfoTooltip {...TOOLTIPS.capital} />
+                <InfoTooltip {...TOOLTIPS.capital} align="left" />
               </label>
               <input
                 type="number"
@@ -1339,7 +1356,7 @@ export default function MonteCarloAuditor() {
             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
               <label className="flex items-center text-xs text-slate-400 font-semibold mb-1">
                 Comisión + slippage (%)
-                <InfoTooltip {...TOOLTIPS.commission} />
+                <InfoTooltip {...TOOLTIPS.commission} align="right" />
               </label>
               <input
                 type="number"
@@ -1357,7 +1374,7 @@ export default function MonteCarloAuditor() {
             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
               <label className="flex items-center text-xs text-slate-400 font-semibold mb-1">
                 Tipo de rendimiento
-                <InfoTooltip {...TOOLTIPS.inputType} />
+                <InfoTooltip {...TOOLTIPS.inputType} align="left" />
               </label>
               <select
                 value={settings.inputType}
@@ -1375,7 +1392,7 @@ export default function MonteCarloAuditor() {
             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
               <label className="flex items-center text-xs text-slate-400 font-semibold mb-1">
                 Iteraciones
-                <InfoTooltip {...TOOLTIPS.iterations} />
+                <InfoTooltip {...TOOLTIPS.iterations} align="right" />
               </label>
               <input
                 type="number"
@@ -1394,7 +1411,7 @@ export default function MonteCarloAuditor() {
 
           {/* Selectores manuales de columnas dentro de acordeón "Avanzado" */}
           {parsed && (
-            <details className="mb-6 bg-slate-900/40 border border-slate-800 rounded-xl group">
+            <details className="mb-6 bg-slate-900/40 border border-slate-800 rounded-xl group/det">
               <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-slate-300 hover:text-slate-100 flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   ⚙️ Ajustes avanzados · Mapeo de columnas del CSV
@@ -1402,13 +1419,13 @@ export default function MonteCarloAuditor() {
                     (auto-detectado · solo cambiar si la detección falla)
                   </span>
                 </span>
-                <span className="text-slate-500 text-xs transition-transform group-open:rotate-180">▼</span>
+                <span className="text-slate-500 text-xs transition-transform group-open/det:rotate-180">▼</span>
               </summary>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 px-4 pb-4">
                 <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
                   <label className="flex items-center text-xs text-slate-400 font-semibold mb-1">
                     Columna Rendimiento (PnL)
-                    <InfoTooltip {...TOOLTIPS.pnlCol} />
+                    <InfoTooltip {...TOOLTIPS.pnlCol} align="left" />
                   </label>
                   <select
                     value={settings.pnlCol}
@@ -1423,7 +1440,7 @@ export default function MonteCarloAuditor() {
                 <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
                   <label className="flex items-center text-xs text-slate-400 font-semibold mb-1">
                     Columna Tipo (opcional)
-                    <InfoTooltip {...TOOLTIPS.typeCol} />
+                    <InfoTooltip {...TOOLTIPS.typeCol} align="center" />
                   </label>
                   <select
                     value={settings.typeCol}
@@ -1439,7 +1456,7 @@ export default function MonteCarloAuditor() {
                 <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
                   <label className="flex items-center text-xs text-slate-400 font-semibold mb-1">
                     Columna Fecha (opcional)
-                    <InfoTooltip {...TOOLTIPS.dateCol} />
+                    <InfoTooltip {...TOOLTIPS.dateCol} align="right" />
                   </label>
                   <select
                     value={settings.dateCol}
