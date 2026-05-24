@@ -23,8 +23,35 @@ function formatDuration(ms: number) {
   return `${hours}h ${remMins}m`
 }
 
+function formatPct(value: number) {
+  return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`
+}
+
+function formatPrice(value: number | null | undefined, digits = 2) {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—'
+  return `$${value.toLocaleString('es-MX', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  })}`
+}
+
+function compoundPct(trades: Trade[]) {
+  const closed = trades.filter((t) => t.status === 'CLOSED' && t.pnl_pct !== null)
+  if (closed.length === 0) return 0
+  return (closed.reduce((acc, t) => acc * (1 + (t.pnl_pct ?? 0) / 100), 1) - 1) * 100
+}
+
 function groupTradesByMonth(trades: Trade[]) {
-  const groups: Record<string, { total: number, longs: number, shorts: number, pnl: number, trades: Trade[] }> = {}
+  const groups: Record<string, {
+    total: number
+    closed: number
+    longs: number
+    shorts: number
+    wins: number
+    losses: number
+    netPct: number
+    trades: Trade[]
+  }> = {}
   
   for (const t of trades) {
     const date = new Date(t.open_time * 1000) // Unix timestamp in seconds
@@ -32,14 +59,16 @@ function groupTradesByMonth(trades: Trade[]) {
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}|${monthYear}`
     
     if (!groups[key]) {
-      groups[key] = { total: 0, longs: 0, shorts: 0, pnl: 0, trades: [] }
+      groups[key] = { total: 0, closed: 0, longs: 0, shorts: 0, wins: 0, losses: 0, netPct: 0, trades: [] }
     }
     
     groups[key].total++
     if (t.direction === 'LONG') groups[key].longs++
     if (t.direction === 'SHORT') groups[key].shorts++
     if (t.status === 'CLOSED') {
-      groups[key].pnl += (t.pnl_pct || 0)
+      groups[key].closed++
+      if ((t.pnl_pct ?? 0) > 0) groups[key].wins++
+      if ((t.pnl_pct ?? 0) < 0) groups[key].losses++
     }
     groups[key].trades.push(t)
   }
@@ -48,6 +77,7 @@ function groupTradesByMonth(trades: Trade[]) {
     .sort((a, b) => b[0].localeCompare(a[0])) // Descending by YYYY-MM
     .map(([key, data]) => {
       data.trades.sort((a, b) => b.open_time - a.open_time) // Descending inside month
+      data.netPct = compoundPct(data.trades)
       return {
         label: key.split('|')[1].charAt(0).toUpperCase() + key.split('|')[1].slice(1), // Capitalize month
         ...data
@@ -79,6 +109,7 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
   const [now, setNow] = useState(0)
   const [btcPrice, setBtcPrice] = useState(0)
   const [goldPrice, setGoldPrice] = useState(0)
+  const [goldSource, setGoldSource] = useState('')
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -144,10 +175,13 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
         })
         .catch(() => { /* silent */ })
       
-      // GOLD PROXY (PAXG)
-      fetch('https://api.binance.com/api/v3/ticker/price?symbol=PAXGUSDT')
+      fetch('/api/market/gold')
         .then((r) => r.json())
-        .then((d) => setGoldPrice(parseFloat(d.price)))
+        .then((d) => {
+          if (d.code !== 0 || typeof d.price !== 'number') return
+          setGoldPrice(d.price)
+          setGoldSource(typeof d.source === 'string' ? d.source : '')
+        })
         .catch(() => { /* silent */ })
     }
     
@@ -161,18 +195,27 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
       name: 'AlgoTrend BTC 1H',
       type: 'Swing Trading',
       pair: 'BTC/USD · 1H',
+      currentPrice: btcPrice,
+      priceSource: 'bitstamp',
+      priceDigits: 2,
       data: dataBTC
     },
     {
       name: 'Oro 15M',
       type: 'Scalping',
       pair: 'XAU/USD · 15M',
+      currentPrice: goldPrice,
+      priceSource: goldSource,
+      priceDigits: 3,
       data: dataOro15
     },
     {
       name: 'Oro 30M',
       type: 'Swing Intradía',
       pair: 'XAU/USD · 30M',
+      currentPrice: goldPrice,
+      priceSource: goldSource,
+      priceDigits: 3,
       data: dataOro30
     }
   ]
@@ -209,8 +252,8 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
         <div className={styles.container}>
           <Link href="/official" className={styles.backLink}>← Volver a GONOVI</Link>
           <div>
-            <h1 className={styles.title}>Motores Algorítmicos</h1>
-            <p className={styles.description}>Auditoría en tiempo real y rendimiento histórico de la inteligencia cuantitativa de GONOVI.</p>
+            <h1 className={styles.title}>Resultados en vivo</h1>
+            <p className={styles.description}>Rendimiento mensual de los indicadores activos de GONOVI. Solo mostramos dirección, operaciones, balance porcentual y estado de la operación abierta.</p>
           </div>
           
           <div className={styles.strategyList}>
@@ -247,13 +290,14 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
               let globalPnl = 0
               let winCount = 0
               let totalClosed = 0
+              const closedTrades = strategy.data.all.filter((t) => t.status === 'CLOSED' && t.pnl_pct !== null)
               for (const t of strategy.data.all) {
                 if (t.status === 'CLOSED' && t.pnl_pct !== null) {
-                  globalPnl += t.pnl_pct
                   totalClosed++
                   if (t.pnl_pct > 0) winCount++
                 }
               }
+              globalPnl = compoundPct(closedTrades)
               const winRate = totalClosed > 0 ? ((winCount / totalClosed) * 100).toFixed(1) : '0.0'
               const currentMonth = months.length > 0 ? months[0] : null
               
@@ -277,9 +321,13 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
                             </div>
                             <div className={styles.globalStatItem}>
                               <span className={styles.globalStatLabel}>Neto Mes</span>
-                              <span className={`${styles.globalStatValue} ${currentMonth.pnl >= 0 ? styles.tdPnlPositive : styles.tdPnlNegative}`}>
-                                {currentMonth.pnl > 0 ? '+' : ''}{currentMonth.pnl.toFixed(2)}%
+                              <span className={`${styles.globalStatValue} ${currentMonth.netPct >= 0 ? styles.tdPnlPositive : styles.tdPnlNegative}`}>
+                                {formatPct(currentMonth.netPct)}
                               </span>
+                            </div>
+                            <div className={styles.globalStatItem}>
+                              <span className={styles.globalStatLabel}>Cerradas</span>
+                              <span className={styles.globalStatValue}>{currentMonth.closed}</span>
                             </div>
                           </div>
                         </div>
@@ -315,7 +363,7 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
                         <div className={styles.openTradeHeader}>
                           <span className={`${styles.liveBadge} ${badgeClass}`}>
                             <span className={`${styles.pulseDot} ${dotClass}`} />
-                            OPEN
+                            Operación abierta
                           </span>
                           <span className={styles.tradeDuration}>{formatDuration(now - openT.open_time * 1000)}</span>
                         </div>
@@ -330,6 +378,24 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
                             <span className={(livePnlPct || 0) >= 0 ? styles.pnlValuePositive : styles.pnlValueNegative}>
                               {livePnlPct !== null ? `${livePnlPct > 0 ? '+' : ''}${livePnlPct.toFixed(2)}%` : 'En curso...'}
                             </span>
+                          </div>
+                        </div>
+                        <div className={styles.openTradeStats}>
+                          <div>
+                            <span>Entrada</span>
+                            <strong>{formatPrice(openT.open_price, strategy.priceDigits)}</strong>
+                          </div>
+                          <div>
+                            <span>{strategy.priceSource === 'capital.com' ? 'CFD live' : 'Precio ref.'}</span>
+                            <strong>{formatPrice(strategy.currentPrice || null, strategy.priceDigits)}</strong>
+                          </div>
+                          <div>
+                            <span>Stop</span>
+                            <strong>{formatPrice(openT.stop_loss, strategy.priceDigits)}</strong>
+                          </div>
+                          <div>
+                            <span>Objetivo</span>
+                            <strong>{formatPrice(openT.take_profit, strategy.priceDigits)}</strong>
                           </div>
                         </div>
                       </div>
@@ -365,8 +431,9 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
                                   <div className={styles.summaryStats}>
                                     <span>{m.total} Ops</span>
                                     <span>{m.longs}L/{m.shorts}S</span>
-                                    <span className={`${styles.tdPnl} ${m.pnl >= 0 ? styles.tdPnlPositive : styles.tdPnlNegative}`}>
-                                      {m.pnl > 0 ? '+' : ''}{m.pnl.toFixed(2)}% Neto
+                                    <span>{m.wins}W/{m.losses}L</span>
+                                    <span className={`${styles.tdPnl} ${m.netPct >= 0 ? styles.tdPnlPositive : styles.tdPnlNegative}`}>
+                                      {formatPct(m.netPct)} Neto
                                     </span>
                                   </div>
                                 </div>

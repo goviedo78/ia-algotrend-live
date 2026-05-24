@@ -237,13 +237,44 @@ const MiniChart = memo(function MiniChart({ scenario, revealed }: { scenario: La
   const candleW = Math.min(36, (vw - pad * 2) / draw.length - 4)
   const gap = 4
 
+  // Calculate dynamic range
+  let min = Number.POSITIVE_INFINITY
+  let max = Number.NEGATIVE_INFINITY
+
+  // While the future is hidden, the scale must be based only on visible candles.
+  // Otherwise an extreme future move can subtly reveal information before the user answers.
+  draw.forEach((c) => {
+    const [, h, l] = c
+    if (h > max) max = h
+    if (l < min) min = l
+  })
+
+  scenario.levels.forEach((lv) => {
+    const show = revealed || lv.kind === 'support' || lv.kind === 'resistance'
+    if (show) {
+      if (lv.y > max) max = lv.y
+      if (lv.y < min) min = lv.y
+    }
+  })
+
+  const range = Math.max(max - min, 1)
+  const chartMax = max + range * 0.1
+  const chartMin = min - range * 0.1
+  const chartRange = chartMax - chartMin
+
+  const toY = (v: number) => vh - pad - ((v - chartMin) / chartRange) * (vh - pad * 2)
+
   return (
     <svg className={s.chartSvg} viewBox={`0 0 ${vw} ${vh}`} preserveAspectRatio="xMidYMid meet" aria-label={`Gráfico ${scenario.market} ${scenario.timeframe}`}>
-      {[20, 40, 60, 80].map((y) => (
-        <line key={y} x1={pad} x2={vw - pad} y1={vh - pad - ((y / 100) * (vh - pad * 2))} y2={vh - pad - ((y / 100) * (vh - pad * 2))} stroke="rgba(229,212,182,0.08)" strokeWidth={1} />
-      ))}
+      {[0.2, 0.4, 0.6, 0.8].map((pct) => {
+        const yVal = chartMin + pct * chartRange
+        const ly = toY(yVal)
+        return (
+          <line key={pct} x1={pad} x2={vw - pad} y1={ly} y2={ly} stroke="rgba(229,212,182,0.08)" strokeWidth={1} />
+        )
+      })}
       {scenario.levels.map((lv) => {
-        const ly = vh - pad - (lv.y / 100) * (vh - pad * 2)
+        const ly = toY(lv.y)
         const color = lv.kind === 'sl' ? '#F44E1C' : lv.kind === 'tp' ? '#4FBC72' : lv.kind === 'entry' ? '#FF8A60' : 'rgba(229,212,182,0.28)'
         const show = revealed || lv.kind === 'support' || lv.kind === 'resistance'
         if (!show) return null
@@ -257,7 +288,6 @@ const MiniChart = memo(function MiniChart({ scenario, revealed }: { scenario: La
       {draw.map((c, i) => {
         const x = pad + i * (candleW + gap) + candleW / 2
         const [o, h, l, cl] = c
-        const toY = (v: number) => vh - pad - (v / 100) * (vh - pad * 2)
         const bull = cl >= o
         const bodyTop = toY(Math.max(o, cl))
         const bodyBot = toY(Math.min(o, cl))

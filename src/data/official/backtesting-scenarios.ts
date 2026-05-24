@@ -5,7 +5,7 @@ export type BacktestingScenario = {
   title: string
   context: string
   difficulty: 'inicial' | 'intermedio' | 'avanzado'
-  /** Array de velas [open, high, low, close] normalizado 0-100 para el MVP SVG */
+  /** Array de velas [open, high, low, close] with real market scale */
   candles: [number, number, number, number][]
   hiddenFromIndex: number
   suggestedBias?: 'long' | 'short' | 'skip'
@@ -21,16 +21,16 @@ const scenarios: BacktestingScenario[] = [
     context: 'El precio consolido en un rango estrecho durante 4 horas. En los ultimos 15 minutos, el volumen ha aumentado. Se acaba de producir una vela impulsiva alcista cerrando fuera del rango.',
     difficulty: 'inicial',
     candles: [
-      /* consolidacion */
-      [40, 42, 38, 41], [41, 43, 40, 40], [40, 41, 39, 41], [41, 42, 39, 40],
-      [40, 44, 38, 39], [39, 41, 37, 40], [40, 42, 39, 41], [41, 42, 40, 41],
-      [41, 43, 39, 42], [42, 45, 41, 44], [44, 46, 43, 45],
+      /* consolidacion around 67000 */
+      [67040, 67042, 67038, 67041], [67041, 67043, 67040, 67040], [67040, 67041, 67039, 67041], [67041, 67042, 67039, 67040],
+      [67040, 67044, 67038, 67039], [67039, 67041, 67037, 67040], [67040, 67042, 67039, 67041], [67041, 67042, 67040, 67041],
+      [67041, 67043, 67039, 67042], [67042, 67045, 67041, 67044], [67044, 67046, 67043, 67045],
       /* vela de breakout (index 11) */
-      [45, 58, 44, 56],
+      [67045, 67058, 67044, 67056],
       /* velas ocultas (pullback y continuacion) */
-      [56, 57, 51, 52], [52, 54, 48, 50], [50, 52, 49, 51], // pullback al borde roto
-      [51, 62, 50, 60], [60, 68, 58, 66], [66, 75, 65, 74], // continuacion
-      [74, 76, 70, 71], [71, 74, 69, 72]
+      [67056, 67057, 67051, 67052], [67052, 67054, 67048, 67050], [67050, 67052, 67049, 67051], // pullback al borde roto
+      [67051, 67062, 67050, 67060], [67060, 67068, 67058, 67066], [67066, 67075, 67065, 67074], // continuacion
+      [67074, 67076, 67070, 67071], [67071, 67074, 67069, 67072]
     ],
     hiddenFromIndex: 12,
     suggestedBias: 'long',
@@ -44,13 +44,13 @@ const scenarios: BacktestingScenario[] = [
     context: 'Apertura de New York (9:30). Primera vela de 5M es una barrida fuerte hacia abajo rompiendo el minimo del pre-market, pero es fuertemente rechazada dejando una mecha enorme.',
     difficulty: 'intermedio',
     candles: [
-      /* premarket chop */
-      [60, 62, 58, 61], [61, 63, 59, 60], [60, 64, 58, 62], [62, 63, 60, 61],
+      /* premarket chop around 18000 */
+      [18060, 18062, 18058, 18061], [18061, 18063, 18059, 18060], [18060, 18064, 18058, 18062], [18062, 18063, 18060, 18061],
       /* apertura 9:30 (index 4) */
-      [61, 62, 30, 58], 
+      [18061, 18062, 18030, 18058], 
       /* velas ocultas (reversion alcista fuerte) */
-      [58, 68, 55, 66], [66, 75, 64, 73], [73, 80, 71, 78], [78, 85, 75, 84],
-      [84, 86, 80, 81], [81, 88, 79, 87]
+      [18058, 18068, 18055, 18066], [18066, 18075, 18064, 18073], [18073, 18080, 18071, 18078], [18078, 18085, 18075, 18084],
+      [18084, 18086, 18080, 18081], [18081, 18088, 18079, 18087]
     ],
     hiddenFromIndex: 5,
     suggestedBias: 'long',
@@ -64,15 +64,15 @@ const scenarios: BacktestingScenario[] = [
     context: 'Oro en clara tendencia alcista de corto plazo haciendo higher highs y higher lows. El precio acaba de retroceder ordenadamente hacia el pivot anterior.',
     difficulty: 'inicial',
     candles: [
-      /* impulso inicial */
-      [20, 28, 18, 26], [26, 35, 25, 34], [34, 45, 32, 42], [42, 52, 40, 50],
+      /* impulso inicial around 2300 */
+      [2320, 2328, 2318, 2326], [2326, 2335, 2325, 2334], [2334, 2345, 2332, 2342], [2342, 2352, 2340, 2350],
       /* pullback a demanda (index 4-7) */
-      [50, 51, 46, 47], [47, 49, 44, 45], [45, 47, 42, 44], [44, 46, 41, 45],
+      [2350, 2351, 2346, 2347], [2347, 2349, 2344, 2345], [2345, 2347, 2342, 2344], [2344, 2346, 2341, 2345],
       /* vela martillo oculta que confirma (index 8) */
-      [45, 46, 38, 44], 
+      [2345, 2346, 2338, 2344], 
       /* continuacion alcista */
-      [44, 58, 43, 56], [56, 68, 54, 65], [65, 75, 62, 73], [73, 85, 71, 82],
-      [82, 85, 78, 80]
+      [2344, 2358, 2343, 2356], [2356, 2368, 2354, 2365], [2365, 2375, 2362, 2373], [2373, 2385, 2371, 2382],
+      [2382, 2385, 2378, 2380]
     ],
     hiddenFromIndex: 8,
     suggestedBias: 'long',
@@ -86,11 +86,12 @@ const scenarios: BacktestingScenario[] = [
     context: 'Tarde de viernes, sin catalizadores. El precio oscila sin direccion con velas pequeñas y mechas por ambos lados. No hay estructura clara definida.',
     difficulty: 'avanzado',
     candles: [
-      [50, 52, 48, 51], [51, 53, 49, 50], [50, 54, 48, 49], [49, 52, 47, 51],
-      [51, 53, 50, 50], [50, 55, 49, 51], [51, 54, 49, 52], [52, 53, 48, 49],
+      /* around 3500 */
+      [3550, 3552, 3548, 3551], [3551, 3553, 3549, 3550], [3550, 3554, 3548, 3549], [3549, 3552, 3547, 3551],
+      [3551, 3553, 3550, 3550], [3550, 3555, 3549, 3551], [3551, 3554, 3549, 3552], [3552, 3553, 3548, 3549],
       /* ocultas: mas rango interminable */
-      [49, 52, 48, 50], [50, 53, 49, 51], [51, 54, 50, 50], [50, 52, 48, 51],
-      [51, 55, 49, 50], [50, 52, 47, 50], [50, 53, 48, 51], [51, 54, 49, 50]
+      [3549, 3552, 3548, 3550], [3550, 3553, 3549, 3551], [3551, 3554, 3550, 3550], [3550, 3552, 3548, 3551],
+      [3551, 3555, 3549, 3550], [3550, 3552, 3547, 3550], [3550, 3553, 3548, 3551], [3551, 3554, 3549, 3550]
     ],
     hiddenFromIndex: 8,
     suggestedBias: 'skip',

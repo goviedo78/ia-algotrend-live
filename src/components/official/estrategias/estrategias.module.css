@@ -189,6 +189,43 @@
   overflow: hidden;
 }
 
+.openTradeStats {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(229, 212, 182, 0.08);
+}
+
+.openTradeStats div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.openTradeStats span {
+  color: rgba(229, 212, 182, 0.45);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.openTradeStats strong {
+  overflow: hidden;
+  color: #f1dec8;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .openTradeGlow {
   position: absolute;
   inset: 0;
@@ -619,4 +656,52 @@
   text-align: center;
   color: rgba(229, 212, 182, 0.4);
   font-size: 0.9rem;
+}
+
+@media (max-width: 720px) {
+  .container {
+    padding-inline: 1rem;
+  }
+
+  .headerStatsRow,
+  .statsBlock,
+  .statsBlockData {
+    width: 100%;
+  }
+
+  .statsBlockData {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+
+  .openTradeStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .strategyPanel {
+    padding: 1rem;
+    border-radius: 18px;
+  }
+
+  .statsBlockData {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .noTradeCard,
+  .openTradeCard {
+    padding: 1rem;
+  }
+
+  .tradeDetails {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pnlFloating {
+    align-items: flex-start;
+    margin-left: 0;
+  }
 }

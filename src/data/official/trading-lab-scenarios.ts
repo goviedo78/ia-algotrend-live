@@ -11,11 +11,11 @@ export type LabScenario = {
   correctDecision: 'long' | 'short' | 'skip'
   resultR: number
   explanation: string
-  /** Mock candle data: [open, high, low, close] normalised 0-100 */
+  /** Mock candle data: OHLC with real market scale */
   candles: [number, number, number, number][]
   /** Index where the "hidden future" begins (inclusive) */
   revealFrom: number
-  /** Key levels drawn on chart (normalised 0-100) */
+  /** Key levels drawn on chart */
   levels: { y: number; label: string; kind: 'support' | 'resistance' | 'entry' | 'sl' | 'tp' }[]
 }
 
@@ -34,24 +34,25 @@ const scenarios: LabScenario[] = [
     explanation:
       'La barrida de liquidez bajo el rango seguida de un cierre inmediato dentro es una trampa de vendedores clasica. El volumen alto confirma absorcion institucional. Entrada al cierre de la vela de reclaim con SL bajo la mecha da un R:R excelente hacia el high del rango.',
     candles: [
-      [52, 58, 48, 55],
-      [55, 60, 52, 53],
-      [53, 56, 50, 54],
-      [54, 55, 46, 47],
-      [47, 48, 32, 34],
-      [34, 55, 30, 52],
+      [18352, 18358, 18348, 18355],
+      [18355, 18360, 18352, 18353],
+      [18353, 18356, 18350, 18354],
+      [18354, 18355, 18346, 18347],
+      [18347, 18348, 18332, 18334],
+      [18334, 18355, 18330, 18352],
       // — reveal from here —
-      [52, 62, 50, 60],
-      [60, 68, 58, 66],
-      [66, 74, 64, 72],
-      [72, 78, 70, 76],
+      [18352, 18362, 18350, 18360],
+      [18360, 18368, 18358, 18366],
+      [18366, 18374, 18364, 18372],
+      [18372, 18378, 18370, 18376],
     ],
     revealFrom: 6,
     levels: [
-      { y: 48, label: 'Soporte rango', kind: 'support' },
-      { y: 60, label: 'Resistencia rango', kind: 'resistance' },
-      { y: 30, label: 'SL', kind: 'sl' },
-      { y: 76, label: 'TP 2R', kind: 'tp' },
+      { y: 18348, label: 'Soporte rango', kind: 'support' },
+      { y: 18360, label: 'Resistencia rango', kind: 'resistance' },
+      { y: 18352, label: 'Entrada', kind: 'entry' },
+      { y: 18330, label: 'SL', kind: 'sl' },
+      { y: 18376, label: 'TP 2R', kind: 'tp' },
     ],
   },
   {
@@ -68,25 +69,25 @@ const scenarios: LabScenario[] = [
     explanation:
       'El doble techo con divergencia bearish en RSI en zona de oferta es una de las señales de reversa mas confiables en oro. El DXY al alza apoya la tesis bajista. Entrada al cierre de la vela de rechazo, SL 2 pips sobre el high, TP en el soporte intermedio.',
     candles: [
-      [40, 48, 38, 46],
-      [46, 56, 44, 54],
-      [54, 64, 52, 62],
-      [62, 72, 60, 70],
-      [70, 88, 68, 78],
-      [78, 82, 64, 66],
-      [66, 76, 64, 74],
-      [74, 90, 72, 74],
+      [2340, 2348, 2338, 2346],
+      [2346, 2356, 2344, 2354],
+      [2354, 2364, 2352, 2362],
+      [2362, 2372, 2360, 2370],
+      [2370, 2388, 2368, 2378],
+      [2378, 2382, 2364, 2366],
+      [2366, 2376, 2364, 2374],
+      [2374, 2390, 2372, 2374],
       // — reveal from here —
-      [74, 76, 62, 64],
-      [64, 66, 52, 54],
-      [54, 58, 44, 46],
+      [2374, 2376, 2362, 2364],
+      [2364, 2366, 2352, 2354],
+      [2354, 2358, 2344, 2346],
     ],
     revealFrom: 8,
     levels: [
-      { y: 88, label: 'Oferta', kind: 'resistance' },
-      { y: 74, label: 'Entrada', kind: 'entry' },
-      { y: 92, label: 'SL', kind: 'sl' },
-      { y: 46, label: 'TP', kind: 'tp' },
+      { y: 2388, label: 'Oferta', kind: 'resistance' },
+      { y: 2374, label: 'Entrada', kind: 'entry' },
+      { y: 2392, label: 'SL', kind: 'sl' },
+      { y: 2346, label: 'TP', kind: 'tp' },
     ],
   },
   {
@@ -103,22 +104,22 @@ const scenarios: LabScenario[] = [
     explanation:
       'El CHOP Index alto y el ATR comprimido indican que el mercado esta en fase de acumulacion sin direccion definida. Forzar una entrada aqui tiene probabilidad de stop-hunt en ambas direcciones. La mejor decision es esperar el quiebre con volumen. No operar es operar.',
     candles: [
-      [50, 56, 46, 52],
-      [52, 58, 48, 54],
-      [54, 57, 49, 51],
-      [51, 55, 47, 53],
-      [53, 56, 48, 50],
-      [50, 54, 46, 52],
+      [67500, 67560, 67460, 67520],
+      [67520, 67580, 67480, 67540],
+      [67540, 67570, 67490, 67510],
+      [67510, 67550, 67470, 67530],
+      [67530, 67560, 67480, 67500],
+      [67500, 67540, 67460, 67520],
       // — reveal from here —
-      [52, 55, 47, 49],
-      [49, 53, 45, 51],
-      [51, 58, 44, 46],
-      [46, 48, 36, 38],
+      [67520, 67550, 67470, 67490],
+      [67490, 67530, 67450, 67510],
+      [67510, 67580, 67440, 67460],
+      [67460, 67480, 67360, 67380],
     ],
     revealFrom: 6,
     levels: [
-      { y: 58, label: 'Techo rango', kind: 'resistance' },
-      { y: 46, label: 'Piso rango', kind: 'support' },
+      { y: 67580, label: 'Techo rango', kind: 'resistance' },
+      { y: 67460, label: 'Piso rango', kind: 'support' },
     ],
   },
   {
@@ -135,25 +136,25 @@ const scenarios: LabScenario[] = [
     explanation:
       'Quiebre de estructura + pullback al Order Block con volumen decreciente es el setup de continuacion mas limpio en temporalidades rapidas. La vela de absorcion en el OB confirma que los compradores defienden la zona. SL bajo el OB, TP en extension 1.618 del impulso.',
     candles: [
-      [42, 48, 38, 44],
-      [44, 46, 40, 42],
-      [42, 50, 40, 48],
-      [48, 72, 46, 70],
-      [70, 72, 56, 58],
-      [58, 60, 50, 52],
-      [52, 54, 46, 50],
+      [18442, 18448, 18438, 18444],
+      [18444, 18446, 18440, 18442],
+      [18442, 18450, 18440, 18448],
+      [18448, 18472, 18446, 18470],
+      [18470, 18472, 18456, 18458],
+      [18458, 18460, 18450, 18452],
+      [18452, 18454, 18446, 18450],
       // — reveal from here —
-      [50, 62, 48, 60],
-      [60, 74, 58, 72],
-      [72, 84, 70, 82],
-      [82, 92, 78, 88],
+      [18450, 18462, 18448, 18460],
+      [18460, 18474, 18458, 18472],
+      [18472, 18484, 18470, 18482],
+      [18482, 18492, 18478, 18488],
     ],
     revealFrom: 7,
     levels: [
-      { y: 46, label: 'OB bajo', kind: 'support' },
-      { y: 50, label: 'OB alto', kind: 'entry' },
-      { y: 42, label: 'SL', kind: 'sl' },
-      { y: 88, label: 'TP 3R', kind: 'tp' },
+      { y: 18446, label: 'OB bajo', kind: 'support' },
+      { y: 18450, label: 'OB alto', kind: 'entry' },
+      { y: 18442, label: 'SL', kind: 'sl' },
+      { y: 18488, label: 'TP 3R', kind: 'tp' },
     ],
   },
   {
@@ -170,24 +171,24 @@ const scenarios: LabScenario[] = [
     explanation:
       'Un quiebre con volumen bajo que no sostiene el cierre por encima es una señal clasica de fake breakout. El cierre de vuelta bajo resistencia atrapa a los compradores apurados. Entrada al cierre de la vela que re-entra, SL sobre la mecha del fake breakout, TP en el soporte del rango.',
     candles: [
-      [44, 50, 42, 48],
-      [48, 52, 46, 50],
-      [50, 54, 48, 52],
-      [52, 56, 50, 54],
-      [54, 58, 52, 56],
-      [56, 72, 55, 70],
-      [70, 71, 54, 56],
+      [1.0844, 1.0850, 1.0842, 1.0848],
+      [1.0848, 1.0852, 1.0846, 1.0850],
+      [1.0850, 1.0854, 1.0848, 1.0852],
+      [1.0852, 1.0856, 1.0850, 1.0854],
+      [1.0854, 1.0858, 1.0852, 1.0856],
+      [1.0856, 1.0872, 1.0855, 1.0870],
+      [1.0870, 1.0871, 1.0854, 1.0856],
       // — reveal —
-      [56, 58, 46, 48],
-      [48, 50, 38, 40],
-      [40, 44, 36, 38],
+      [1.0856, 1.0858, 1.0846, 1.0848],
+      [1.0848, 1.0850, 1.0838, 1.0840],
+      [1.0840, 1.0844, 1.0836, 1.0838],
     ],
     revealFrom: 7,
     levels: [
-      { y: 58, label: 'Resistencia', kind: 'resistance' },
-      { y: 56, label: 'Entrada', kind: 'entry' },
-      { y: 73, label: 'SL', kind: 'sl' },
-      { y: 38, label: 'TP', kind: 'tp' },
+      { y: 1.0858, label: 'Resistencia', kind: 'resistance' },
+      { y: 1.0856, label: 'Entrada', kind: 'entry' },
+      { y: 1.0873, label: 'SL', kind: 'sl' },
+      { y: 1.0838, label: 'TP', kind: 'tp' },
     ],
   },
   {
@@ -204,22 +205,22 @@ const scenarios: LabScenario[] = [
     explanation:
       'Entrar largo en una tendencia tan extendida sin pullback expone a un retroceso abrupto con SL amplio. Entrar corto contra tendencia sin señal de reversa es apuesta. El RSI en sobrecompra no es señal de venta por si solo. Lo correcto es esperar un retroceso a zona de demanda o una señal de agotamiento clara.',
     candles: [
-      [38, 44, 36, 42],
-      [42, 50, 40, 48],
-      [48, 56, 47, 54],
-      [54, 60, 52, 58],
-      [58, 66, 57, 64],
-      [64, 72, 63, 70],
+      [5238, 5244, 5236, 5242],
+      [5242, 5250, 5240, 5248],
+      [5248, 5256, 5247, 5254],
+      [5254, 5260, 5252, 5258],
+      [5258, 5266, 5257, 5264],
+      [5264, 5272, 5263, 5270],
       // — reveal —
-      [70, 76, 68, 74],
-      [74, 78, 66, 68],
-      [68, 70, 58, 60],
-      [60, 64, 56, 62],
+      [5270, 5276, 5268, 5274],
+      [5274, 5278, 5266, 5268],
+      [5268, 5270, 5258, 5260],
+      [5260, 5264, 5256, 5262],
     ],
     revealFrom: 6,
     levels: [
-      { y: 72, label: 'Extension', kind: 'resistance' },
-      { y: 42, label: 'EMA20 aprox', kind: 'support' },
+      { y: 5272, label: 'Extension', kind: 'resistance' },
+      { y: 5242, label: 'EMA20 aprox', kind: 'support' },
     ],
   },
   {
@@ -236,24 +237,24 @@ const scenarios: LabScenario[] = [
     explanation:
       'El doble piso con aumento de volumen en el segundo testeo indica acumulacion institucional. Las mechas largas confirman demanda real en la zona. BTC estable elimina riesgo de correlacion bajista. Entrada sobre el cierre de la segunda vela de testeo, SL bajo la mecha mas profunda.',
     candles: [
-      [58, 62, 54, 56],
-      [56, 58, 42, 44],
-      [44, 54, 40, 52],
-      [52, 56, 50, 54],
-      [54, 56, 48, 50],
-      [50, 52, 38, 42],
-      [42, 56, 36, 54],
+      [2858, 2862, 2854, 2856],
+      [2856, 2858, 2842, 2844],
+      [2844, 2854, 2840, 2852],
+      [2852, 2856, 2850, 2854],
+      [2854, 2856, 2848, 2850],
+      [2850, 2852, 2838, 2842],
+      [2842, 2856, 2836, 2854],
       // — reveal —
-      [54, 62, 52, 60],
-      [60, 68, 58, 66],
-      [66, 76, 64, 74],
+      [2854, 2862, 2852, 2860],
+      [2860, 2868, 2858, 2866],
+      [2866, 2876, 2864, 2874],
     ],
     revealFrom: 7,
     levels: [
-      { y: 40, label: 'Soporte semanal', kind: 'support' },
-      { y: 54, label: 'Entrada', kind: 'entry' },
-      { y: 34, label: 'SL', kind: 'sl' },
-      { y: 74, label: 'TP', kind: 'tp' },
+      { y: 2840, label: 'Soporte semanal', kind: 'support' },
+      { y: 2854, label: 'Entrada', kind: 'entry' },
+      { y: 2834, label: 'SL', kind: 'sl' },
+      { y: 2874, label: 'TP', kind: 'tp' },
     ],
   },
   {
@@ -270,22 +271,22 @@ const scenarios: LabScenario[] = [
     explanation:
       'Entrar largo despues de un impulso de 1.8% sin retroceso deja un SL enorme y un TP muy cercano a resistencia. El volumen decreciente indica que el impulso pierde fuerza. El error clasico es FOMO: ver el movimiento y perseguirlo. Lo correcto es esperar pullback al OB del impulso o a la siguiente zona de demanda.',
     candles: [
-      [40, 42, 30, 32],
-      [32, 52, 30, 50],
-      [50, 64, 48, 62],
-      [62, 74, 60, 72],
-      [72, 80, 70, 78],
-      [78, 84, 76, 82],
+      [64000, 64020, 63880, 63900],
+      [63900, 64200, 63880, 64180],
+      [64180, 64600, 64100, 64580],
+      [64580, 65000, 64500, 64980],
+      [64980, 65152, 64900, 65100],
+      [65100, 65200, 65050, 65150],
       // — reveal —
-      [82, 86, 74, 76],
-      [76, 78, 64, 66],
-      [66, 72, 62, 70],
-      [70, 72, 60, 62],
+      [65150, 65240, 64320, 64340],
+      [64340, 64360, 64220, 64240],
+      [64240, 64300, 64200, 64280],
+      [64280, 64300, 64180, 64200],
     ],
     revealFrom: 6,
     levels: [
-      { y: 86, label: 'Oferta', kind: 'resistance' },
-      { y: 50, label: 'OB impulso', kind: 'support' },
+      { y: 65152, label: 'Oferta', kind: 'resistance' },
+      { y: 64080, label: 'OB impulso', kind: 'support' },
     ],
   },
   {
@@ -302,22 +303,22 @@ const scenarios: LabScenario[] = [
     explanation:
       'Los primeros 10-15 minutos de apertura de NY son los mas ruidosos del dia. Las mechas enormes y el spread amplio hacen que cualquier SL sea enorme. El volumen alto pero desordenado no da direccion. Esperar a que se forme el rango de apertura (15-30 min) y operar el quiebre con contexto es mucho mas seguro.',
     candles: [
-      [50, 54, 46, 52],
-      [52, 54, 48, 50],
-      [50, 52, 48, 50],
-      [50, 68, 42, 58],
-      [58, 62, 34, 40],
-      [40, 56, 38, 54],
+      [18500, 18504, 18496, 18502],
+      [18502, 18504, 18498, 18500],
+      [18500, 18502, 18498, 18500],
+      [18500, 18518, 18492, 18508],
+      [18508, 18512, 18484, 18490],
+      [18490, 18506, 18488, 18504],
       // — reveal —
-      [54, 58, 44, 46],
-      [46, 52, 40, 50],
-      [50, 56, 48, 54],
-      [54, 58, 50, 56],
+      [18504, 18508, 18494, 18496],
+      [18496, 18502, 18490, 18500],
+      [18500, 18506, 18498, 18504],
+      [18504, 18508, 18500, 18506],
     ],
     revealFrom: 6,
     levels: [
-      { y: 68, label: 'Mecha alta', kind: 'resistance' },
-      { y: 34, label: 'Mecha baja', kind: 'support' },
+      { y: 18518, label: 'Mecha alta', kind: 'resistance' },
+      { y: 18484, label: 'Mecha baja', kind: 'support' },
     ],
   },
   {
@@ -334,26 +335,26 @@ const scenarios: LabScenario[] = [
     explanation:
       'Pullback ordenado a zona de demanda en tendencia alcista con volumen decreciente es el setup mas limpio de continuacion. El martillo confirma rechazo de la zona. SL bajo la zona de demanda, TP en el high anterior o extension. El error seria esperar mas confirmacion y perder la entrada.',
     candles: [
-      [40, 52, 38, 50],
-      [50, 62, 48, 60],
-      [60, 70, 58, 68],
-      [68, 74, 66, 72],
-      [72, 74, 62, 64],
-      [64, 66, 56, 58],
-      [58, 60, 48, 50],
-      [50, 58, 46, 56],
+      [2310, 2322, 2308, 2320],
+      [2320, 2332, 2318, 2330],
+      [2330, 2340, 2328, 2338],
+      [2338, 2344, 2336, 2342],
+      [2342, 2344, 2332, 2334],
+      [2334, 2336, 2326, 2328],
+      [2328, 2330, 2318, 2320],
+      [2320, 2328, 2316, 2326],
       // — reveal —
-      [56, 66, 54, 64],
-      [64, 74, 62, 72],
-      [72, 80, 70, 78],
+      [2326, 2336, 2324, 2334],
+      [2334, 2344, 2332, 2342],
+      [2342, 2350, 2340, 2348],
     ],
     revealFrom: 8,
     levels: [
-      { y: 50, label: 'Demanda alta', kind: 'support' },
-      { y: 46, label: 'Demanda baja', kind: 'support' },
-      { y: 56, label: 'Entrada', kind: 'entry' },
-      { y: 44, label: 'SL', kind: 'sl' },
-      { y: 78, label: 'TP', kind: 'tp' },
+      { y: 2320, label: 'Demanda alta', kind: 'support' },
+      { y: 2316, label: 'Demanda baja', kind: 'support' },
+      { y: 2326, label: 'Entrada', kind: 'entry' },
+      { y: 2314, label: 'SL', kind: 'sl' },
+      { y: 2348, label: 'TP', kind: 'tp' },
     ],
   },
   {
@@ -370,25 +371,25 @@ const scenarios: LabScenario[] = [
     explanation:
       'Envolvente bajista en zona de oferta con VIX en ascenso es una combinacion fuerte de reversa. El rally previo de 3 dias genera profit-taking natural en resistencia. La incertidumbre del CPI amplifica la presion vendedora. Entrada al cierre de la envolvente, SL sobre la mecha, TP en el soporte del dia.',
     candles: [
-      [42, 48, 40, 46],
-      [46, 54, 44, 52],
-      [52, 60, 50, 58],
-      [58, 66, 56, 64],
-      [64, 72, 62, 70],
-      [70, 76, 68, 74],
-      [74, 78, 72, 76],
-      [76, 80, 60, 62],
+      [5142, 5148, 5140, 5146],
+      [5146, 5154, 5144, 5152],
+      [5152, 5160, 5150, 5158],
+      [5158, 5166, 5156, 5164],
+      [5164, 5172, 5162, 5170],
+      [5170, 5176, 5168, 5174],
+      [5174, 5178, 5172, 5176],
+      [5176, 5180, 5160, 5162],
       // — reveal —
-      [62, 64, 52, 54],
-      [54, 58, 48, 50],
-      [50, 52, 42, 44],
+      [5162, 5164, 5152, 5154],
+      [5154, 5158, 5148, 5150],
+      [5150, 5152, 5142, 5144],
     ],
     revealFrom: 8,
     levels: [
-      { y: 78, label: 'Oferta', kind: 'resistance' },
-      { y: 62, label: 'Entrada', kind: 'entry' },
-      { y: 82, label: 'SL', kind: 'sl' },
-      { y: 44, label: 'TP', kind: 'tp' },
+      { y: 5178, label: 'Oferta', kind: 'resistance' },
+      { y: 5162, label: 'Entrada', kind: 'entry' },
+      { y: 5182, label: 'SL', kind: 'sl' },
+      { y: 5144, label: 'TP', kind: 'tp' },
     ],
   },
   {
@@ -405,24 +406,24 @@ const scenarios: LabScenario[] = [
     explanation:
       'Cuando un quiebre bajista no produce continuacion y el precio recupera el nivel, los vendedores quedan atrapados con stops por encima. Esos stops se convierten en combustible alcista. La recuperacion del soporte con mechas de absorcion confirma demanda oculta. SL bajo la mecha mas baja del fakeout.',
     candles: [
-      [58, 62, 56, 60],
-      [60, 62, 56, 58],
-      [58, 60, 54, 56],
-      [56, 58, 52, 54],
-      [54, 56, 36, 38],
-      [38, 48, 34, 46],
-      [46, 58, 44, 56],
+      [66580, 66620, 66560, 66600],
+      [66600, 66620, 66560, 66580],
+      [66580, 66600, 66540, 66560],
+      [66560, 66580, 66520, 66540],
+      [66540, 66560, 66360, 66380],
+      [66380, 66480, 66340, 66460],
+      [66460, 66580, 66440, 66560],
       // — reveal —
-      [56, 64, 54, 62],
-      [62, 70, 60, 68],
-      [68, 76, 66, 74],
+      [66560, 66640, 66540, 66620],
+      [66620, 66700, 66600, 66680],
+      [66680, 66760, 66660, 66740],
     ],
     revealFrom: 7,
     levels: [
-      { y: 54, label: 'Soporte', kind: 'support' },
-      { y: 56, label: 'Entrada', kind: 'entry' },
-      { y: 32, label: 'SL', kind: 'sl' },
-      { y: 74, label: 'TP', kind: 'tp' },
+      { y: 66540, label: 'Soporte', kind: 'support' },
+      { y: 66560, label: 'Entrada', kind: 'entry' },
+      { y: 66320, label: 'SL', kind: 'sl' },
+      { y: 66740, label: 'TP', kind: 'tp' },
     ],
   },
   {
@@ -439,28 +440,28 @@ const scenarios: LabScenario[] = [
     explanation:
       'El HCH con volumen decreciente en cada pico es una de las formaciones de reversa mas estudiadas. El cierre en el neckline con cuerpo bajista confirma la presion vendedora. BTC debil refuerza la tesis. Entrada al cierre bajo el neckline, SL sobre el hombro derecho, TP en la proyeccion del patron.',
     candles: [
-      [42, 52, 40, 50],
-      [50, 68, 48, 64],
-      [64, 66, 52, 54],
-      [54, 62, 52, 60],
-      [60, 78, 58, 72],
-      [72, 74, 56, 58],
-      [58, 64, 56, 62],
-      [62, 70, 58, 60],
-      [60, 62, 48, 50],
+      [3142, 3152, 3140, 3150],
+      [3150, 3168, 3148, 3164],
+      [3164, 3166, 3152, 3154],
+      [3154, 3162, 3152, 3160],
+      [3160, 3178, 3158, 3172],
+      [3172, 3174, 3156, 3158],
+      [3158, 3164, 3156, 3162],
+      [3162, 3170, 3158, 3160],
+      [3160, 3162, 3148, 3150],
       // — reveal —
-      [50, 52, 40, 42],
-      [42, 46, 34, 36],
-      [36, 40, 30, 32],
+      [3150, 3152, 3140, 3142],
+      [3142, 3146, 3134, 3136],
+      [3134, 3140, 3130, 3132],
     ],
     revealFrom: 9,
     levels: [
-      { y: 78, label: 'Cabeza', kind: 'resistance' },
-      { y: 68, label: 'Hombros', kind: 'resistance' },
-      { y: 50, label: 'Neckline', kind: 'support' },
-      { y: 50, label: 'Entrada', kind: 'entry' },
-      { y: 72, label: 'SL', kind: 'sl' },
-      { y: 32, label: 'TP', kind: 'tp' },
+      { y: 3178, label: 'Cabeza', kind: 'resistance' },
+      { y: 3168, label: 'Hombros', kind: 'resistance' },
+      { y: 3150, label: 'Neckline', kind: 'support' },
+      { y: 3150, label: 'Entrada', kind: 'entry' },
+      { y: 3172, label: 'SL', kind: 'sl' },
+      { y: 3132, label: 'TP', kind: 'tp' },
     ],
   },
   {
@@ -477,26 +478,26 @@ const scenarios: LabScenario[] = [
     explanation:
       'Consolidacion estrecha despues de impulso = bandera/pennant de continuacion. El quiebre con volumen 3x confirma interes real. Las 5 velas de acumulacion construyeron la base para el siguiente movimiento. Entrada al cierre del breakout, SL bajo la consolidacion, TP en extension del impulso previo.',
     candles: [
-      [38, 52, 36, 50],
-      [50, 62, 48, 60],
-      [60, 64, 58, 62],
-      [62, 64, 60, 62],
-      [62, 64, 60, 62],
-      [62, 66, 60, 64],
-      [64, 66, 62, 64],
-      [64, 78, 62, 76],
+      [18338, 18352, 18336, 18350],
+      [18350, 18362, 18348, 18360],
+      [18360, 18364, 18358, 18362],
+      [18362, 18364, 18360, 18362],
+      [18362, 18364, 18360, 18362],
+      [18362, 18366, 18360, 18364],
+      [18364, 18366, 18362, 18364],
+      [18364, 18378, 18362, 18376],
       // — reveal —
-      [76, 84, 74, 82],
-      [82, 90, 80, 88],
-      [88, 94, 84, 92],
+      [18376, 18384, 18374, 18382],
+      [18382, 18390, 18380, 18388],
+      [18388, 18394, 18384, 18392],
     ],
     revealFrom: 8,
     levels: [
-      { y: 66, label: 'Techo consolidacion', kind: 'resistance' },
-      { y: 60, label: 'Piso consolidacion', kind: 'support' },
-      { y: 76, label: 'Entrada', kind: 'entry' },
-      { y: 58, label: 'SL', kind: 'sl' },
-      { y: 92, label: 'TP', kind: 'tp' },
+      { y: 18370, label: 'Techo consolidacion', kind: 'resistance' },
+      { y: 18350, label: 'Piso consolidacion', kind: 'support' },
+      { y: 18376, label: 'Entrada', kind: 'entry' },
+      { y: 18348, label: 'SL', kind: 'sl' },
+      { y: 18392, label: 'TP', kind: 'tp' },
     ],
   },
   {
@@ -513,22 +514,22 @@ const scenarios: LabScenario[] = [
     explanation:
       'Operar en los primeros minutos despues de NFP es una de las trampas mas comunes. El spike en ambas direcciones caza stops de ambos lados. El spread amplio hace que cualquier entrada tenga un costo oculto enorme. Lo correcto es esperar 15-30 minutos a que el mercado digiera la data y el spread se normalice.',
     candles: [
-      [50, 54, 48, 52],
-      [52, 56, 50, 54],
-      [54, 56, 50, 52],
-      [52, 54, 50, 52],
-      [52, 82, 28, 54],
-      [54, 58, 46, 50],
-      [50, 54, 48, 52],
+      [2350, 2354, 2348, 2352],
+      [2352, 2356, 2350, 2354],
+      [2354, 2356, 2350, 2352],
+      [2352, 2354, 2350, 2352],
+      [2352, 2382, 2328, 2354],
+      [2354, 2358, 2346, 2350],
+      [2350, 2354, 2348, 2352],
       // — reveal —
-      [52, 56, 44, 46],
-      [46, 54, 42, 52],
-      [52, 60, 50, 58],
+      [2352, 2356, 2344, 2346],
+      [2346, 2354, 2342, 2352],
+      [2352, 2360, 2350, 2358],
     ],
     revealFrom: 7,
     levels: [
-      { y: 82, label: 'Spike alto', kind: 'resistance' },
-      { y: 28, label: 'Spike bajo', kind: 'support' },
+      { y: 2382, label: 'Spike alto', kind: 'resistance' },
+      { y: 2328, label: 'Spike bajo', kind: 'support' },
     ],
   },
   {
@@ -545,24 +546,24 @@ const scenarios: LabScenario[] = [
     explanation:
       'Una pin bar bajista en resistencia mensual con momentum debilitandose es una señal de alta probabilidad. La resistencia mensual no se rompe facil y el primer testeo suele producir rechazo. El soporte tecnico del dolar refuerza la tesis. SL sobre la mecha, TP en el soporte intermedio.',
     candles: [
-      [34, 40, 32, 38],
-      [38, 46, 36, 44],
-      [44, 52, 42, 50],
-      [50, 58, 48, 56],
-      [56, 64, 54, 62],
-      [62, 68, 60, 66],
-      [66, 82, 64, 66],
+      [1.034, 1.040, 1.032, 1.038],
+      [1.038, 1.046, 1.036, 1.044],
+      [1.044, 1.052, 1.042, 1.050],
+      [1.050, 1.058, 1.048, 1.056],
+      [1.056, 1.064, 1.054, 1.062],
+      [1.062, 1.068, 1.060, 1.066],
+      [1.066, 1.082, 1.064, 1.066],
       // — reveal —
-      [66, 68, 58, 60],
-      [60, 62, 52, 54],
-      [54, 58, 50, 52],
+      [1.066, 1.068, 1.058, 1.060],
+      [1.060, 1.062, 1.052, 1.054],
+      [1.054, 1.058, 1.050, 1.052],
     ],
     revealFrom: 7,
     levels: [
-      { y: 72, label: 'Resistencia mensual', kind: 'resistance' },
-      { y: 66, label: 'Entrada', kind: 'entry' },
-      { y: 84, label: 'SL', kind: 'sl' },
-      { y: 52, label: 'TP', kind: 'tp' },
+      { y: 1.072, label: 'Resistencia mensual', kind: 'resistance' },
+      { y: 1.066, label: 'Entrada', kind: 'entry' },
+      { y: 1.084, label: 'SL', kind: 'sl' },
+      { y: 1.052, label: 'TP', kind: 'tp' },
     ],
   },
   {
@@ -579,26 +580,26 @@ const scenarios: LabScenario[] = [
     explanation:
       'La bandera alcista es un patron de continuacion clasico. El retroceso ordenado con volumen bajo al 38.2% de Fib es textbook. La vela de rechazo en la zona de Fibonacci confirma que los compradores defienden. SL bajo la bandera, TP en extension 1:1 del mastil.',
     candles: [
-      [30, 44, 28, 42],
-      [42, 56, 40, 54],
-      [54, 68, 52, 66],
-      [66, 68, 58, 60],
-      [60, 62, 54, 56],
-      [56, 58, 50, 52],
-      [52, 54, 46, 48],
-      [48, 56, 44, 54],
+      [63000, 64400, 62800, 64200],
+      [64200, 65600, 64000, 65400],
+      [65400, 66800, 65200, 66600],
+      [66600, 66800, 65800, 66000],
+      [66000, 66200, 65400, 65600],
+      [65600, 65800, 65000, 65200],
+      [65200, 65400, 64600, 64800],
+      [64800, 65600, 64400, 65400],
       // — reveal —
-      [54, 66, 52, 64],
-      [64, 76, 62, 74],
-      [74, 86, 72, 84],
+      [65400, 66600, 65200, 66400],
+      [66400, 67600, 66200, 67400],
+      [67400, 68600, 67200, 68400],
     ],
     revealFrom: 8,
     levels: [
-      { y: 48, label: 'Fib 38.2%', kind: 'support' },
-      { y: 44, label: 'Bandera baja', kind: 'support' },
-      { y: 54, label: 'Entrada', kind: 'entry' },
-      { y: 42, label: 'SL', kind: 'sl' },
-      { y: 84, label: 'TP', kind: 'tp' },
+      { y: 64800, label: 'Fib 38.2%', kind: 'support' },
+      { y: 64400, label: 'Bandera baja', kind: 'support' },
+      { y: 65400, label: 'Entrada', kind: 'entry' },
+      { y: 64200, label: 'SL', kind: 'sl' },
+      { y: 68400, label: 'TP', kind: 'tp' },
     ],
   },
   {
@@ -615,23 +616,23 @@ const scenarios: LabScenario[] = [
     explanation:
       'Un setup tecnico correcto no es suficiente si el R:R es menor a 1:1. Arriesgar 18 puntos para ganar 12 necesita un win rate superior al 60% solo para breakeven. La disciplina de solo tomar setups con R:R minimo 1.5:1 es lo que separa al trader rentable del que gana muchas veces pero pierde mas de lo que gana.',
     candles: [
-      [46, 54, 44, 52],
-      [52, 60, 50, 58],
-      [58, 66, 56, 64],
-      [64, 70, 62, 68],
-      [68, 70, 58, 60],
-      [60, 62, 54, 56],
-      [56, 62, 52, 60],
+      [5046, 5054, 5044, 5052],
+      [5052, 5060, 5050, 5058],
+      [5058, 5066, 5056, 5064],
+      [5064, 5070, 5062, 5068],
+      [5068, 5070, 5058, 5060],
+      [5060, 5062, 5054, 5056],
+      [5056, 5062, 5052, 5060],
       // — reveal —
-      [60, 68, 58, 66],
-      [66, 70, 62, 64],
-      [64, 66, 54, 56],
+      [5060, 5068, 5058, 5066],
+      [5066, 5070, 5062, 5064],
+      [5064, 5066, 5054, 5056],
     ],
     revealFrom: 7,
     levels: [
-      { y: 70, label: 'Resistencia cercana', kind: 'resistance' },
-      { y: 56, label: 'Zona de demanda', kind: 'support' },
-      { y: 42, label: 'SL logico', kind: 'sl' },
+      { y: 5068, label: 'Resistencia cercana', kind: 'resistance' },
+      { y: 5056, label: 'Zona de demanda', kind: 'support' },
+      { y: 5038, label: 'SL logico', kind: 'sl' },
     ],
   },
   {
@@ -648,25 +649,25 @@ const scenarios: LabScenario[] = [
     explanation:
       'Multiples rechazos al mismo nivel con mechas crecientes y cierres descendentes es el patron clasico de distribucion. Los compradores no logran sostener y cada intento genera mas venta. Entrada al cierre de la tercera vela de rechazo, SL sobre las mechas, TP en el soporte de sesion.',
     candles: [
-      [42, 48, 40, 46],
-      [46, 54, 44, 52],
-      [52, 58, 50, 56],
-      [56, 64, 54, 62],
-      [62, 68, 56, 58],
-      [58, 74, 56, 60],
-      [60, 76, 56, 58],
-      [58, 78, 54, 56],
+      [18342, 18348, 18340, 18346],
+      [18346, 18354, 18344, 18352],
+      [18352, 18358, 18350, 18356],
+      [18356, 18364, 18354, 18362],
+      [18362, 18368, 18356, 18358],
+      [18358, 18374, 18356, 18360],
+      [18360, 18376, 18356, 18358],
+      [18358, 18378, 18354, 18356],
       // — reveal —
-      [56, 58, 46, 48],
-      [48, 52, 40, 42],
-      [42, 46, 36, 38],
+      [18356, 18358, 18346, 18348],
+      [18348, 18352, 18340, 18342],
+      [18342, 18346, 18336, 18338],
     ],
     revealFrom: 8,
     levels: [
-      { y: 76, label: 'Techo distribucion', kind: 'resistance' },
-      { y: 56, label: 'Entrada', kind: 'entry' },
-      { y: 80, label: 'SL', kind: 'sl' },
-      { y: 38, label: 'TP', kind: 'tp' },
+      { y: 18376, label: 'Techo distribucion', kind: 'resistance' },
+      { y: 18356, label: 'Entrada', kind: 'entry' },
+      { y: 18380, label: 'SL', kind: 'sl' },
+      { y: 18338, label: 'TP', kind: 'tp' },
     ],
   },
   {
@@ -683,26 +684,26 @@ const scenarios: LabScenario[] = [
     explanation:
       'La divergencia bajista oculta en RSI con volumen de compra decreciente indica que el soporte se esta debilitando. Cada rebote tiene menos fuerza. Que BTC ya perdiera su soporte es una señal macro poderosa. El error comun es confiar en el soporte visual sin verificar la calidad de los rebotes. SL sobre el ultimo rebote, TP en el siguiente soporte.',
     candles: [
-      [56, 62, 54, 60],
-      [60, 62, 48, 50],
-      [50, 58, 46, 56],
-      [56, 60, 54, 58],
-      [58, 60, 46, 48],
-      [48, 54, 44, 52],
-      [52, 56, 50, 54],
-      [54, 56, 44, 46],
-      [46, 50, 42, 48],
+      [2756, 2762, 2754, 2760],
+      [2760, 2762, 2748, 2750],
+      [2750, 2758, 2746, 2756],
+      [2756, 2760, 2754, 2758],
+      [2758, 2760, 2746, 2748],
+      [2748, 2754, 2744, 2752],
+      [2752, 2756, 2750, 2754],
+      [2754, 2756, 2744, 2746],
+      [2746, 2750, 2742, 2748],
       // — reveal —
-      [48, 50, 38, 40],
-      [40, 44, 30, 32],
-      [32, 38, 28, 34],
+      [2748, 2750, 2738, 2740],
+      [2740, 2744, 2730, 2732],
+      [2732, 2738, 2728, 2734],
     ],
     revealFrom: 9,
     levels: [
-      { y: 46, label: 'Soporte visual', kind: 'support' },
-      { y: 48, label: 'Entrada', kind: 'entry' },
-      { y: 56, label: 'SL', kind: 'sl' },
-      { y: 32, label: 'TP', kind: 'tp' },
+      { y: 2746, label: 'Soporte visual', kind: 'support' },
+      { y: 2748, label: 'Entrada', kind: 'entry' },
+      { y: 2756, label: 'SL', kind: 'sl' },
+      { y: 2732, label: 'TP', kind: 'tp' },
     ],
   },
   {
@@ -717,14 +718,14 @@ const scenarios: LabScenario[] = [
     resultR: 2.1,
     explanation: 'Un doji tras un impulso fuerte que descansa sobre una media móvil clave suele ser una pausa antes de continuar. Tomar posiciones aquí ofrece un stop ajustado por debajo del doji.',
     candles: [
-      [30, 40, 28, 38], [38, 48, 36, 46], [46, 56, 44, 54], [54, 64, 52, 62], [62, 70, 60, 68], [68, 70, 66, 68],
-      [68, 80, 66, 78], [78, 88, 76, 86], [86, 96, 84, 94]
+      [68030, 68040, 68028, 68038], [68038, 68048, 68036, 68046], [68046, 68056, 68044, 68054], [68054, 68064, 68052, 68062], [68062, 68070, 68060, 68068], [68068, 68070, 68066, 68068],
+      [68068, 68080, 68066, 68078], [68078, 68088, 68076, 68086], [68086, 68096, 68084, 68094]
     ],
     revealFrom: 6,
     levels: [
-      { y: 68, label: 'Entrada', kind: 'entry' },
-      { y: 64, label: 'SL', kind: 'sl' },
-      { y: 86, label: 'TP', kind: 'tp' }
+      { y: 68068, label: 'Entrada', kind: 'entry' },
+      { y: 68064, label: 'SL', kind: 'sl' },
+      { y: 68086, label: 'TP', kind: 'tp' }
     ]
   },
   {
@@ -739,15 +740,15 @@ const scenarios: LabScenario[] = [
     resultR: 2.8,
     explanation: 'Los falsos quiebres (fakeouts) que terminan con patrones envolventes bajistas indican trampa de liquidez. Entrar corto tras el cierre envolvente ofrece un excelente R:R.',
     candles: [
-      [50, 54, 48, 52], [52, 58, 50, 56], [56, 62, 54, 60], [60, 68, 58, 66], [66, 74, 64, 72], [72, 76, 60, 62],
-      [62, 64, 52, 54], [54, 56, 42, 44], [44, 48, 34, 36]
+      [2350, 2354, 2348, 2352], [2352, 2358, 2350, 2356], [2356, 2362, 2354, 2360], [2360, 2368, 2358, 2366], [2366, 2374, 2364, 2372], [2372, 2376, 2360, 2362],
+      [2362, 2364, 2352, 2354], [2354, 2356, 2342, 2344], [2344, 2348, 2334, 2336]
     ],
     revealFrom: 6,
     levels: [
-      { y: 68, label: 'Resistencia', kind: 'resistance' },
-      { y: 62, label: 'Entrada', kind: 'entry' },
-      { y: 76, label: 'SL', kind: 'sl' },
-      { y: 42, label: 'TP', kind: 'tp' }
+      { y: 2368, label: 'Resistencia', kind: 'resistance' },
+      { y: 2362, label: 'Entrada', kind: 'entry' },
+      { y: 2376, label: 'SL', kind: 'sl' },
+      { y: 2342, label: 'TP', kind: 'tp' }
     ]
   },
   {
@@ -762,13 +763,13 @@ const scenarios: LabScenario[] = [
     resultR: 0,
     explanation: 'Operar en rangos estrechos sin catalizadores aumenta el riesgo de whipsaw. Esperar la apertura oficial y el aumento de volumen es la única decisión prudente.',
     candles: [
-      [50, 52, 48, 51], [51, 53, 49, 50], [50, 52, 48, 51], [51, 52, 49, 50], [50, 53, 49, 51], [51, 52, 48, 50],
-      [50, 53, 49, 51], [51, 55, 47, 54], [54, 60, 52, 58]
+      [5150, 5152, 5148, 5151], [5151, 5153, 5149, 5150], [5150, 5152, 5148, 5151], [5151, 5152, 5149, 5150], [5150, 5153, 5149, 5151], [5151, 5152, 5148, 5150],
+      [5150, 5153, 5149, 5151], [5151, 5155, 5147, 5154], [5154, 5160, 5152, 5158]
     ],
     revealFrom: 6,
     levels: [
-      { y: 53, label: 'Techo Rango', kind: 'resistance' },
-      { y: 48, label: 'Piso Rango', kind: 'support' }
+      { y: 5153, label: 'Techo Rango', kind: 'resistance' },
+      { y: 5148, label: 'Piso Rango', kind: 'support' }
     ]
   },
   {
@@ -783,15 +784,15 @@ const scenarios: LabScenario[] = [
     resultR: 3.0,
     explanation: 'El toque a un Order Block en tendencia alcista combinado con un patrón de rechazo (pin bar) y bajo volumen de retroceso confirma la continuidad de la tendencia.',
     candles: [
-      [30, 40, 28, 38], [38, 50, 36, 48], [48, 70, 46, 68], [68, 72, 60, 62], [62, 64, 54, 56], [56, 58, 48, 52],
-      [52, 64, 50, 62], [62, 76, 60, 74], [74, 88, 72, 86]
+      [18430, 18440, 18428, 18438], [18438, 18450, 18436, 18448], [18448, 18470, 18446, 18468], [18468, 18472, 18460, 18462], [18462, 18464, 18454, 18456], [18456, 18458, 18448, 18452],
+      [18452, 18464, 18450, 18462], [18462, 18476, 18460, 18474], [18474, 18488, 18472, 18486]
     ],
     revealFrom: 6,
     levels: [
-      { y: 48, label: 'Order Block', kind: 'support' },
-      { y: 52, label: 'Entrada', kind: 'entry' },
-      { y: 46, label: 'SL', kind: 'sl' },
-      { y: 74, label: 'TP', kind: 'tp' }
+      { y: 18448, label: 'Order Block', kind: 'support' },
+      { y: 18452, label: 'Entrada', kind: 'entry' },
+      { y: 18446, label: 'SL', kind: 'sl' },
+      { y: 18474, label: 'TP', kind: 'tp' }
     ]
   },
   {
@@ -806,15 +807,15 @@ const scenarios: LabScenario[] = [
     resultR: 2.2,
     explanation: 'El doble techo validado por una divergencia en osciladores (como MACD o RSI) en marcos mayores como 4H tiene alta probabilidad de éxito para reversiones.',
     candles: [
-      [60, 70, 58, 68], [68, 80, 66, 78], [78, 82, 70, 72], [72, 76, 64, 66], [66, 78, 64, 76], [76, 80, 68, 70],
-      [70, 72, 58, 60], [60, 62, 48, 50], [50, 54, 38, 40]
+      [69960, 69970, 69958, 69968], [69968, 69980, 69966, 69978], [69978, 69982, 69970, 69972], [69972, 69976, 69964, 69966], [69966, 69978, 69964, 69976], [69976, 69980, 69968, 69970],
+      [69970, 69972, 69958, 69960], [69960, 69962, 69948, 69950], [69950, 69954, 69938, 69940]
     ],
     revealFrom: 6,
     levels: [
-      { y: 80, label: 'Resistencia', kind: 'resistance' },
-      { y: 70, label: 'Entrada', kind: 'entry' },
-      { y: 82, label: 'SL', kind: 'sl' },
-      { y: 50, label: 'TP', kind: 'tp' }
+      { y: 69980, label: 'Resistencia', kind: 'resistance' },
+      { y: 69970, label: 'Entrada', kind: 'entry' },
+      { y: 69982, label: 'SL', kind: 'sl' },
+      { y: 69950, label: 'TP', kind: 'tp' }
     ]
   },
   {
@@ -829,8 +830,8 @@ const scenarios: LabScenario[] = [
     resultR: 0,
     explanation: 'Operar durante la publicación de noticias clave como el CPI con extrema volatilidad y poca liquidez resulta en deslizamientos graves. Mantenerse al margen protege el capital.',
     candles: [
-      [50, 54, 48, 52], [52, 56, 50, 54], [54, 56, 50, 52], [52, 54, 50, 52], [52, 90, 10, 50], [50, 60, 40, 52],
-      [52, 56, 48, 50], [50, 52, 46, 48], [48, 54, 46, 52]
+      [2350, 2354, 2348, 2352], [2352, 2356, 2350, 2354], [2354, 2356, 2350, 2352], [2352, 2354, 2350, 2352], [2352, 2390, 2310, 2350], [2350, 2360, 2340, 2352],
+      [2352, 2356, 2348, 2350], [2350, 2352, 2346, 2348], [2348, 2354, 2346, 2352]
     ],
     revealFrom: 6,
     levels: []
@@ -847,15 +848,15 @@ const scenarios: LabScenario[] = [
     resultR: 2.0,
     explanation: 'El patrón Morning Star (vela bajista fuerte, doji, vela alcista fuerte) en una zona de demanda histórica indica agotamiento vendedor y giro alcista inminente.',
     candles: [
-      [70, 72, 60, 62], [62, 64, 52, 54], [54, 56, 44, 46], [46, 48, 36, 38], [38, 40, 32, 34], [34, 44, 32, 42],
-      [42, 52, 40, 50], [50, 60, 48, 58], [58, 68, 56, 66]
+      [5070, 5072, 5060, 5062], [5062, 5064, 5052, 5054], [5054, 5056, 5044, 5046], [5046, 5048, 5036, 5038], [5038, 5040, 5032, 5034], [5034, 5044, 5032, 5042],
+      [5042, 5052, 5040, 5050], [5050, 5060, 5048, 5058], [5058, 5068, 5056, 5066]
     ],
     revealFrom: 6,
     levels: [
-      { y: 36, label: 'Zona Demanda', kind: 'support' },
-      { y: 42, label: 'Entrada', kind: 'entry' },
-      { y: 30, label: 'SL', kind: 'sl' },
-      { y: 60, label: 'TP', kind: 'tp' }
+      { y: 5036, label: 'Zona Demanda', kind: 'support' },
+      { y: 5042, label: 'Entrada', kind: 'entry' },
+      { y: 5030, label: 'SL', kind: 'sl' },
+      { y: 5060, label: 'TP', kind: 'tp' }
     ]
   },
   {
@@ -870,8 +871,8 @@ const scenarios: LabScenario[] = [
     resultR: 0,
     explanation: 'Los mercados picados (choppy) en temporalidades bajas destrozan cuentas debido a la cacería constante de stops. Identificar este ruido y apartarse es clave para la supervivencia.',
     candles: [
-      [50, 58, 42, 52], [52, 60, 46, 48], [48, 54, 40, 50], [50, 56, 44, 48], [48, 58, 42, 52], [52, 56, 46, 50],
-      [50, 54, 44, 52], [52, 58, 46, 48], [48, 56, 42, 50]
+      [18450, 18458, 18442, 18452], [18452, 18460, 18446, 18448], [18448, 18454, 18440, 18450], [18450, 18456, 18444, 18448], [18448, 18458, 18442, 18452], [18452, 18456, 18446, 18450],
+      [18450, 18454, 18444, 18452], [18452, 18458, 18446, 18448], [18448, 18456, 18442, 18450]
     ],
     revealFrom: 6,
     levels: []
@@ -888,15 +889,15 @@ const scenarios: LabScenario[] = [
     resultR: 2.7,
     explanation: 'Un falso quiebre bajista con alto volumen seguido de recuperación inmediata (Spring) revela la trampa de grandes operadores para acumular liquidez y subir el precio.',
     candles: [
-      [55, 60, 50, 52], [52, 55, 48, 49], [49, 52, 45, 46], [46, 48, 30, 32], [32, 50, 30, 48], [48, 52, 45, 50],
-      [50, 60, 48, 58], [58, 68, 56, 66], [66, 76, 64, 74]
+      [60055, 60060, 60050, 60052], [60052, 60055, 60048, 60049], [60049, 60052, 60045, 60046], [60046, 60048, 60030, 60032], [60032, 60050, 60030, 60048], [60048, 60052, 60045, 60050],
+      [60050, 60060, 60048, 60058], [60058, 60068, 60056, 60066], [60066, 60076, 60064, 60074]
     ],
     revealFrom: 6,
     levels: [
-      { y: 45, label: 'Soporte', kind: 'support' },
-      { y: 50, label: 'Entrada', kind: 'entry' },
-      { y: 28, label: 'SL', kind: 'sl' },
-      { y: 68, label: 'TP', kind: 'tp' }
+      { y: 60045, label: 'Soporte', kind: 'support' },
+      { y: 60050, label: 'Entrada', kind: 'entry' },
+      { y: 60028, label: 'SL', kind: 'sl' },
+      { y: 60068, label: 'TP', kind: 'tp' }
     ]
   },
   {
@@ -911,14 +912,14 @@ const scenarios: LabScenario[] = [
     resultR: 2.3,
     explanation: 'El banderín bajista es un patrón clásico de continuación. Unir cortos en la rotura del banderín a favor de la tendencia principal suele dar movimientos rápidos y limpios.',
     candles: [
-      [80, 82, 70, 72], [72, 74, 60, 62], [62, 64, 50, 52], [52, 56, 50, 54], [54, 58, 52, 56], [56, 60, 54, 58],
-      [58, 60, 48, 50], [50, 52, 40, 42], [42, 44, 30, 32]
+      [2380, 2382, 2370, 2372], [2372, 2374, 2360, 2362], [2362, 2364, 2350, 2352], [2352, 2356, 2350, 2354], [2354, 2358, 2352, 2356], [2356, 2360, 2354, 2358],
+      [2358, 2360, 2348, 2350], [2350, 2352, 2340, 2342], [2342, 2344, 2330, 2332]
     ],
     revealFrom: 6,
     levels: [
-      { y: 58, label: 'Entrada', kind: 'entry' },
-      { y: 62, label: 'SL', kind: 'sl' },
-      { y: 42, label: 'TP', kind: 'tp' }
+      { y: 2358, label: 'Entrada', kind: 'entry' },
+      { y: 2362, label: 'SL', kind: 'sl' },
+      { y: 2342, label: 'TP', kind: 'tp' }
     ]
   },
   {
@@ -933,13 +934,13 @@ const scenarios: LabScenario[] = [
     resultR: 0,
     explanation: 'Nunca se debe tomar un trade donde el stop loss estructural excede tus parámetros de riesgo métricos o arruina tu R:R, por muy seguro que parezca el setup. Es mejor dejar pasar la oportunidad.',
     candles: [
-      [40, 44, 38, 42], [42, 46, 40, 44], [44, 48, 42, 46], [46, 50, 44, 48], [48, 76, 46, 74], [74, 78, 72, 76],
-      [76, 80, 74, 78], [78, 82, 76, 80], [80, 84, 78, 82]
+      [5140, 5144, 5138, 5142], [5142, 5146, 5140, 5144], [5144, 5148, 5142, 5146], [5146, 5150, 5144, 5148], [5148, 5176, 5146, 5174], [5174, 5178, 5172, 5176],
+      [5176, 5180, 5174, 5178], [5178, 5182, 5176, 5180], [5180, 5184, 5178, 5182]
     ],
     revealFrom: 6,
     levels: [
-      { y: 50, label: 'Resistencia Rota', kind: 'support' },
-      { y: 44, label: 'SL Estructural lejanísimo', kind: 'sl' }
+      { y: 5150, label: 'Resistencia Rota', kind: 'support' },
+      { y: 5144, label: 'SL Estructural lejanísimo', kind: 'sl' }
     ]
   },
   {
@@ -954,15 +955,15 @@ const scenarios: LabScenario[] = [
     resultR: 2.4,
     explanation: 'Un cruce del VWAP acompañado de aumento de volumen y velas sin mecha (fuerte convicción compradora) es un setup sólido de impulso (momentum) en intradía.',
     candles: [
-      [40, 44, 38, 42], [42, 46, 40, 44], [44, 48, 42, 46], [46, 60, 46, 60], [60, 72, 60, 72], [72, 78, 70, 76],
-      [76, 88, 76, 88], [88, 98, 86, 96], [96, 98, 92, 94]
+      [18440, 18444, 18438, 18442], [18442, 18446, 18440, 18444], [18444, 18448, 18442, 18446], [18446, 18460, 18446, 18460], [18460, 18472, 18460, 18472], [18472, 18478, 18470, 18476],
+      [18476, 18488, 18476, 18488], [18488, 18498, 18486, 18496], [18496, 18498, 18492, 18494]
     ],
     revealFrom: 6,
     levels: [
-      { y: 46, label: 'VWAP', kind: 'support' },
-      { y: 72, label: 'Entrada', kind: 'entry' },
-      { y: 58, label: 'SL', kind: 'sl' },
-      { y: 92, label: 'TP', kind: 'tp' }
+      { y: 18446, label: 'VWAP', kind: 'support' },
+      { y: 18472, label: 'Entrada', kind: 'entry' },
+      { y: 18458, label: 'SL', kind: 'sl' },
+      { y: 18492, label: 'TP', kind: 'tp' }
     ]
   },
   {
@@ -977,14 +978,14 @@ const scenarios: LabScenario[] = [
     resultR: 3.5,
     explanation: 'Una Shooting Star climática en máximos históricos advierte de una inminente y severa corrección o toma de ganancias. Ofrece uno de los trades cortos con mayor ratio R:R posible.',
     candles: [
-      [50, 60, 48, 58], [58, 68, 56, 66], [66, 76, 64, 74], [74, 84, 72, 82], [82, 98, 80, 84], [84, 86, 72, 74],
-      [74, 76, 60, 62], [62, 66, 50, 52], [52, 54, 38, 40]
+      [73050, 73060, 73048, 73058], [73058, 73068, 73056, 73066], [73066, 73076, 73064, 73074], [73074, 73084, 73072, 73082], [73082, 73098, 73080, 73084], [73084, 73086, 73072, 73074],
+      [73074, 73076, 73060, 73062], [73062, 73066, 73050, 73052], [73050, 73054, 73038, 73040]
     ],
     revealFrom: 6,
     levels: [
-      { y: 84, label: 'Entrada', kind: 'entry' },
-      { y: 100, label: 'SL', kind: 'sl' },
-      { y: 48, label: 'TP', kind: 'tp' }
+      { y: 73084, label: 'Entrada', kind: 'entry' },
+      { y: 73100, label: 'SL', kind: 'sl' },
+      { y: 73048, label: 'TP', kind: 'tp' }
     ]
   },
   {
@@ -999,15 +1000,15 @@ const scenarios: LabScenario[] = [
     resultR: 2.1,
     explanation: 'La confluencia del golden ratio de Fibonacci (61.8%) con un retroceso de bajo volumen es la receta ideal para entrar a favor de la tendencia con bajo riesgo.',
     candles: [
-      [30, 40, 28, 38], [38, 50, 36, 48], [48, 60, 46, 58], [58, 70, 56, 68], [68, 70, 62, 64], [64, 66, 58, 60],
-      [60, 68, 56, 66], [66, 76, 64, 74], [74, 86, 72, 84]
+      [2330, 2340, 2328, 2338], [2338, 2350, 2336, 2348], [2348, 2360, 2346, 2358], [2358, 2370, 2356, 2368], [2368, 2370, 2362, 2364], [2364, 2366, 2358, 2360],
+      [2360, 2368, 2356, 2366], [2366, 2376, 2364, 2374], [2374, 2386, 2372, 2384]
     ],
     revealFrom: 6,
     levels: [
-      { y: 58, label: 'Fib 61.8%', kind: 'support' },
-      { y: 60, label: 'Entrada', kind: 'entry' },
-      { y: 54, label: 'SL', kind: 'sl' },
-      { y: 78, label: 'TP', kind: 'tp' }
+      { y: 2358, label: 'Fib 61.8%', kind: 'support' },
+      { y: 2360, label: 'Entrada', kind: 'entry' },
+      { y: 2354, label: 'SL', kind: 'sl' },
+      { y: 2378, label: 'TP', kind: 'tp' }
     ]
   },
   {
@@ -1022,15 +1023,15 @@ const scenarios: LabScenario[] = [
     resultR: 2.6,
     explanation: 'Las trampas de toros absorben a los compradores rezagados y atrapan su liquidez. Vender en corto tan pronto como el precio retorna bajo la resistencia es una operativa altamente rentable.',
     candles: [
-      [50, 56, 48, 54], [54, 60, 52, 58], [58, 64, 56, 62], [62, 68, 60, 66], [66, 76, 64, 74], [74, 78, 60, 62],
-      [62, 64, 50, 52], [52, 56, 42, 44], [44, 46, 30, 32]
+      [5250, 5256, 5248, 5254], [5254, 5260, 5252, 5258], [5258, 5264, 5256, 5262], [5262, 5268, 5260, 5266], [5266, 5276, 5264, 5274], [5274, 5278, 5260, 5262],
+      [5262, 5264, 5250, 5252], [5252, 5256, 5242, 5244], [5244, 5246, 5230, 5232]
     ],
     revealFrom: 6,
     levels: [
-      { y: 66, label: 'Oferta', kind: 'resistance' },
-      { y: 62, label: 'Entrada', kind: 'entry' },
-      { y: 78, label: 'SL', kind: 'sl' },
-      { y: 44, label: 'TP', kind: 'tp' }
+      { y: 5266, label: 'Oferta', kind: 'resistance' },
+      { y: 5262, label: 'Entrada', kind: 'entry' },
+      { y: 5278, label: 'SL', kind: 'sl' },
+      { y: 5244, label: 'TP', kind: 'tp' }
     ]
   },
   {
@@ -1045,8 +1046,8 @@ const scenarios: LabScenario[] = [
     resultR: 0,
     explanation: 'Eventos de impacto macro, como conferencias de la FED, anulan todo análisis técnico a corto plazo. Es imperativo no tener posiciones abiertas y esperar a que el polvo se asiente tras sus declaraciones.',
     candles: [
-      [40, 44, 38, 42], [42, 48, 40, 46], [46, 48, 42, 44], [44, 46, 40, 42], [42, 50, 40, 48], [48, 52, 46, 50],
-      [50, 90, 10, 85], [85, 95, 20, 30], [30, 60, 20, 50]
+      [18440, 18444, 18438, 18442], [18442, 18448, 18440, 18446], [18446, 18448, 18442, 18444], [18444, 18446, 18440, 18442], [18442, 18450, 18440, 18448], [18448, 18452, 18446, 18450],
+      [18450, 18490, 18410, 18485], [18485, 18495, 18420, 18430], [18430, 18460, 18420, 18450]
     ],
     revealFrom: 6,
     levels: []
@@ -1063,8 +1064,8 @@ const scenarios: LabScenario[] = [
     resultR: 0,
     explanation: 'El trading de fin de semana en cripto suele caracterizarse por una acción de precio engañosa dominada por bots. Es mejor ahorrar energía y capital para la apertura del mercado tradicional.',
     candles: [
-      [50, 52, 49, 51], [51, 52, 49, 50], [50, 51, 48, 49], [49, 51, 48, 50], [50, 51, 49, 50], [50, 52, 49, 51],
-      [51, 52, 50, 51], [51, 52, 49, 50], [50, 52, 48, 51]
+      [60050, 60052, 60049, 60051], [60051, 60052, 60049, 60050], [60050, 60051, 60048, 60049], [60049, 60051, 60048, 60050], [60050, 60051, 60049, 60050], [60050, 60052, 60049, 60051],
+      [60051, 60052, 60050, 60051], [60051, 60052, 60049, 60050], [60050, 60052, 60048, 60051]
     ],
     revealFrom: 6,
     levels: []
@@ -1081,15 +1082,15 @@ const scenarios: LabScenario[] = [
     resultR: 2.5,
     explanation: 'Doble suelo más divergencia de RSI en sobreventa en zona de soporte es un excelente trigger. Entrar en la validación del rechazo asegura confirmación con buen margen de ganancia.',
     candles: [
-      [70, 72, 58, 60], [60, 64, 56, 58], [58, 62, 50, 52], [52, 60, 48, 58], [58, 60, 54, 56], [56, 58, 46, 48],
-      [48, 60, 46, 58], [58, 68, 56, 66], [66, 76, 64, 74]
+      [2370, 2372, 2358, 2360], [2360, 2364, 2356, 2358], [2358, 2362, 2350, 2352], [2352, 2360, 2348, 2358], [2358, 2360, 2354, 2356], [2356, 2358, 2346, 2348],
+      [2348, 2360, 2346, 2358], [2358, 2368, 2356, 2366], [2366, 2376, 2364, 2374]
     ],
     revealFrom: 6,
     levels: [
-      { y: 48, label: 'Soporte Clave', kind: 'support' },
-      { y: 58, label: 'Entrada', kind: 'entry' },
-      { y: 44, label: 'SL', kind: 'sl' },
-      { y: 80, label: 'TP', kind: 'tp' }
+      { y: 2348, label: 'Soporte Clave', kind: 'support' },
+      { y: 2358, label: 'Entrada', kind: 'entry' },
+      { y: 2344, label: 'SL', kind: 'sl' },
+      { y: 2380, label: 'TP', kind: 'tp' }
     ]
   },
   {
@@ -1104,15 +1105,15 @@ const scenarios: LabScenario[] = [
     resultR: 2.0,
     explanation: 'En días de alta presión bajista ("trend days"), intentar atrapar el suelo (catching falling knives) es suicida. Vender los rebotes hacia las EMAs es la estrategia de mayor probabilidad.',
     candles: [
-      [80, 82, 68, 70], [70, 72, 58, 60], [60, 62, 48, 50], [50, 56, 48, 54], [54, 58, 52, 56], [56, 58, 44, 46],
-      [46, 48, 34, 36], [36, 40, 26, 28], [28, 30, 18, 20]
+      [5080, 5082, 5068, 5070], [5070, 5072, 5058, 5060], [5060, 5062, 5048, 5050], [5050, 5056, 5048, 5054], [5054, 5058, 5052, 5056], [5056, 5058, 5044, 5046],
+      [5046, 5048, 5034, 5036], [5036, 5040, 5026, 5028], [5026, 5030, 5018, 5020]
     ],
     revealFrom: 6,
     levels: [
-      { y: 56, label: 'EMA 20', kind: 'resistance' },
-      { y: 46, label: 'Entrada', kind: 'entry' },
-      { y: 58, label: 'SL', kind: 'sl' },
-      { y: 26, label: 'TP', kind: 'tp' }
+      { y: 5056, label: 'EMA 20', kind: 'resistance' },
+      { y: 5046, label: 'Entrada', kind: 'entry' },
+      { y: 5058, label: 'SL', kind: 'sl' },
+      { y: 5026, label: 'TP', kind: 'tp' }
     ]
   },
   {
@@ -1127,13 +1128,13 @@ const scenarios: LabScenario[] = [
     resultR: 0,
     explanation: 'Entrar tarde motivado por FOMO (Fear Of Missing Out) y justo frente a una resistencia mayor garantiza comprar el tope antes del retroceso. Nunca persigas el precio, espera que el precio venga a ti.',
     candles: [
-      [30, 40, 28, 38], [38, 42, 36, 40], [40, 54, 38, 52], [52, 70, 50, 68], [68, 86, 66, 84], [84, 90, 82, 88],
-      [88, 92, 80, 82], [82, 86, 72, 74], [74, 76, 64, 66]
+      [18330, 18340, 18328, 18338], [18338, 18380, 18336, 18375], [18375, 18430, 18370, 18425], [18425, 18480, 18420, 18475], [18475, 18486, 18466, 18484], [18484, 18490, 18482, 18488],
+      [18488, 18492, 18480, 18482], [18482, 18486, 18472, 18474], [18474, 18476, 18464, 18466]
     ],
     revealFrom: 6,
     levels: [
-      { y: 90, label: 'Resistencia Mayor', kind: 'resistance' },
-      { y: 40, label: 'Punto Ruptura original', kind: 'support' }
+      { y: 18490, label: 'Resistencia Mayor', kind: 'resistance' },
+      { y: 18340, label: 'Punto Ruptura original', kind: 'support' }
     ]
   },
   {
@@ -1148,15 +1149,15 @@ const scenarios: LabScenario[] = [
     resultR: 2.2,
     explanation: 'El triángulo ascendente es un patrón de continuación alcista de alta fiabilidad. Romper la resistencia superior plana valida la acumulación previa y proyecta una subida fuerte.',
     candles: [
-      [40, 50, 38, 48], [48, 44, 42, 42], [42, 50, 40, 46], [46, 44, 44, 44], [44, 50, 42, 48], [48, 60, 46, 58],
-      [58, 68, 56, 66], [66, 76, 64, 74], [74, 84, 72, 82]
+      [2940, 3050, 2938, 2948], [2948, 2950, 2942, 2942], [2942, 2950, 2940, 2946], [2946, 2948, 2944, 2944], [2944, 2950, 2942, 2948], [2948, 3060, 2946, 3058],
+      [3058, 3068, 3056, 3066], [3066, 3076, 3064, 3074], [3074, 3084, 3072, 3082]
     ],
     revealFrom: 6,
     levels: [
-      { y: 50, label: 'Resistencia Rota', kind: 'support' },
-      { y: 58, label: 'Entrada', kind: 'entry' },
-      { y: 46, label: 'SL', kind: 'sl' },
-      { y: 80, label: 'TP', kind: 'tp' }
+      { y: 3050, label: 'Resistencia Rota', kind: 'support' },
+      { y: 3058, label: 'Entrada', kind: 'entry' },
+      { y: 3046, label: 'SL', kind: 'sl' },
+      { y: 3080, label: 'TP', kind: 'tp' }
     ]
   }
 ]
