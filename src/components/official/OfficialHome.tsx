@@ -225,25 +225,19 @@ export default function OfficialHome() {
     materiaRepelY.set((deltaY / distance) * maxPush * force * 0.82)
   }, [materiaRepelX, materiaRepelY, prefersReducedMotion, resetMateriaRepel, materiaPhase, logoMenuOpen])
 
-  // Quick-action confirm gate para touch: en desktop ejecuta directo; en touch
-  // requiere doble tap (primer tap expande+preview, segundo tap confirma).
-  // Auto-cierra a los 3s sin segundo tap.
+  // Quick-action: Ejecuta la acción inmediatamente y expande el botón
+  // para dar feedback visual al usuario en móviles. Auto-cierra a los 3s.
   const requestActionConfirm = useCallback(
     (id: 'install' | 'notify' | 'share', action: () => void) => {
-      if (typeof window === 'undefined') return action()
-      const isTouch = window.matchMedia('(hover: none)').matches
-      if (!isTouch) return action()
-      if (confirmingAction === id) {
-        if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
-        setConfirmingAction(null)
-        action()
-        return
-      }
-      setConfirmingAction(id)
+      // Disparamos la acción de inmediato, sin requerir doble tap.
+      action()
+      
+      // Expandimos visualmente el botón para dar un feedback claro.
       if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+      setConfirmingAction(id)
       confirmTimerRef.current = setTimeout(() => setConfirmingAction(null), 3000)
     },
-    [confirmingAction]
+    []
   )
 
   // Cierra el preview si tapeás fuera de la barra de acciones rápidas
@@ -533,7 +527,7 @@ export default function OfficialHome() {
           if (!logoMenuOpen) resetMateriaRepel()
           setLogoMenuOpen((open) => !open)
         }}
-        className={`${styles.materiaBackdrop} ${materiaCompact && materiaPhase !== 'floating' ? styles.materiaBackdropCompact : ''}`}
+        className={`${styles.materiaBackdrop} ${materiaPhase === 'floating' ? styles.materiaFloating : ''} ${materiaCompact && materiaPhase !== 'floating' ? styles.materiaBackdropCompact : ''}`}
         data-phase={materiaPhase}
         ref={materiaRef}
         style={{
