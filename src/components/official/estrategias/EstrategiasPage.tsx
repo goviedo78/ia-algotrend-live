@@ -5,9 +5,73 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import shellStyles from '../official-home.module.css'
 import styles from './estrategias.module.css'
+import { InfoTooltip } from '../InfoTooltip'
 
 import { createClient } from '@/lib/supabase/client'
 import type { Trade } from '@/lib/db'
+
+const TIPS = {
+  trades: {
+    title: 'Trades del mes',
+    body: 'Cantidad total de operaciones que el algoritmo abrió este mes (cerradas + abiertas + skipped si las hubo). Incluye las que todavía no se cerraron.',
+    example: 'Ej: 12 = el bot detectó 12 setups válidos y entró al mercado 12 veces en el mes.',
+  },
+  netoMes: {
+    title: 'Rendimiento neto del mes',
+    body: 'Cuánto creció (o cayó) tu cuenta este mes operando esta estrategia, asumiendo que reinvertís ganancias. Es interés compuesto, no la suma aritmética de cada trade.',
+    example: 'Ej: 3 trades de +2%, +2%, +2% compuestos = +6.12% (no +6.00%). Si dice -5%, perdiste el 5% del capital del mes.',
+  },
+  cerradas: {
+    title: 'Operaciones cerradas',
+    body: 'Cuántos trades de este mes ya tocaron Stop Loss o Take Profit (es decir, ya tenés el resultado final). Las que faltan están todavía abiertas esperando salida.',
+    example: 'Ej: "12 ops, 10 cerradas" → 10 ya dieron resultado, 2 siguen vivas en el mercado.',
+  },
+  winRate: {
+    title: 'Win Rate global',
+    body: 'De TODOS los trades cerrados (histórico completo, no solo este mes), qué porcentaje terminó en ganancia. Importante: un win rate alto no garantiza ganancias — depende del tamaño promedio de cada win vs cada loss.',
+    example: 'Ej: 65% win rate con TP grande y SL chico = ganador. 80% win rate con TP chico y SL grande = puede ser perdedor.',
+  },
+  tradesTotales: {
+    title: 'Trades totales',
+    body: 'Cantidad acumulada de operaciones que el algoritmo ejecutó desde que se lanzó. Más trades = mayor significancia estadística (los resultados son menos atribuibles a suerte).',
+    example: 'Ej: 50 trades = muestra chica, todavía hay incertidumbre. 200+ trades = muestra estadísticamente sólida.',
+  },
+  netoTotal: {
+    title: 'Rendimiento neto total',
+    body: 'Crecimiento acumulado de la cuenta desde el lanzamiento del algoritmo, asumiendo que reinvertís ganancias (interés compuesto). Es la métrica más realista de "cuánto ganó esta estrategia".',
+    example: 'Ej: +42% desde lanzamiento → si arrancaste con $10k ahora tendrías $14,200 reinvertido. No es +42% sobre los $10k iniciales (eso sería simple).',
+  },
+  pnlFlotante: {
+    title: 'PNL Flotante',
+    body: 'Cuánto está ganando o perdiendo en TIEMPO REAL la operación abierta, calculado contra el precio actual del mercado. Cambia segundo a segundo y NO es resultado final hasta que la operación cierre.',
+    example: 'Ej: LONG BTC entrada $67k, precio actual $68k → PNL flotante +1.5%. Si precio cae a $66k antes de cerrar, pasa a -1.5%.',
+  },
+  entrada: {
+    title: 'Precio de entrada',
+    body: 'Precio exacto al que el algoritmo abrió la posición. Este número no cambia: queda fijo hasta que cierre la operación.',
+    example: 'Ej: Entrada $67,234 en BTC LONG = compraste BTC a $67,234. Ganás si sube, perdés si baja, hasta tocar Stop o Objetivo.',
+  },
+  stop: {
+    title: 'Stop Loss (corte de pérdida)',
+    body: 'Precio al que la operación se cierra automáticamente si el mercado va en tu contra, para limitar la pérdida máxima. Es tu cinturón de seguridad — define cuánto estás dispuesto a perder en este trade.',
+    example: 'Ej: LONG entrada $67k, Stop $66k → si BTC cae a $66k, se cierra perdiendo $1k (~1.5%). No podés perder más.',
+  },
+  objetivo: {
+    title: 'Take Profit (objetivo)',
+    body: 'Precio al que la operación se cierra automáticamente si el mercado va a tu favor, para asegurar la ganancia. Define el objetivo de beneficio del trade.',
+    example: 'Ej: LONG entrada $67k, Objetivo $70k → si BTC sube a $70k, se cierra ganando $3k (~4.5%). El ratio R:R es 3:1 (ganás 3x lo que arriesgás).',
+  },
+  longsShorts: {
+    title: 'Longs vs Shorts',
+    body: 'Cuántos trades del mes fueron al alza (LONG: comprás esperando que suba) vs a la baja (SHORT: vendés esperando que baje). El balance L/S indica si la estrategia favoreció una dirección.',
+    example: 'Ej: "8L/4S" = 8 longs, 4 shorts. En mercado alcista normalmente predominan longs. 50/50 = estrategia neutra.',
+  },
+  winsLosses: {
+    title: 'Ganadoras vs Perdedoras',
+    body: 'Del mes, cuántas operaciones cerradas terminaron en ganancia vs en pérdida. NO suma a "Trades totales del mes" si hay operaciones todavía abiertas o sin resultado.',
+    example: 'Ej: "8W/4L" = 8 ganadoras y 4 perdedoras este mes (Win Rate del mes = 66%). Si hay más abiertas no aparecen acá.',
+  },
+} as const
 
 const nyFormatter = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/New_York',
@@ -316,17 +380,26 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
                           <div className={styles.statsBlockTitle}>Mes en Curso ({currentMonth.label})</div>
                           <div className={styles.statsBlockData}>
                             <div className={styles.globalStatItem}>
-                              <span className={styles.globalStatLabel}>Trades</span>
+                              <span className={styles.globalStatLabel}>
+                                Trades
+                                <InfoTooltip {...TIPS.trades} align="left" />
+                              </span>
                               <span className={styles.globalStatValue}>{currentMonth.total}</span>
                             </div>
                             <div className={styles.globalStatItem}>
-                              <span className={styles.globalStatLabel}>Neto Mes</span>
+                              <span className={styles.globalStatLabel}>
+                                Neto Mes
+                                <InfoTooltip {...TIPS.netoMes} align="center" />
+                              </span>
                               <span className={`${styles.globalStatValue} ${currentMonth.netPct >= 0 ? styles.tdPnlPositive : styles.tdPnlNegative}`}>
                                 {formatPct(currentMonth.netPct)}
                               </span>
                             </div>
                             <div className={styles.globalStatItem}>
-                              <span className={styles.globalStatLabel}>Cerradas</span>
+                              <span className={styles.globalStatLabel}>
+                                Cerradas
+                                <InfoTooltip {...TIPS.cerradas} align="right" />
+                              </span>
                               <span className={styles.globalStatValue}>{currentMonth.closed}</span>
                             </div>
                           </div>
@@ -337,15 +410,24 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
                         <div className={styles.statsBlockTitle}>Histórico Global</div>
                         <div className={styles.statsBlockData}>
                           <div className={styles.globalStatItem}>
-                            <span className={styles.globalStatLabel}>Win Rate</span>
+                            <span className={styles.globalStatLabel}>
+                              Win Rate
+                              <InfoTooltip {...TIPS.winRate} align="left" />
+                            </span>
                             <span className={styles.globalStatValue}>{winRate}%</span>
                           </div>
                           <div className={styles.globalStatItem}>
-                            <span className={styles.globalStatLabel}>Trades Totales</span>
+                            <span className={styles.globalStatLabel}>
+                              Trades Totales
+                              <InfoTooltip {...TIPS.tradesTotales} align="center" />
+                            </span>
                             <span className={styles.globalStatValue}>{strategy.data.all.length}</span>
                           </div>
                           <div className={styles.globalStatItem}>
-                            <span className={styles.globalStatLabel}>Neto Total</span>
+                            <span className={styles.globalStatLabel}>
+                              Neto Total
+                              <InfoTooltip {...TIPS.netoTotal} align="right" />
+                            </span>
                             <span className={`${styles.globalStatValue} ${globalPnl >= 0 ? styles.tdPnlPositive : styles.tdPnlNegative}`}>
                               {globalPnl > 0 ? '+' : ''}{globalPnl.toFixed(2)}%
                             </span>
@@ -374,7 +456,10 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
                             </span>
                           </div>
                           <div className={styles.pnlFloating}>
-                            <span className={styles.pnlLabel}>PNL Flotante</span>
+                            <span className={styles.pnlLabel}>
+                              PNL Flotante
+                              <InfoTooltip {...TIPS.pnlFlotante} align="right" />
+                            </span>
                             <span className={(livePnlPct || 0) >= 0 ? styles.pnlValuePositive : styles.pnlValueNegative}>
                               {livePnlPct !== null ? `${livePnlPct > 0 ? '+' : ''}${livePnlPct.toFixed(2)}%` : 'En curso...'}
                             </span>
@@ -382,7 +467,10 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
                         </div>
                         <div className={styles.openTradeStats}>
                           <div>
-                            <span>Entrada</span>
+                            <span>
+                              Entrada
+                              <InfoTooltip {...TIPS.entrada} align="left" />
+                            </span>
                             <strong>{formatPrice(openT.open_price, strategy.priceDigits)}</strong>
                           </div>
                           <div>
@@ -390,11 +478,17 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
                             <strong>{formatPrice(strategy.currentPrice || null, strategy.priceDigits)}</strong>
                           </div>
                           <div>
-                            <span>Stop</span>
+                            <span>
+                              Stop
+                              <InfoTooltip {...TIPS.stop} align="center" />
+                            </span>
                             <strong>{formatPrice(openT.stop_loss, strategy.priceDigits)}</strong>
                           </div>
                           <div>
-                            <span>Objetivo</span>
+                            <span>
+                              Objetivo
+                              <InfoTooltip {...TIPS.objetivo} align="right" />
+                            </span>
                             <strong>{formatPrice(openT.take_profit, strategy.priceDigits)}</strong>
                           </div>
                         </div>

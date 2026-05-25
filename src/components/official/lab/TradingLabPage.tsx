@@ -4,6 +4,60 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import allScenarios, { type LabScenario, type LabCategory } from '@/data/official/trading-lab-scenarios'
 import s from './trading-lab.module.css'
+import { InfoTooltip } from '../InfoTooltip'
+
+const TIPS = {
+  decision: {
+    title: 'Tu decisión: Largo / Corto / No operar',
+    body: 'LARGO (Long) = comprás esperando que el precio suba. CORTO (Short) = vendés en corto esperando que baje. NO OPERAR (Skip) = el setup no es lo suficientemente claro y preferís pasar. Es una decisión válida y profesional.',
+    example: 'Ej: si ves rompimiento alcista con volumen → Largo. Si ves rechazo en resistencia con divergencia bajista → Corto. Si está en rango sin dirección clara → No operar.',
+  },
+  riesgo: {
+    title: 'Riesgo por operación (%)',
+    body: 'Qué porcentaje de tu cuenta arriesgás en este trade si el Stop Loss se ejecuta. Los pro retail recomiendan 0.5%-2% como máximo. Más de eso destruye cuentas en una mala racha.',
+    example: 'Ej: cuenta $10k, riesgo 1% = perdés máximo $100 por trade si toca Stop. Con riesgo 2% perdés $200. Una racha de 10 stops seguidos con 2% = -18% (compuesto).',
+  },
+  objetivo: {
+    title: 'Objetivo (R Multiple)',
+    body: 'Cuántas veces tu riesgo querés ganar como Take Profit. 1R = ganás lo mismo que arriesgaste. 2R = ganás el doble. 3R = ganás el triple. Mayor R = menos win rate necesitás para ganar a largo plazo.',
+    example: 'Ej: 2R con 40% Win Rate → ganador (40% × 2 - 60% × 1 = +0.20 esperanza). 1R con 40% WR → perdedor (-0.20). 3R con 30% WR → ganador (+0.30).',
+  },
+  revelarLab: {
+    title: 'Revelar resultado',
+    body: 'Muestra la respuesta correcta del escenario + qué hubiera pasado realmente en el mercado. Comparás tu decisión con el resultado óptimo y aprendés del error o confirmás el acierto.',
+    example: 'Ej: elegiste Largo y el correcto era Corto → ves por qué (rechazo en resistencia, volumen débil, etc). Cada error explicado = una lección concreta para el próximo trade.',
+  },
+  resumenRonda: {
+    title: 'Resumen de ronda',
+    body: 'Análisis de tu performance en los 8 escenarios completados: cuántos acertaste, tu Win Rate, tu R promedio, y un diagnóstico de qué tipos de errores cometiste más para que sepás qué mejorar.',
+    example: 'Ej: "6/8 aciertos, +1.2R promedio, error principal: ignorar confluencia de liquidez" → sabés exactamente qué estudiar en YouTube esta semana.',
+  },
+  diagnostico: {
+    title: 'Diagnóstico por categoría',
+    body: 'Agrupa tus errores por tipo de setup (Estructura, Order Flow, Liquidez, Volumen, etc) para que veas DÓNDE estás débil. No es el mismo problema fallar en Wyckoff que en SMC — el remedio es distinto.',
+    example: 'Ej: 3 errores en "Liquidez" → necesitás estudiar sweep + fair value gaps. 2 en "Volumen" → repasar climax volume y POC.',
+  },
+  escenariosLab: {
+    title: 'Escenarios completados',
+    body: 'Cantidad TOTAL de escenarios que jugaste en el Lab (en todas las rondas, persistido localmente). Más escenarios = mejor calibración. Hay 41 escenarios distintos en este Lab.',
+    example: 'Ej: 20 escenarios = recién empezando. 80+ = todos los escenarios al menos 2 veces = base sólida. El Lab repite escenarios para reforzar memoria muscular.',
+  },
+  aciertosLab: {
+    title: 'Aciertos totales',
+    body: 'Cuántos escenarios decidiste correctamente (Long cuando era Long, Short cuando era Short, Skip cuando era Skip). Un acierto no implica ganancia: es haber leído bien el contexto del mercado.',
+    example: 'Ej: 50 aciertos en 80 escenarios = 62.5% Win Rate. Pro retail anda 50-65% en lectura técnica pura.',
+  },
+  winRateLab: {
+    title: 'Win Rate de lectura',
+    body: 'Porcentaje de tus decisiones que coincidieron con la respuesta correcta del escenario. Mide qué tan bien LEÉS el mercado, no necesariamente qué tan bien GANÁS plata (eso depende también del R que elijas).',
+    example: 'Ej: 55% WR con 2R objetivo = ganador. 80% WR con 0.5R = perdedor. La combinación con el Objetivo es lo que define rentabilidad.',
+  },
+  promedioRLab: {
+    title: 'Promedio R por escenario',
+    body: 'Cuántos múltiplos de riesgo ganaste (o perdiste) en promedio por escenario. Combina tu Win Rate con el R que elegiste como objetivo. Esta SÍ es la métrica de rentabilidad neta.',
+    example: 'Ej: +0.6R promedio = excelente. +0.2R = ganador modesto. 0R = breakeven. -0.3R = todavía no listo para real.',
+  },
+} as const
 
 /* ─── constants ─── */
 const ROUND_SIZE = 8
@@ -536,7 +590,10 @@ export default function TradingLabPage() {
             </div>
             <div className={s.controlPanel}>
               <div className={s.panelSection}>
-                <span className={s.panelKicker}>Tu decision</span>
+                <span className={s.panelKicker}>
+                  Tu decision
+                  <InfoTooltip {...TIPS.decision} align="left" />
+                </span>
                 <div className={s.choiceRow}>
                   <button type="button" className={`${s.choiceBtn} ${s.longBtn} ${decision === 'long' ? s.active : ''}`} onClick={() => handleDecision('long')} disabled={revealed}>▲ Largo</button>
                   <button type="button" className={`${s.choiceBtn} ${s.shortBtn} ${decision === 'short' ? s.active : ''}`} onClick={() => handleDecision('short')} disabled={revealed}>▼ Corto</button>
@@ -544,7 +601,10 @@ export default function TradingLabPage() {
                 </div>
               </div>
               <div className={s.panelSection}>
-                <span className={s.panelKicker}>Riesgo por operacion</span>
+                <span className={s.panelKicker}>
+                  Riesgo por operacion
+                  <InfoTooltip {...TIPS.riesgo} align="left" />
+                </span>
                 <div className={s.optionRow}>
                   {([0.5, 1, 2] as RiskPct[]).map((r) => (
                     <button key={r} type="button" className={`${s.optionBtn} ${risk === r ? s.optionActive : ''}`} onClick={() => setRisk(r)} disabled={revealed}>{r}%</button>
@@ -552,7 +612,10 @@ export default function TradingLabPage() {
                 </div>
               </div>
               <div className={s.panelSection}>
-                <span className={s.panelKicker}>Objetivo</span>
+                <span className={s.panelKicker}>
+                  Objetivo
+                  <InfoTooltip {...TIPS.objetivo} align="left" />
+                </span>
                 <div className={s.optionRow}>
                   {([1, 2, 3] as TargetR[]).map((t) => (
                     <button key={t} type="button" className={`${s.optionBtn} ${target === t ? s.optionActive : ''}`} onClick={() => setTarget(t)} disabled={revealed}>{t}R</button>
@@ -675,19 +738,31 @@ export default function TradingLabPage() {
       {/* stats */}
       <section className={s.statsBar}>
         <div className={s.statItem}>
-          <span className={s.statLabel}>Escenarios</span>
+          <span className={s.statLabel}>
+            Escenarios
+            <InfoTooltip {...TIPS.escenariosLab} align="left" />
+          </span>
           <strong className={s.statValue}>{stats.total}</strong>
         </div>
         <div className={s.statItem}>
-          <span className={s.statLabel}>Aciertos</span>
+          <span className={s.statLabel}>
+            Aciertos
+            <InfoTooltip {...TIPS.aciertosLab} align="left" />
+          </span>
           <strong className={s.statValue}>{stats.wins}</strong>
         </div>
         <div className={s.statItem}>
-          <span className={s.statLabel}>Win Rate</span>
+          <span className={s.statLabel}>
+            Win Rate
+            <InfoTooltip {...TIPS.winRateLab} align="right" />
+          </span>
           <strong className={s.statValue}>{stats.total > 0 ? `${stats.wr}%` : '—'}</strong>
         </div>
         <div className={s.statItem}>
-          <span className={s.statLabel}>Promedio R</span>
+          <span className={s.statLabel}>
+            Promedio R
+            <InfoTooltip {...TIPS.promedioRLab} align="right" />
+          </span>
           <strong className={`${s.statValue} ${stats.avgR > 0 ? s.statPositive : stats.avgR < 0 ? s.statNegative : ''}`}>
             {stats.total > 0 ? (stats.avgR > 0 ? `+${stats.avgR}` : stats.avgR) : '—'}
           </strong>
