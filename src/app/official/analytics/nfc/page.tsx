@@ -37,6 +37,7 @@ interface NfcScan {
 interface CardName {
   card_id: string
   name: string
+  redirect_url: string | null
 }
 
 function parseUserAgent(ua: string | null): { device: string; browser: string } {
@@ -93,7 +94,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
   const supabase = createAdminClient()
   const [scansRes, namesRes] = await Promise.all([
     supabase.from('nfc_analytics').select('*').order('created_at', { ascending: false }).limit(500),
-    supabase.from('nfc_card_names').select('card_id, name').order('card_id'),
+    supabase.from('nfc_card_names').select('card_id, name, redirect_url').order('card_id'),
   ])
 
   const scans: NfcScan[] = scansRes.data ?? []

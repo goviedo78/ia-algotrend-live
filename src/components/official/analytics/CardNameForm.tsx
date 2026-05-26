@@ -37,7 +37,7 @@ const dangerButtonStyle: React.CSSProperties = {
 
 interface Props {
   pin: string
-  named: Array<{ card_id: string; name: string }>
+  named: Array<{ card_id: string; name: string; redirect_url: string | null }>
 }
 
 export function CardNameForm({ pin, named }: Props) {
@@ -66,24 +66,37 @@ export function CardNameForm({ pin, named }: Props) {
         Asociá un nombre legible a cada código corto. Si lo guardás, la tabla de abajo lo muestra en lugar del código.
       </p>
 
-      <form action={saveCardName} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: named.length ? '1.25rem' : 0 }}>
+      <form action={saveCardName} style={{ display: 'grid', gap: '0.5rem', marginBottom: named.length ? '1.25rem' : 0 }}>
         <input type="hidden" name="pin" value={pin} />
-        <input
-          name="card_id"
-          placeholder="Código (ej: b1)"
-          required
-          maxLength={32}
-          pattern="[a-zA-Z0-9_-]{1,32}"
-          style={{ ...fieldStyle, width: '160px' }}
-        />
-        <input
-          name="name"
-          placeholder="Nombre (ej: Personal LinkedIn)"
-          required
-          maxLength={80}
-          style={{ ...fieldStyle, flex: '1', minWidth: '220px' }}
-        />
-        <button type="submit" style={buttonStyle}>Guardar</button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <input
+            name="card_id"
+            placeholder="Código (ej: b1)"
+            required
+            maxLength={32}
+            pattern="[a-zA-Z0-9_-]{1,32}"
+            style={{ ...fieldStyle, width: '160px' }}
+          />
+          <input
+            name="name"
+            placeholder="Nombre (ej: Personal LinkedIn)"
+            required
+            maxLength={80}
+            style={{ ...fieldStyle, flex: '1', minWidth: '220px' }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <input
+            name="redirect_url"
+            placeholder="URL de redirección (opcional, dejar vacío = landing). Ej: https://linkedin.com/in/gonzalo o /official/montecarlo"
+            maxLength={500}
+            style={{ ...fieldStyle, flex: '1', minWidth: '220px' }}
+          />
+          <button type="submit" style={buttonStyle}>Guardar</button>
+        </div>
+        <p style={{ opacity: 0.45, fontSize: '0.72rem', marginTop: '0.1rem' }}>
+          Si dejás vacío el campo de URL, la tarjeta lleva al landing (<code>/?dev=...</code>). También aceptamos URLs externas (https://…) o rutas internas (/algo).
+        </p>
       </form>
 
       {named.length > 0 && (
@@ -115,7 +128,10 @@ export function CardNameForm({ pin, named }: Props) {
               >
                 {row.card_id}
               </span>
-              <span style={{ flex: 1 }}>{row.name}</span>
+              <span style={{ flex: '0 0 auto', minWidth: '140px' }}>{row.name}</span>
+              <span style={{ flex: 1, opacity: row.redirect_url ? 0.8 : 0.35, fontSize: '0.74rem', wordBreak: 'break-all' }}>
+                → {row.redirect_url ?? 'landing (default)'}
+              </span>
               <form action={deleteCardName}>
                 <input type="hidden" name="pin" value={pin} />
                 <input type="hidden" name="card_id" value={row.card_id} />

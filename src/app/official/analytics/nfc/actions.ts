@@ -3,9 +3,20 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+function sanitizeRedirect(raw: string): string | null {
+  if (!raw) return null
+  const trimmed = raw.trim().substring(0, 500)
+  if (!trimmed) return null
+  // Aceptar URLs absolutas https/http o paths internos comenzando con /
+  if (/^https?:\/\/[^\s<>"']+$/i.test(trimmed)) return trimmed
+  if (/^\/[^\s<>"']*$/.test(trimmed)) return trimmed
+  return null
+}
+
 export async function saveCardName(formData: FormData) {
   const cardIdRaw = String(formData.get('card_id') ?? '').trim()
   const nameRaw = String(formData.get('name') ?? '').trim()
+  const redirectRaw = String(formData.get('redirect_url') ?? '').trim()
   const pin = String(formData.get('pin') ?? '')
 
   const validPin = process.env.ANALYTICS_PIN ?? process.env.DASHBOARD_PASSWORD
@@ -15,12 +26,18 @@ export async function saveCardName(formData: FormData) {
   if (!/^[a-zA-Z0-9_-]{1,32}$/.test(cardIdRaw)) return
 
   const name = nameRaw.substring(0, 80)
+  const redirectUrl = sanitizeRedirect(redirectRaw)
 
   const supabase = createAdminClient()
   await supabase
     .from('nfc_card_names')
     .upsert(
-      { card_id: cardIdRaw, name, updated_at: new Date().toISOString() },
+      {
+        card_id: cardIdRaw,
+        name,
+        redirect_url: redirectUrl,
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: 'card_id' }
     )
 

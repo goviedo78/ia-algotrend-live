@@ -11,11 +11,31 @@ export async function GET(
   const { id } = await params
 
   const bypassToken = process.env.BYPASS_TOKEN ?? 'materia'
-  const redirectUrl = new URL(`/?dev=${bypassToken}`, request.url)
+  const defaultRedirect = new URL(`/?dev=${bypassToken}`, request.url)
 
   // 1. Validar id (1-32 chars alfanuméricos)
   if (!/^[a-zA-Z0-9_-]{1,32}$/.test(id)) {
-    return NextResponse.redirect(redirectUrl, 302)
+    return NextResponse.redirect(defaultRedirect, 302)
+  }
+
+  // 1.5. Lookup de URL custom configurada en el dashboard
+  let redirectUrl: URL = defaultRedirect
+  try {
+    const supabaseLookup = createAdminClient()
+    const { data: cardConfig } = await supabaseLookup
+      .from('nfc_card_names')
+      .select('redirect_url')
+      .eq('card_id', id)
+      .maybeSingle()
+    if (cardConfig?.redirect_url) {
+      try {
+        redirectUrl = new URL(cardConfig.redirect_url, request.url)
+      } catch {
+        redirectUrl = defaultRedirect
+      }
+    }
+  } catch {
+    redirectUrl = defaultRedirect
   }
 
   // 2. Extraer headers
