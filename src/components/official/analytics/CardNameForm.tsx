@@ -88,14 +88,14 @@ export function CardNameForm({ pin, named }: Props) {
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <input
             name="redirect_url"
-            placeholder="URL de redirección (opcional, dejar vacío = landing). Ej: https://linkedin.com/in/gonzalo o /official/montecarlo"
+            placeholder="Destino opcional. Ej: https://youtube.com/@gonovi o /official"
             maxLength={500}
             style={{ ...fieldStyle, flex: '1', minWidth: '220px' }}
           />
           <button type="submit" style={buttonStyle}>Guardar</button>
         </div>
         <p style={{ opacity: 0.45, fontSize: '0.72rem', marginTop: '0.1rem' }}>
-          Si dejás vacío el campo de URL, la tarjeta lleva al landing (<code>/?dev=...</code>). También aceptamos URLs externas (https://…) o rutas internas (/algo).
+          Si dejás vacío el destino, la tarjeta abre la muestra privada de GONOVI. También acepta URLs externas o rutas internas.
         </p>
       </form>
 
@@ -130,7 +130,7 @@ export function CardNameForm({ pin, named }: Props) {
               </span>
               <span style={{ flex: '0 0 auto', minWidth: '140px' }}>{row.name}</span>
               <span style={{ flex: 1, opacity: row.redirect_url ? 0.8 : 0.35, fontSize: '0.74rem', wordBreak: 'break-all' }}>
-                → {row.redirect_url ?? 'landing (default)'}
+                → {row.redirect_url ?? 'muestra privada GONOVI'}
               </span>
               <form action={deleteCardName}>
                 <input type="hidden" name="pin" value={pin} />

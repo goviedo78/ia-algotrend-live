@@ -41,8 +41,8 @@ interface CardName {
   redirect_url: string | null
 }
 
-function parseUserAgent(ua: string | null): { device: string; browser: string } {
-  if (!ua) return { device: '—', browser: '—' }
+function parseUserAgent(ua: string | null): { device: string; browser: string; system: string; summary: string } {
+  if (!ua) return { device: '—', browser: '—', system: '—', summary: 'Sin datos' }
   let device = 'PC'
   if (/iPhone/i.test(ua)) device = 'iPhone'
   else if (/iPad/i.test(ua)) device = 'iPad'
@@ -51,14 +51,32 @@ function parseUserAgent(ua: string | null): { device: string; browser: string } 
   else if (/Windows/i.test(ua)) device = 'Windows'
   else if (/Linux/i.test(ua)) device = 'Linux'
 
-  let browser = 'otro'
+  let browser = 'Otro'
   if (/Edg\//i.test(ua)) browser = 'Edge'
   else if (/OPR\/|Opera/i.test(ua)) browser = 'Opera'
   else if (/Chrome\//i.test(ua) && !/Edg\//i.test(ua)) browser = 'Chrome'
   else if (/Firefox\//i.test(ua)) browser = 'Firefox'
   else if (/Safari\//i.test(ua) && !/Chrome\//i.test(ua)) browser = 'Safari'
 
-  return { device, browser }
+  let system = 'Sistema no detectado'
+  const iosMatch = ua.match(/OS ([\d_]+)/i)
+  const androidMatch = ua.match(/Android\s+([\d.]+)/i)
+  const macMatch = ua.match(/Mac OS X ([\d_]+)/i)
+  const windowsMatch = ua.match(/Windows NT ([\d.]+)/i)
+
+  if ((device === 'iPhone' || device === 'iPad') && iosMatch) {
+    system = `iOS ${iosMatch[1].replaceAll('_', '.').split('.').slice(0, 2).join('.')}`
+  } else if (androidMatch) {
+    system = `Android ${androidMatch[1].split('.').slice(0, 2).join('.')}`
+  } else if (macMatch) {
+    system = `macOS ${macMatch[1].replaceAll('_', '.').split('.').slice(0, 2).join('.')}`
+  } else if (windowsMatch) {
+    system = windowsMatch[1] === '10.0' ? 'Windows 10/11' : `Windows ${windowsMatch[1]}`
+  } else if (/Linux/i.test(ua)) {
+    system = 'Linux'
+  }
+
+  return { device, browser, system, summary: `${device} · ${browser} · ${system}` }
 }
 
 export default async function NfcAnalyticsPage({ searchParams }: Props) {
@@ -259,11 +277,11 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                   />
                 </th>
                 <th style={headStyle}>
-                  User Agent
+                  Resumen técnico
                   <InfoTooltip
-                    title="User Agent completo"
-                    body="Texto técnico que el navegador envía con cada request. Identifica versión exacta del SO, modelo del dispositivo (a veces) y navegador. Útil para debug. La columna lo trunca a 80 caracteres; pasá el mouse para verlo completo."
-                    example="Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Mobile/15E148 Safari/604.1 = iPhone con iOS 18.2 usando Safari 18.2."
+                    title="Resumen técnico"
+                    body="Versión corta del dispositivo, navegador y sistema. El texto completo queda oculto y solo aparece como ayuda técnica al pasar el mouse."
+                    example="iPhone · Safari · iOS 18.2"
                     align="right"
                   />
                 </th>
@@ -272,8 +290,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
             <tbody>
               {scans.map((scan) => {
                 const ua = scan.user_agent || ''
-                const { device, browser } = parseUserAgent(ua)
-                const uaTruncated = ua.length > 80 ? ua.substring(0, 80) + '…' : ua
+                const { device, browser, system, summary } = parseUserAgent(ua)
                 const deviceShort = scan.device_cookie_id ? scan.device_cookie_id.substring(0, 8) : 'N/A'
 
                 const locationParts = [scan.city, scan.region, scan.country].filter(Boolean)
@@ -330,8 +347,11 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                       </span>
                       <code style={{ opacity: 0.55, fontSize: '0.7rem' }}>{deviceShort}</code>
                     </td>
-                    <td style={cellStyle} title={ua}>
-                      {uaTruncated}
+                    <td style={cellStyle} title={ua || undefined}>
+                      <span style={{ display: 'block', fontWeight: 600 }}>{summary}</span>
+                      <span style={{ display: 'block', opacity: 0.5, fontSize: '0.68rem', marginTop: '0.15rem' }}>
+                        {system === '—' ? 'sin detalle técnico' : 'detalle completo al pasar el mouse'}
+                      </span>
                     </td>
                   </tr>
                 )
