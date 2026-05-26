@@ -22,8 +22,10 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
+            // Sensores de movimiento explícitamente habilitados en mismo origen
+            // (brand-3d.html usa giroscopio en mobile via DeviceOrientationEvent)
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=(), microphone=(), geolocation=(), accelerometer=(self), gyroscope=(self), magnetometer=(self)",
           },
           {
             key: 'Strict-Transport-Security',

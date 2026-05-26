@@ -106,6 +106,47 @@
   }
   .fallback img { width: min(360px, 60vw); aspect-ratio: 1; --logo-bg: transparent; --logo-fg: var(--bone); }
   .fallback p { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: oklch(78% 0.008 60); }
+
+  /* Botón para activar giroscopio en iOS (requiere gesto + permiso del usuario) */
+  .motion-btn {
+    position: fixed;
+    bottom: 130px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 22px;
+    background: var(--pulse);
+    color: var(--ink);
+    border: none;
+    border-radius: 999px;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: none;
+    z-index: 20;
+    box-shadow: 0 6px 32px oklch(62% 0.18 28 / 0.45);
+    transition: transform 0.15s ease, background 0.2s ease;
+    text-align: center;
+    max-width: calc(100vw - 40px);
+  }
+  .motion-btn:active { transform: translateX(-50%) scale(0.96); }
+  .motion-btn.error {
+    background: oklch(55% 0.15 25);
+    color: var(--bone);
+    font-size: 12px;
+    padding: 14px 22px;
+  }
+  .motion-btn .hint {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    margin-top: 4px;
+    opacity: 0.85;
+    letter-spacing: 0.06em;
+    text-transform: none;
+  }
 </style>
 </head>
 <body>
@@ -128,6 +169,10 @@
   Mové el cursor para girar y perturbar la <span class="pulse">materia</span>.
   Click sostenido la calma. Rueda para zoom.
 </div>
+
+<button id="motionBtn" class="motion-btn" type="button" aria-label="Activar sensor de movimiento">
+  🧭 Activar movimiento
+</button>
 
 <div class="footer-meta">
   Standalone preview · Three.js r160<br/>
@@ -510,17 +555,33 @@ function attachGyro() {
     markInput();
   });
 }
+
+const motionBtn = document.getElementById('motionBtn');
+
 if (typeof DeviceOrientationEvent !== 'undefined') {
-  // iOS 13+ requiere permiso vía gesto del usuario
   if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-    window.addEventListener('touchstart', function onFirstTouch() {
+    // iOS 13+ requiere permiso vía gesto del usuario + Ajustes habilitados
+    motionBtn.style.display = 'block';
+    motionBtn.addEventListener('click', () => {
+      motionBtn.textContent = 'Solicitando…';
       DeviceOrientationEvent.requestPermission()
-        .then((res) => { if (res === 'granted') attachGyro(); })
-        .catch(() => {});
-      window.removeEventListener('touchstart', onFirstTouch);
-    }, { once: true, passive: true });
+        .then((res) => {
+          if (res === 'granted') {
+            attachGyro();
+            motionBtn.style.display = 'none';
+          } else {
+            motionBtn.classList.add('error');
+            motionBtn.innerHTML = 'Permiso denegado<span class="hint">Activá Ajustes › Safari › Movimiento y Orientación</span>';
+          }
+        })
+        .catch((err) => {
+          motionBtn.classList.add('error');
+          const msg = (err && err.message) ? err.message : 'sensor no disponible';
+          motionBtn.innerHTML = 'Sensor no disponible<span class="hint">' + msg + '</span>';
+        });
+    }, { once: true });
   } else {
-    // Android / desktop con sensores: attach directo
+    // Android / desktop con sensores: attach directo (sin permiso)
     attachGyro();
   }
 }
