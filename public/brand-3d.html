@@ -247,6 +247,9 @@ scene.environmentIntensity = 1.0;
 const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 5000);
 const REST_CAM   = new THREE.Vector3(0, 0, 1500);  // más alejada por defecto
 const ENTRY_CAM  = new THREE.Vector3(900, 200, 1100); // mismo offset relativo
+const PRESENTATION_SCALE = 0.65; // después de cargar, el logo se achica un 35%
+const PRESENTATION_CAM_Z = REST_CAM.z / PRESENTATION_SCALE;
+const PRESENTATION_DELAY = 2.0;
 const MIN_ZOOM   = 600;
 const MAX_ZOOM   = 3000;
 const TILT_MAX_Y = THREE.MathUtils.degToRad(15);
@@ -603,6 +606,8 @@ let fpsTimer = 0;
 const fpsEl = document.getElementById('fps');
 const stateEl = document.getElementById('state');
 let entryDone = false;
+let entryDoneAt = 0;
+let presentationShrinkStarted = false;
 
 function ease(t) { return 1 - Math.pow(1 - t, 5); } // ease-out-quint
 
@@ -618,10 +623,16 @@ function animate() {
     camera.lookAt(0, 0, 0);
     if (entryProgress >= 1 && !entryDone) {
       entryDone = true;
+      entryDoneAt = t;
       targetZ = camera.position.z; // sync zoom target con posición final
       stateEl.textContent = 'Materia viva';
     }
   } else {
+    if (!presentationShrinkStarted && t - entryDoneAt >= PRESENTATION_DELAY) {
+      presentationShrinkStarted = true;
+      targetZ = PRESENTATION_CAM_Z;
+    }
+
     // Después de la entrada: tilt hacia cursor + zoom suave + auto-idle
     tiltCurrent.lerp(tiltTarget, 0.06);
 
