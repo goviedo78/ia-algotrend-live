@@ -268,6 +268,7 @@ const material = new THREE.MeshPhysicalMaterial({
   clearcoat: 1.0,
   clearcoatRoughness: 0.08,
   reflectivity: 0.4,
+  side: THREE.DoubleSide,
 });
 
 // Inject noise displacement into the vertex shader via onBeforeCompile
@@ -351,8 +352,8 @@ material.onBeforeCompile = (shader) => {
       `
       vec3 transformed = vec3(position);
 
-      // Front-face only: normal.z near +1
-      float frontFactor = smoothstep(0.5, 1.0, normal.z);
+      // Front-face only: normal.z near +1 or -1 if flipped
+      float frontFactor = smoothstep(0.5, 1.0, abs(normal.z));
 
       // Local UV in logo bounding-box space (logo lives ~ -500..500 on x,y after centering)
       vec2 localUV = (position.xy + 500.0) / 1000.0;
