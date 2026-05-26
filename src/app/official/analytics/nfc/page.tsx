@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { InfoTooltip } from '@/components/official/InfoTooltip'
 import { NfcLocalTime } from '@/components/official/analytics/NfcLocalTime'
 import { CardNameForm } from '@/components/official/analytics/CardNameForm'
+import { RefreshButton } from '@/components/official/analytics/RefreshButton'
 
 export const metadata: Metadata = {
   title: 'NFC Analytics | GONOVI',
@@ -70,8 +71,8 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
           minHeight: '100vh',
           display: 'grid',
           placeItems: 'center',
-          background: '#0d1122',
-          color: 'rgba(229,212,182,0.62)',
+          background: '#14120E', // Ink background from 3D hero
+          color: 'rgba(240,236,228,0.62)',
           fontFamily: 'ui-monospace, monospace',
           fontSize: '0.76rem',
           letterSpacing: '0.12em',
@@ -80,10 +81,10 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
       >
         <div style={{ textAlign: 'center', display: 'grid', gap: '1rem' }}>
           <p>Panel privado NFC — se requiere PIN</p>
-          <p style={{ color: 'rgba(229,212,182,0.32)', fontSize: '0.64rem' }}>
+          <p style={{ color: 'rgba(240,236,228,0.32)', fontSize: '0.64rem' }}>
             Agregar <code>?pin=TU_PIN</code> a la URL
           </p>
-          <Link href="/official" style={{ color: '#ff8a60', textDecoration: 'none' }}>
+          <Link href="/official" style={{ color: '#ff8a3d', textDecoration: 'none' }}>
             ← Volver al inicio
           </Link>
         </div>
@@ -120,8 +121,8 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
     <main
       style={{
         minHeight: '100vh',
-        background: '#0d1122',
-        color: '#e5d4b6',
+        background: '#14120E', // Ink
+        color: '#F0ECE4',      // Bone
         fontFamily: 'ui-monospace, monospace',
         padding: '2rem',
       }}
@@ -137,18 +138,22 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
         }}
       >
         <div>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#ff8a60' }}>NFC Analytics</h1>
+          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#ff8a3d' }}>NFC Analytics</h1>
           <p style={{ opacity: 0.6, fontSize: '0.8rem' }}>Últimos 500 escaneos · hora local de tu navegador</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <RefreshButton />
           <Link
             href={`/official/analytics?pin=${pin}`}
             style={{
-              color: 'rgba(229,212,182,0.6)',
+              color: 'rgba(240,236,228,0.6)',
               textDecoration: 'none',
-              border: '1px solid rgba(229,212,182,0.2)',
-              padding: '0.5rem 1rem',
+              border: '1px solid rgba(240,236,228,0.2)',
+              padding: '0.4rem 0.8rem',
               borderRadius: '4px',
+              fontSize: '0.75rem',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
             }}
           >
             ← Analytics General
@@ -166,11 +171,11 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
           marginBottom: '2rem',
         }}
       >
-        <div style={{ background: 'rgba(229,212,182,0.05)', padding: '1.5rem', borderRadius: '8px' }}>
+        <div style={{ background: 'rgba(240,236,228,0.05)', padding: '1.5rem', borderRadius: '8px' }}>
           <div style={{ opacity: 0.6, fontSize: '0.8rem', marginBottom: '0.5rem' }}>Total Escaneos</div>
           <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{totalScans}</div>
         </div>
-        <div style={{ background: 'rgba(229,212,182,0.05)', padding: '1.5rem', borderRadius: '8px' }}>
+        <div style={{ background: 'rgba(240,236,228,0.05)', padding: '1.5rem', borderRadius: '8px' }}>
           <div style={{ opacity: 0.6, fontSize: '0.8rem', marginBottom: '0.5rem' }}>
             Dispositivos Únicos
             <InfoTooltip
@@ -182,8 +187,8 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
           </div>
           <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{uniqueDevices}</div>
         </div>
-        <div style={{ background: 'rgba(229,212,182,0.05)', padding: '1.5rem', borderRadius: '8px' }}>
-          <div style={{ opacity: 0.6, fontSize: '0.8rem', marginBottom: '0.5rem' }}>Top tarjetas</div>
+        <div style={{ background: 'rgba(240,236,228,0.05)', padding: '1.5rem', borderRadius: '8px' }}>
+          <div style={{ opacity: 0.6, fontSize: '0.8rem', marginBottom: '0.5rem' }}>Top Tarjetas Físicas</div>
           <div style={{ fontSize: '1.05rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             {topCards.length > 0 ? (
               topCards.map(([id, count]) => (
@@ -207,7 +212,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(229,212,182,0.2)' }}>
+              <tr style={{ borderBottom: '1px solid rgba(240,236,228,0.2)' }}>
                 <th style={headStyle}>
                   Fecha
                   <InfoTooltip
@@ -218,11 +223,11 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                   />
                 </th>
                 <th style={headStyle}>
-                  Tarjeta
+                  Tarjeta Física (ID)
                   <InfoTooltip
-                    title="Código de la tarjeta"
-                    body="Es el identificador grabado en el NFC (ej. b1, vip7). Si le asignaste un nombre arriba, ves el nombre en lugar del código. Pasá el mouse para ver el código original."
-                    example="Grabaste la URL /x/b1 y la nombraste 'Personal LinkedIn'. La columna muestra 'Personal LinkedIn' con tooltip b1."
+                    title="ID Físico de la Tarjeta"
+                    body="Es el identificador grabado en el chip NFC de la tarjeta real (ej. b1, vip7). Corresponde a la ruta corta en la URL (gonovi.app/x/b1). Si le asignaste un nombre arriba, ves el nombre en lugar del código. Pasá el mouse para ver el código físico original."
+                    example="Grabaste la URL /x/b1 en tu tarjeta negra. Al escanearla, aquí aparecerá 'b1'."
                     align="left"
                   />
                 </th>
@@ -281,16 +286,16 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                 const cardLabel = nameByCard.get(scan.card_id)
 
                 return (
-                  <tr key={scan.id} style={{ borderBottom: '1px solid rgba(229,212,182,0.05)' }}>
+                  <tr key={scan.id} style={{ borderBottom: '1px solid rgba(240,236,228,0.05)' }}>
                     <td style={{ ...cellStyle, whiteSpace: 'nowrap' }}>
                       <NfcLocalTime iso={scan.created_at} />
                     </td>
                     <td style={cellStyle}>
                       <span
-                        title={cardLabel ? `Código original: ${scan.card_id}` : undefined}
+                        title={cardLabel ? `Código físico: ${scan.card_id}` : undefined}
                         style={{
-                          background: '#ff8a60',
-                          color: '#0d1122',
+                          background: '#ff8a3d',
+                          color: '#14120E',
                           padding: '0.2rem 0.5rem',
                           borderRadius: '4px',
                           fontWeight: 700,
@@ -308,7 +313,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                           rel="noopener noreferrer"
                           title="Abrir en Google Maps (ubicación aproximada por IP)"
                           style={{
-                            color: '#ff8a60',
+                            color: '#ff8a3d',
                             textDecoration: 'none',
                             marginLeft: '0.5rem',
                             fontSize: '0.85rem',
