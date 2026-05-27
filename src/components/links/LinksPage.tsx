@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { HEADER, LINKS, ECOSYSTEM_LABEL, COPYRIGHT } from './linksData'
+import { HEADER, LINKS, ECOSYSTEM_LABEL, COPYRIGHT, SPONSOR } from './linksData'
 import styles from './LinksPage.module.css'
 
 export function LinksPage() {
@@ -20,6 +20,14 @@ export function LinksPage() {
           <h1 className={styles.brand}>{HEADER.brand}</h1>
           <p className={styles.subtitle}>{HEADER.subtitle}</p>
         </header>
+
+        <aside className={styles.sponsorBanner} aria-label="Información para patrocinadores">
+          <p className={styles.sponsorPitch}>{SPONSOR.pitch}</p>
+          <p className={styles.sponsorDesc}>{SPONSOR.description}</p>
+          <a className={styles.sponsorCta} href={SPONSOR.ctaHref}>
+            {SPONSOR.ctaText}
+          </a>
+        </aside>
 
         <ul className={styles.list}>
           {LINKS.map((link) => {

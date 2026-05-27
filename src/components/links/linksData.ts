@@ -14,6 +14,17 @@ export const HEADER = {
   subtitle: 'Indicadores, herramientas y recursos para traders.',
 }
 
+// Banner de patrocinadores — aparece arriba de la lista de links.
+// Editar acá el copy y el destino del CTA cuando tengas la URL real.
+export const SPONSOR = {
+  pitch: '¿Querés que tu marca aparezca acá?',
+  description:
+    'Este hub se comparte en todos mis videos y redes. Exposición permanente, audiencia 100% trading.',
+  ctaText: 'Quiero patrocinar →',
+  ctaHref:
+    'mailto:?subject=Patrocinio%20GONOVI&body=Hola%20Gonzalo%2C%20me%20interesa%20patrocinar%20tu%20canal.',
+}
+
 export const LINKS: LinkItem[] = [
   { title: 'Descargar indicadores gratis', href: '#', external: true },
   { title: 'Ver indicadores PRO', href: '#', external: true, badge: 'PRO' },
