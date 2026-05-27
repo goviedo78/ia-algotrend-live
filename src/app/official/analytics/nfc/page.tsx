@@ -16,8 +16,14 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     robots: { index: false, follow: false },
     manifest: `/api/manifest-nfc?pin=${pin || ''}`,
     icons: {
-      icon: '/icons/nfc-icon-192.png',
-      apple: '/icons/nfc-icon-192.png',
+      // Cache-busting query string: Safari/iOS cachean el apple-touch-icon
+      // muy agresivamente; al cambiar el query se fuerza re-descarga.
+      icon: [
+        { url: '/icons/nfc-icon-192.png?v=3', sizes: '192x192', type: 'image/png' },
+      ],
+      apple: [
+        { url: '/icons/nfc-icon-180.png?v=3', sizes: '180x180', type: 'image/png' },
+      ],
     },
     appleWebApp: {
       title: 'NFC Admin',

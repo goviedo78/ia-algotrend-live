@@ -21,13 +21,13 @@ export async function GET(request: Request) {
     orientation: "portrait-primary",
     icons: [
       {
-        src: "/icons/nfc-icon-192.png",
+        src: "/icons/nfc-icon-192.png?v=3",
         sizes: "192x192",
         type: "image/png",
         purpose: "any"
       },
       {
-        src: "/icons/nfc-icon-512.png",
+        src: "/icons/nfc-icon-512.png?v=3",
         sizes: "512x512",
         type: "image/png",
         purpose: "any"
