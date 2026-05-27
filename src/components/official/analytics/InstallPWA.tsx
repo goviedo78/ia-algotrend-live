@@ -2,25 +2,34 @@
 
 import { useEffect, useState } from 'react'
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+}
+
+function isIOSStandalone(): boolean {
+  return 'standalone' in window.navigator && window.navigator.standalone === true
+}
+
 export function InstallPWA() {
-  const [promptEvent, setPromptEvent] = useState<any>(null)
+  const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null)
   const [isIOS, setIsIOS] = useState(false)
-  const [isStandalone, setIsStandalone] = useState(false)
+  const [isStandalone, setIsStandalone] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(display-mode: standalone)').matches || isIOSStandalone()
+  })
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const isApp = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone
-      setIsStandalone(!!isApp)
-
       const handler = (e: Event) => {
         e.preventDefault()
-        setPromptEvent(e)
+        setPromptEvent(e as BeforeInstallPromptEvent)
       }
       window.addEventListener('beforeinstallprompt', handler)
 
       const ua = window.navigator.userAgent.toLowerCase()
       if (/iphone|ipad|ipod/.test(ua)) {
-        setIsIOS(true)
+        queueMicrotask(() => setIsIOS(true))
       }
 
       return () => window.removeEventListener('beforeinstallprompt', handler)
@@ -35,6 +44,7 @@ export function InstallPWA() {
         onClick={() => {
           promptEvent.prompt()
           promptEvent.userChoice.then(() => setPromptEvent(null))
+          setIsStandalone(true)
         }}
         style={{
           background: 'rgba(79, 188, 114, 0.15)',
