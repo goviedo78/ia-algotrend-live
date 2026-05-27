@@ -3,33 +3,37 @@
 import { saveCardName, deleteCardName } from '@/app/official/analytics/nfc/actions'
 
 const fieldStyle: React.CSSProperties = {
-  background: 'rgba(229,212,182,0.05)',
-  border: '1px solid rgba(229,212,182,0.2)',
+  background: 'rgba(17, 22, 42, 0.6)',
+  border: '1px solid rgba(79, 85, 112, 0.6)',
   color: '#e5d4b6',
-  padding: '0.5rem 0.75rem',
-  borderRadius: '4px',
+  padding: '0.6rem 0.85rem',
+  borderRadius: '8px',
   fontFamily: 'inherit',
   fontSize: '0.85rem',
+  outline: 'none',
+  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
 }
 
 const buttonStyle: React.CSSProperties = {
-  background: '#ff8a60',
-  color: '#0d1122',
-  border: 'none',
-  padding: '0.5rem 1rem',
-  borderRadius: '4px',
-  fontWeight: 700,
+  background: 'rgba(244, 78, 28, 0.2)',
+  color: '#FF8A60',
+  border: '1px solid rgba(244, 78, 28, 0.32)',
+  borderTop: '1px solid rgba(255, 138, 96, 0.4)',
+  padding: '0.6rem 1.2rem',
+  borderRadius: '8px',
+  fontWeight: 600,
   cursor: 'pointer',
   fontFamily: 'inherit',
   fontSize: '0.85rem',
+  boxShadow: '0 4px 16px rgba(244, 78, 28, 0.2), inset 0 1px 0 rgba(255, 138, 96, 0.22)',
 }
 
 const dangerButtonStyle: React.CSSProperties = {
   background: 'transparent',
-  color: '#f44e1c',
-  border: '1px solid rgba(244,78,28,0.4)',
+  color: 'rgba(244, 78, 28, 0.8)',
+  border: '1px solid rgba(244, 78, 28, 0.3)',
   padding: '0.25rem 0.6rem',
-  borderRadius: '4px',
+  borderRadius: '6px',
   cursor: 'pointer',
   fontFamily: 'inherit',
   fontSize: '0.7rem',
@@ -43,13 +47,16 @@ interface Props {
 export function CardNameForm({ pin, named }: Props) {
   return (
     <section
-      style={{
-        background: 'rgba(229,212,182,0.04)',
-        border: '1px solid rgba(229,212,182,0.1)',
-        borderRadius: '8px',
-        padding: '1.25rem',
-        marginBottom: '2rem',
-      }}
+        style={{
+          background: 'rgba(28, 34, 58, 0.35)',
+          border: '1px solid rgba(79, 85, 112, 0.4)',
+          borderRadius: '16px',
+          padding: '1.5rem',
+          marginBottom: '2rem',
+          boxShadow: 'inset 0 1px 0 rgba(229, 212, 182, 0.05), 0 12px 32px -8px rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(20px) saturate(150%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(150%)',
+        }}
     >
       <h2
         style={{
@@ -108,16 +115,18 @@ export function CardNameForm({ pin, named }: Props) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.75rem',
-                padding: '0.4rem 0.6rem',
-                background: 'rgba(229,212,182,0.03)',
-                borderRadius: '4px',
+                padding: '0.6rem 0.8rem',
+                background: 'rgba(17, 22, 42, 0.4)',
+                border: '1px solid rgba(79, 85, 112, 0.3)',
+                borderRadius: '8px',
                 fontSize: '0.82rem',
               }}
             >
               <span
                 style={{
-                  background: '#ff8a60',
-                  color: '#0d1122',
+                  background: 'rgba(244, 78, 28, 0.15)',
+                  border: '1px solid rgba(244, 78, 28, 0.3)',
+                  color: '#FF8A60',
                   padding: '0.15rem 0.45rem',
                   borderRadius: '4px',
                   fontWeight: 700,

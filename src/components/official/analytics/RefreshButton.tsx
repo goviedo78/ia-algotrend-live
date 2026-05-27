@@ -12,11 +12,11 @@ export function RefreshButton() {
       onClick={() => startTransition(() => router.refresh())}
       disabled={isPending}
       style={{
-        background: 'rgba(240,236,228,0.05)',
-        border: '1px solid rgba(240,236,228,0.15)',
-        color: '#F0ECE4',
+        background: 'rgba(28, 34, 58, 0.4)',
+        border: '1px solid rgba(79, 85, 112, 0.6)',
+        color: '#E5D4B6',
         padding: '0.4rem 0.8rem',
-        borderRadius: '4px',
+        borderRadius: '6px',
         fontSize: '0.75rem',
         fontFamily: 'var(--font-mono, ui-monospace, monospace)',
         cursor: isPending ? 'wait' : 'pointer',
@@ -27,14 +27,14 @@ export function RefreshButton() {
       }}
       onMouseOver={(e) => {
         if (!isPending) {
-          e.currentTarget.style.background = 'rgba(240,236,228,0.1)'
-          e.currentTarget.style.borderColor = 'rgba(240,236,228,0.3)'
+          e.currentTarget.style.background = 'rgba(42, 49, 72, 0.6)'
+          e.currentTarget.style.borderColor = 'rgba(244, 78, 28, 0.4)'
         }
       }}
       onMouseOut={(e) => {
         if (!isPending) {
-          e.currentTarget.style.background = 'rgba(240,236,228,0.05)'
-          e.currentTarget.style.borderColor = 'rgba(240,236,228,0.15)'
+          e.currentTarget.style.background = 'rgba(28, 34, 58, 0.4)'
+          e.currentTarget.style.borderColor = 'rgba(79, 85, 112, 0.6)'
         }
       }}
     >

@@ -5,6 +5,7 @@ import { InfoTooltip } from '@/components/official/InfoTooltip'
 import { NfcLocalTime } from '@/components/official/analytics/NfcLocalTime'
 import { CardNameForm } from '@/components/official/analytics/CardNameForm'
 import { RefreshButton } from '@/components/official/analytics/RefreshButton'
+import { CardFilter } from '@/components/official/analytics/CardFilter'
 import s from './nfc.module.css'
 
 export const metadata: Metadata = {
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 interface Props {
-  searchParams: Promise<{ pin?: string }>
+  searchParams: Promise<{ pin?: string; card?: string }>
 }
 
 const VALID_PIN = process.env.ANALYTICS_PIN ?? process.env.DASHBOARD_PASSWORD
@@ -81,7 +82,7 @@ function parseUserAgent(ua: string | null): { device: string; browser: string; s
 }
 
 export default async function NfcAnalyticsPage({ searchParams }: Props) {
-  const { pin } = await searchParams
+  const { pin, card } = await searchParams
 
   if (!VALID_PIN || pin !== VALID_PIN) {
     return (
@@ -112,8 +113,14 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
   }
 
   const supabase = createAdminClient()
+  
+  let query = supabase.from('nfc_analytics').select('*').order('created_at', { ascending: false }).limit(500)
+  if (card) {
+    query = query.eq('card_id', card)
+  }
+
   const [scansRes, namesRes] = await Promise.all([
-    supabase.from('nfc_analytics').select('*').order('created_at', { ascending: false }).limit(500),
+    query,
     supabase.from('nfc_card_names').select('card_id, name, redirect_url').order('card_id'),
   ])
 
@@ -140,16 +147,21 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
           <h1 className={s.headerTitle}>NFC Analytics</h1>
           <p className={s.headerSubtitle}>Últimos 500 escaneos · hora local de tu navegador</p>
         </div>
-        <div className={s.headerControls} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div className={s.headerControls} style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <CardFilter 
+            pin={pin ?? ''} 
+            cards={names.map(n => ({ id: n.card_id, label: `${n.name} (${n.card_id})` }))} 
+          />
           <RefreshButton />
           <Link
             href={`/official/analytics?pin=${pin}`}
             style={{
-              color: 'rgba(240,236,228,0.6)',
+              color: '#E5D4B6',
               textDecoration: 'none',
-              border: '1px solid rgba(240,236,228,0.2)',
+              border: '1px solid rgba(79, 85, 112, 0.6)',
+              background: 'rgba(28, 34, 58, 0.4)',
               padding: '0.4rem 0.8rem',
-              borderRadius: '4px',
+              borderRadius: '6px',
               fontSize: '0.75rem',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
@@ -267,7 +279,12 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                 const { device, browser, system, summary } = parseUserAgent(ua)
                 const deviceShort = scan.device_cookie_id ? scan.device_cookie_id.substring(0, 8) : 'N/A'
 
-                const locationParts = [scan.city, scan.region, scan.country].filter(Boolean)
+                const locationParts = [scan.city, scan.region, scan.country]
+                  .filter(Boolean)
+                  .map(part => {
+                    try { return decodeURIComponent(part as string) } 
+                    catch { return part }
+                  })
                 const locationLabel = locationParts.join(', ') || 'Desconocido'
                 const mapsUrl =
                   scan.latitude && scan.longitude
@@ -278,10 +295,10 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
 
                 return (
                   <tr key={scan.id} className={s.row}>
-                    <td style={{ whiteSpace: 'nowrap' }} className={s.td}>
+                    <td data-label="Fecha" style={{ whiteSpace: 'nowrap' }} className={s.td}>
                       <NfcLocalTime iso={scan.created_at} />
                     </td>
-                    <td className={s.td}>
+                    <td data-label="Tarjeta" className={s.td}>
                       <span
                         title={cardLabel ? `Código físico: ${scan.card_id}` : undefined}
                         className={s.cardBadge}
@@ -289,7 +306,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                         {cardLabel ?? scan.card_id}
                       </span>
                     </td>
-                    <td className={s.td}>
+                    <td data-label="Ubicación" className={s.td}>
                       <span>{locationLabel}</span>
                       {mapsUrl && (
                         <a
@@ -308,14 +325,14 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                         </a>
                       )}
                     </td>
-                    <td className={`${s.td} ${s.hideMobile}`}>{scan.browser_language || '—'}</td>
-                    <td className={`${s.td} ${s.hideMobile}`} title={scan.device_cookie_id || ''}>
+                    <td data-label="Idioma" className={`${s.td} ${s.hideMobile}`}>{scan.browser_language || '—'}</td>
+                    <td data-label="Dispositivo" className={`${s.td} ${s.hideMobile}`} title={scan.device_cookie_id || ''}>
                       <span style={{ display: 'block', fontWeight: 600 }}>
                         {device} · {browser}
                       </span>
                       <code style={{ opacity: 0.55, fontSize: '0.7rem' }}>{deviceShort}</code>
                     </td>
-                    <td className={s.td} title={ua || undefined}>
+                    <td data-label="Resumen" className={s.td} title={ua || undefined}>
                       <span style={{ display: 'block', fontWeight: 600 }}>{summary}</span>
                       <span style={{ display: 'block', opacity: 0.5, fontSize: '0.68rem', marginTop: '0.15rem' }}>
                         {system === '—' ? 'sin detalle técnico' : 'detalle al pasar mouse'}

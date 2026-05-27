@@ -44,9 +44,13 @@ export async function GET(
              headersList.get('x-forwarded-for')?.split(',')[0].trim() ?? 
              null
 
-  const country = headersList.get('x-vercel-ip-country') ?? null
-  const city = headersList.get('x-vercel-ip-city') ?? null
-  const region = headersList.get('x-vercel-ip-region') ?? null
+  const safeDecode = (val: string | null) => {
+    if (!val) return null
+    try { return decodeURIComponent(val) } catch { return val }
+  }
+  const country = safeDecode(headersList.get('x-vercel-ip-country'))
+  const city = safeDecode(headersList.get('x-vercel-ip-city'))
+  const region = safeDecode(headersList.get('x-vercel-ip-region'))
   const latitude = headersList.get('x-vercel-ip-latitude') ?? null
   const longitude = headersList.get('x-vercel-ip-longitude') ?? null
   
