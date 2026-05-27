@@ -56,6 +56,11 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
+  /* Grid lines — slate navy, con apenas calidez pastel */
+  background:
+    linear-gradient(to right, rgba(79, 85, 112, 0.20) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(to bottom, rgba(201, 168, 122, 0.08) 1px, transparent 1px) 0 0 / 32px 32px;
+  mask-image: linear-gradient(to bottom, black 0%, transparent 88%);
   z-index: 0;
 }
 

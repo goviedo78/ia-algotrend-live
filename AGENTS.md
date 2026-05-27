@@ -24,3 +24,14 @@ GONOVI is Gonzalo Oviedo's personal brand and YouTube/channel ecosystem. `gonovi
 3. **MAINTENANCE WALL IS ACTIVE**: The site is currently behind a "Próximamente" (Coming Soon) screen. **DO NOT REMOVE** the "Próximamente" screen until the user EXPLICITLY orders you to do so.
 4. **Bypass URL**: The active testing route where the main page is actually functioning is the bypass URL: `/?dev=materia`.
 5. **ABSOLUTE MANDATE**: These rules CAN NEVER BE OMITTED. NEVER point `gonovi.app` to another project. JAMÁS deben quitar el cartel de Próximamente hasta recibir la orden explícita.
+
+## GONOVI Deploy Protocol (CRITICAL)
+
+- A plain `git push` from any branch other than the production branch creates a Vercel **preview**, not the live site.
+- Do not tell the user that a change is "live" unless the output explicitly says `target production` and `Aliased: https://gonovi.app`.
+- To publish a validated change to the public production aliases, run exactly:
+  `npm run deploy:prod`
+- For review-only work, use:
+  `npm run deploy:preview`
+- After any production deploy, verify `https://gonovi.app` still returns the Próximamente page unless Gonzalo explicitly ordered removing the wall.
+- Never change `proxy.ts`, `OFFICIAL_ENABLED`, `BYPASS_TOKEN`, or the maintenance wall as part of a deploy fix.

@@ -113,7 +113,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
   }
 
   const supabase = createAdminClient()
-  
+
   let query = supabase.from('nfc_analytics').select('*').order('created_at', { ascending: false }).limit(500)
   if (card) {
     query = query.eq('card_id', card)
@@ -148,9 +148,9 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
           <p className={s.headerSubtitle}>Últimos 500 escaneos · hora local de tu navegador</p>
         </div>
         <div className={s.headerControls} style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <CardFilter 
-            pin={pin ?? ''} 
-            cards={names.map(n => ({ id: n.card_id, label: `${n.name} (${n.card_id})` }))} 
+          <CardFilter
+            pin={pin ?? ''}
+            cards={names.map(n => ({ id: n.card_id, label: `${n.name} (${n.card_id})` }))}
           />
           <RefreshButton />
           <Link
@@ -282,7 +282,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                 const locationParts = [scan.city, scan.region, scan.country]
                   .filter(Boolean)
                   .map(part => {
-                    try { return decodeURIComponent(part as string) } 
+                    try { return decodeURIComponent(part as string) }
                     catch { return part }
                   })
                 const locationLabel = locationParts.join(', ') || 'Desconocido'
