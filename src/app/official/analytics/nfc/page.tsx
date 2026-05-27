@@ -309,36 +309,42 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                       </span>
                     </td>
                     <td data-label="Ubicación" className={s.td}>
-                      <span>{locationLabel}</span>
-                      {mapsUrl && (
-                        <a
-                          href={mapsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Abrir en Google Maps (ubicación aproximada por IP)"
-                          style={{
-                            color: '#ff8a3d',
-                            textDecoration: 'none',
-                            marginLeft: '0.5rem',
-                            fontSize: '0.85rem',
-                          }}
-                        >
-                          📍
-                        </a>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        <span>{locationLabel}</span>
+                        {mapsUrl && (
+                          <a
+                            href={mapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Abrir en Google Maps (ubicación aproximada por IP)"
+                            style={{
+                              color: '#ff8a3d',
+                              textDecoration: 'none',
+                              marginLeft: '0.5rem',
+                              fontSize: '0.85rem',
+                            }}
+                          >
+                            📍
+                          </a>
+                        )}
+                      </div>
                     </td>
                     <td data-label="Idioma" className={`${s.td} ${s.hideMobile}`}>{scan.browser_language || '—'}</td>
                     <td data-label="Dispositivo" className={`${s.td} ${s.hideMobile}`} title={scan.device_cookie_id || ''}>
-                      <span style={{ display: 'block', fontWeight: 600 }}>
-                        {device} · {browser}
-                      </span>
-                      <code style={{ opacity: 0.55, fontSize: '0.7rem' }}>{deviceShort}</code>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <span style={{ display: 'block', fontWeight: 600 }}>
+                          {device} · {browser}
+                        </span>
+                        <code style={{ opacity: 0.55, fontSize: '0.7rem' }}>{deviceShort}</code>
+                      </div>
                     </td>
                     <td data-label="Resumen" className={s.td} title={ua || undefined}>
-                      <span style={{ display: 'block', fontWeight: 600 }}>{summary}</span>
-                      <span style={{ display: 'block', opacity: 0.5, fontSize: '0.68rem', marginTop: '0.15rem' }}>
-                        {system === '—' ? 'sin detalle técnico' : 'detalle al pasar mouse'}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <span style={{ display: 'block', fontWeight: 600 }}>{summary}</span>
+                        <span style={{ display: 'block', opacity: 0.5, fontSize: '0.68rem', marginTop: '0.15rem' }}>
+                          {system === '—' ? 'sin detalle técnico' : 'detalle al pasar mouse'}
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 )
