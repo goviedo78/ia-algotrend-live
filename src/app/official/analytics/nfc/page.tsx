@@ -9,9 +9,18 @@ import { CardFilter } from '@/components/official/analytics/CardFilter'
 import { InstallPWA } from '@/components/official/analytics/InstallPWA'
 import s from './nfc.module.css'
 
-export const metadata: Metadata = {
-  title: 'NFC Analytics | GONOVI',
-  robots: { index: false, follow: false },
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const { pin } = await searchParams
+  return {
+    title: 'NFC Analytics | GONOVI',
+    robots: { index: false, follow: false },
+    manifest: `/api/manifest-nfc?pin=${pin || ''}`,
+    appleWebApp: {
+      title: 'NFC Admin',
+      statusBarStyle: 'black-translucent',
+      capable: true
+    }
+  }
 }
 
 export const dynamic = 'force-dynamic'
