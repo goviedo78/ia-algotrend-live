@@ -5,6 +5,7 @@ import { InfoTooltip } from '@/components/official/InfoTooltip'
 import { NfcLocalTime } from '@/components/official/analytics/NfcLocalTime'
 import { CardNameForm } from '@/components/official/analytics/CardNameForm'
 import { RefreshButton } from '@/components/official/analytics/RefreshButton'
+import s from './nfc.module.css'
 
 export const metadata: Metadata = {
   title: 'NFC Analytics | GONOVI',
@@ -132,34 +133,14 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
 
-  const cellStyle: React.CSSProperties = { padding: '0.75rem 1rem' }
-  const headStyle: React.CSSProperties = { padding: '0.75rem 1rem', whiteSpace: 'nowrap' }
-
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#14120E', // Ink
-        color: '#F0ECE4',      // Bone
-        fontFamily: 'ui-monospace, monospace',
-        padding: '2rem',
-      }}
-    >
-      <header
-        style={{
-          marginBottom: '2rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem',
-        }}
-      >
+    <main className={s.main}>
+      <header className={s.header}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#ff8a3d' }}>NFC Analytics</h1>
-          <p style={{ opacity: 0.6, fontSize: '0.8rem' }}>Últimos 500 escaneos · hora local de tu navegador</p>
+          <h1 className={s.headerTitle}>NFC Analytics</h1>
+          <p className={s.headerSubtitle}>Últimos 500 escaneos · hora local de tu navegador</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div className={s.headerControls} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <RefreshButton />
           <Link
             href={`/official/analytics?pin=${pin}`}
@@ -181,20 +162,13 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
 
       <CardNameForm pin={pin ?? ''} named={names} />
 
-      <section
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '1rem',
-          marginBottom: '2rem',
-        }}
-      >
-        <div style={{ background: 'rgba(240,236,228,0.05)', padding: '1.5rem', borderRadius: '8px' }}>
-          <div style={{ opacity: 0.6, fontSize: '0.8rem', marginBottom: '0.5rem' }}>Total Escaneos</div>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{totalScans}</div>
+      <section className={s.statsSection}>
+        <div className={s.statCard}>
+          <div className={s.statLabel}>Total Escaneos</div>
+          <div className={s.statValue}>{totalScans}</div>
         </div>
-        <div style={{ background: 'rgba(240,236,228,0.05)', padding: '1.5rem', borderRadius: '8px' }}>
-          <div style={{ opacity: 0.6, fontSize: '0.8rem', marginBottom: '0.5rem' }}>
+        <div className={s.statCard}>
+          <div className={s.statLabel}>
             Dispositivos Únicos
             <InfoTooltip
               title="Dispositivos únicos"
@@ -203,10 +177,10 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
               align="left"
             />
           </div>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{uniqueDevices}</div>
+          <div className={s.statValue}>{uniqueDevices}</div>
         </div>
-        <div style={{ background: 'rgba(240,236,228,0.05)', padding: '1.5rem', borderRadius: '8px' }}>
-          <div style={{ opacity: 0.6, fontSize: '0.8rem', marginBottom: '0.5rem' }}>Top Tarjetas Físicas</div>
+        <div className={s.statCard}>
+          <div className={s.statLabel}>Top Tarjetas Físicas</div>
           <div style={{ fontSize: '1.05rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             {topCards.length > 0 ? (
               topCards.map(([id, count]) => (
@@ -227,11 +201,11 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
           Error cargando datos: {error.message}
         </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+        <div className={s.tableWrapper}>
+          <table className={s.table}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(240,236,228,0.2)' }}>
-                <th style={headStyle}>
+                <th className={s.th}>
                   Fecha
                   <InfoTooltip
                     title="Fecha y hora del escaneo"
@@ -240,7 +214,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                     align="left"
                   />
                 </th>
-                <th style={headStyle}>
+                <th className={s.th}>
                   Tarjeta Física (ID)
                   <InfoTooltip
                     title="ID Físico de la Tarjeta"
@@ -249,7 +223,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                     align="left"
                   />
                 </th>
-                <th style={headStyle}>
+                <th className={s.th}>
                   Ubicación
                   <InfoTooltip
                     title="Ubicación aproximada por IP"
@@ -258,7 +232,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                     align="left"
                   />
                 </th>
-                <th style={headStyle}>
+                <th className={`${s.th} ${s.hideMobile}`}>
                   Idioma
                   <InfoTooltip
                     title="Idioma del navegador"
@@ -267,7 +241,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                     align="left"
                   />
                 </th>
-                <th style={headStyle}>
+                <th className={`${s.th} ${s.hideMobile}`}>
                   Dispositivo
                   <InfoTooltip
                     title="Tipo de dispositivo y navegador"
@@ -276,7 +250,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                     align="left"
                   />
                 </th>
-                <th style={headStyle}>
+                <th className={s.th}>
                   Resumen técnico
                   <InfoTooltip
                     title="Resumen técnico"
@@ -304,10 +278,10 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
 
                 return (
                   <tr key={scan.id} style={{ borderBottom: '1px solid rgba(240,236,228,0.05)' }}>
-                    <td style={{ ...cellStyle, whiteSpace: 'nowrap' }}>
+                    <td style={{ whiteSpace: 'nowrap' }} className={s.td}>
                       <NfcLocalTime iso={scan.created_at} />
                     </td>
-                    <td style={cellStyle}>
+                    <td className={s.td}>
                       <span
                         title={cardLabel ? `Código físico: ${scan.card_id}` : undefined}
                         style={{
@@ -321,7 +295,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                         {cardLabel ?? scan.card_id}
                       </span>
                     </td>
-                    <td style={cellStyle}>
+                    <td className={s.td}>
                       <span>{locationLabel}</span>
                       {mapsUrl && (
                         <a
@@ -340,17 +314,17 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                         </a>
                       )}
                     </td>
-                    <td style={cellStyle}>{scan.browser_language || '—'}</td>
-                    <td style={cellStyle} title={scan.device_cookie_id || ''}>
+                    <td className={`${s.td} ${s.hideMobile}`}>{scan.browser_language || '—'}</td>
+                    <td className={`${s.td} ${s.hideMobile}`} title={scan.device_cookie_id || ''}>
                       <span style={{ display: 'block', fontWeight: 600 }}>
                         {device} · {browser}
                       </span>
                       <code style={{ opacity: 0.55, fontSize: '0.7rem' }}>{deviceShort}</code>
                     </td>
-                    <td style={cellStyle} title={ua || undefined}>
+                    <td className={s.td} title={ua || undefined}>
                       <span style={{ display: 'block', fontWeight: 600 }}>{summary}</span>
                       <span style={{ display: 'block', opacity: 0.5, fontSize: '0.68rem', marginTop: '0.15rem' }}>
-                        {system === '—' ? 'sin detalle técnico' : 'detalle completo al pasar el mouse'}
+                        {system === '—' ? 'sin detalle técnico' : 'detalle al pasar mouse'}
                       </span>
                     </td>
                   </tr>
