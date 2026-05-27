@@ -6,6 +6,7 @@ import { emailOpen, emailClose } from '@/lib/email'
 import { logEvent } from '@/lib/analytics'
 import { latestAtrPercent } from '@/lib/atr'
 import { sendPushNotification } from '@/lib/push'
+import { safeExecuteBingxClose, safeExecuteBingxOpen } from '@/lib/bingx'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -260,6 +261,7 @@ export async function GET(req: NextRequest) {
       const firstHit = hitPath(path[0])
       if (firstHit) {
         const trade = await closeTrade(existingTrade.id, last.time, firstHit.closePrice, firstHit.hit)
+        await safeExecuteBingxClose(trade, actions)
         await notifyClose(trade)
         await sendPushDirect({
           title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
@@ -273,6 +275,7 @@ export async function GET(req: NextRequest) {
         const secondHit = hitPath(path[1])
         if (secondHit) {
           const trade = await closeTrade(existingTrade.id, last.time, secondHit.closePrice, secondHit.hit)
+          await safeExecuteBingxClose(trade, actions)
           await notifyClose(trade)
           await sendPushDirect({
             title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
@@ -307,6 +310,7 @@ export async function GET(req: NextRequest) {
 
           if (closeHit) {
             const trade = await closeTrade(existingTrade.id, last.time, price, closeHit)
+            await safeExecuteBingxClose(trade, actions)
             await notifyClose(trade)
             await sendPushDirect({
               title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
@@ -365,6 +369,7 @@ export async function GET(req: NextRequest) {
         const prob = signal === 'LONG' ? signalResult.probUp : signalResult.probDown
         const probText = (prob * 100).toFixed(1) + '%'
 
+        await safeExecuteBingxOpen(trade, actions)
         await notifyOpen(trade)
 
         const emoji = signal === 'LONG' ? '🟢' : '🔴'
