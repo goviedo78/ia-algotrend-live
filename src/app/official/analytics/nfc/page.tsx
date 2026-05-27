@@ -6,6 +6,7 @@ import { NfcLocalTime } from '@/components/official/analytics/NfcLocalTime'
 import { CardNameForm } from '@/components/official/analytics/CardNameForm'
 import { RefreshButton } from '@/components/official/analytics/RefreshButton'
 import { CardFilter } from '@/components/official/analytics/CardFilter'
+import { InstallPWA } from '@/components/official/analytics/InstallPWA'
 import s from './nfc.module.css'
 
 export const metadata: Metadata = {
@@ -148,6 +149,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
           <p className={s.headerSubtitle}>Últimos 500 escaneos · hora local de tu navegador</p>
         </div>
         <div className={s.headerControls} style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <InstallPWA />
           <CardFilter
             pin={pin ?? ''}
             cards={names.map(n => ({ id: n.card_id, label: `${n.name} (${n.card_id})` }))}
