@@ -35,3 +35,18 @@ GONOVI is Gonzalo Oviedo's personal brand and YouTube/channel ecosystem. `gonovi
   `npm run deploy:preview`
 - After any production deploy, verify `https://gonovi.app` still returns the Próximamente page unless Gonzalo explicitly ordered removing the wall.
 - Never change `proxy.ts`, `OFFICIAL_ENABLED`, `BYPASS_TOKEN`, or the maintenance wall as part of a deploy fix.
+
+## GONOVI Supabase Schema Rules (CRITICAL)
+
+Background: la migración `009_explicit_grants_supabase_v2.sql` aplica GRANTs explícitos a `anon`/`authenticated`/`service_role` para cumplir el breaking change de Supabase (oct 2026). La migración `010_default_privileges_least_privilege.sql` restringe los DEFAULT PRIVILEGES de tablas futuras (anon = solo SELECT). La defensa real de los datos es **RLS (Row Level Security)**.
+
+Reglas inviolables al crear cualquier tabla nueva en `public` schema (migraciones `supabase/migrations/*.sql`):
+
+1. **TODA tabla nueva DEBE incluir `ALTER TABLE public.<tabla> ENABLE ROW LEVEL SECURITY;`** en la misma migración que la crea. Sin excepciones.
+2. **Si la tabla NO debe ser accesible por roles públicos** (anon/authenticated), no agregues policies. Habilitar RLS sin policies = deny-all (solo `service_role` accede vía bypass).
+3. **Si la tabla SÍ debe exponerse a anon o authenticated** (ej. tabla pública o por-usuario), creá las `CREATE POLICY` correspondientes en la misma migración, nunca después.
+4. **Funciones (`CREATE FUNCTION`) que hagan operaciones privilegiadas** deben usar `SECURITY DEFINER` y validar el rol del caller adentro. El default privilege para `routines` ya está restringido a `authenticated EXECUTE` + `service_role ALL`.
+5. **Antes de aplicar la migración al remoto (`npx supabase db push`)**, revisar que cada `CREATE TABLE` tenga su correspondiente `ENABLE ROW LEVEL SECURITY` en el archivo. Es un checklist mental obligatorio.
+
+Razón: si una tabla nueva queda sin RLS, `anon` (el rol público con la `anon_key` que va en el frontend) puede al menos leer (`SELECT`) por los default_privileges. Y si alguien olvida también revisar la migración 010 en el futuro, podría exponerse total. RLS es la primera línea de defensa, no la última.
+
