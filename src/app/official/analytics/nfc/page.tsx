@@ -15,6 +15,10 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     title: 'NFC Analytics | GONOVI',
     robots: { index: false, follow: false },
     manifest: `/api/manifest-nfc?pin=${pin || ''}`,
+    icons: {
+      icon: '/icons/nfc-icon-192.png',
+      apple: '/icons/nfc-icon-192.png',
+    },
     appleWebApp: {
       title: 'NFC Admin',
       statusBarStyle: 'black-translucent',
