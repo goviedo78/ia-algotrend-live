@@ -204,7 +204,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
         <div className={s.tableWrapper}>
           <table className={s.table}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(240,236,228,0.2)' }}>
+              <tr>
                 <th className={s.th}>
                   Fecha
                   <InfoTooltip
@@ -277,20 +277,14 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
                 const cardLabel = nameByCard.get(scan.card_id)
 
                 return (
-                  <tr key={scan.id} style={{ borderBottom: '1px solid rgba(240,236,228,0.05)' }}>
+                  <tr key={scan.id} className={s.row}>
                     <td style={{ whiteSpace: 'nowrap' }} className={s.td}>
                       <NfcLocalTime iso={scan.created_at} />
                     </td>
                     <td className={s.td}>
                       <span
                         title={cardLabel ? `Código físico: ${scan.card_id}` : undefined}
-                        style={{
-                          background: '#ff8a3d',
-                          color: '#14120E',
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '4px',
-                          fontWeight: 700,
-                        }}
+                        className={s.cardBadge}
                       >
                         {cardLabel ?? scan.card_id}
                       </span>
