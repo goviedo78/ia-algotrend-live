@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { HEADER, LINKS, ECOSYSTEM_LABEL, COPYRIGHT, SPONSOR } from './linksData'
+import { LinkIcon } from './LinkIcon'
 import styles from './LinksPage.module.css'
 
 export function LinksPage() {
@@ -40,6 +41,11 @@ export function LinksPage() {
                   {...(isExternal && { target: '_blank', rel: 'noopener noreferrer' })}
                   aria-label={link.badge ? `${link.title} (${link.badge})` : link.title}
                 >
+                  {link.icon && (
+                    <span className={styles.linkIcon}>
+                      <LinkIcon name={link.icon} />
+                    </span>
+                  )}
                   <span className={styles.linkTitle}>{link.title}</span>
                   {link.badge && <span className={styles.badge}>{link.badge}</span>}
                 </a>

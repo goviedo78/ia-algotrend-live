@@ -1,5 +1,7 @@
 // Single source of truth para /links. Editar acá para agregar/quitar/cambiar enlaces.
 
+import type { IconName } from './LinkIcon'
+
 export type LinkItem = {
   title: string
   href: string
@@ -7,6 +9,8 @@ export type LinkItem = {
   external?: boolean
   /** Tag opcional al costado del título (ej. 'PRO', 'Nuevo') */
   badge?: string
+  /** Icono opcional (definido en LinkIcon.tsx) */
+  icon?: IconName
 }
 
 export const HEADER = {
@@ -26,15 +30,15 @@ export const SPONSOR = {
 }
 
 export const LINKS: LinkItem[] = [
-  { title: 'Descargar indicadores gratis', href: '#', external: true },
-  { title: 'Ver indicadores PRO', href: '#', external: true, badge: 'PRO' },
-  { title: 'IA AlgoTrend', href: '#', external: true },
-  { title: 'Fusion X10', href: '#', external: true },
-  { title: 'Unirme a la membresía de YouTube', href: 'https://youtube.com/...', external: true },
-  { title: 'Ver último video', href: 'https://youtube.com/...', external: true },
-  { title: 'Contacto comercial / sponsors', href: 'mailto:?subject=Sponsors%20GONOVI', external: false },
-  { title: 'WhatsApp / comunidad', href: 'https://wa.me/...', external: true },
-  { title: 'Apps y herramientas', href: '#', external: true },
+  { title: 'Descargar indicadores gratis', href: '#', external: true, icon: 'chart' },
+  { title: 'Ver indicadores PRO', href: '#', external: true, badge: 'PRO', icon: 'chart-pro' },
+  { title: 'IA AlgoTrend', href: '#', external: true, icon: 'bot' },
+  { title: 'Fusion X10', href: '#', external: true, icon: 'layers' },
+  { title: 'Unirme a la membresía de YouTube', href: 'https://youtube.com/...', external: true, icon: 'youtube' },
+  { title: 'Ver último video', href: 'https://youtube.com/...', external: true, icon: 'play' },
+  { title: 'Contacto comercial / sponsors', href: 'mailto:?subject=Sponsors%20GONOVI', external: false, icon: 'mail' },
+  { title: 'WhatsApp / comunidad', href: 'https://wa.me/...', external: true, icon: 'whatsapp' },
+  { title: 'Apps y herramientas', href: '#', external: true, icon: 'grid' },
 ]
 
 export const ECOSYSTEM_LABEL = 'TradingView · YouTube · Gumroad · Herramientas propias'

@@ -176,6 +176,26 @@
   transform: translateY(0);
 }
 
+.linkIcon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(229, 212, 182, 0.06);
+  border: 1px solid var(--border);
+  color: var(--ink-muted);
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.linkBtn:hover .linkIcon,
+.linkBtn:focus-visible .linkIcon {
+  color: var(--primary);
+  background: rgba(244, 78, 28, 0.08);
+  border-color: var(--primary);
+}
+
 .linkTitle {
   flex: 1;
   min-width: 0;
