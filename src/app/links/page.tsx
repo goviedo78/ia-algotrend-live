@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     description: 'Indicadores, herramientas y recursos para traders. Todos los accesos del ecosistema GONOVI en un solo lugar.',
     url: 'https://gonovi.app/links',
     siteName: 'GONOVI',
-    images: [{ url: '/og-card.png', width: 1200, height: 630, alt: 'GONOVI · Enlaces' }],
+    images: [{ url: '/og-links.png', width: 1200, height: 630, alt: 'GONOVI · Enlaces' }],
     type: 'website',
     locale: 'es_AR',
   },
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Enlaces | GONOVI',
     description: 'Indicadores, herramientas y recursos para traders. Hub de enlaces oficial GONOVI.',
-    images: ['/og-card.png'],
+    images: ['/og-links.png'],
   },
 }
 
