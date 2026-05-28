@@ -22,6 +22,23 @@
   overflow-x: hidden;
 }
 
+.introOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: #1a1814;
+  z-index: 0;
+  pointer-events: none;
+  transition: opacity 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+[data-phase="intro"] .introOverlay {
+  opacity: 1;
+}
+
+[data-phase="content"] .introOverlay {
+  opacity: 0;
+}
+
 /* ── Noise & Shards (Materia aesthetic) ─────────────────── */
 .noise {
   position: fixed;

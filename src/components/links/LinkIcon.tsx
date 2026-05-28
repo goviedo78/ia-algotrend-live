@@ -15,6 +15,7 @@ export type IconName =
   | 'instagram'    // instagram
   | 'tiktok'       // tiktok
   | 'globe'        // website
+  | 'gonovi'       // gonovi mark
 
 const COMMON = {
   width: 20,
@@ -112,7 +113,7 @@ export function LinkIcon({ name }: { name: IconName }) {
     case 'tiktok':
       return (
         <svg {...COMMON}>
-          <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5v3a8 8 0 0 1-5-1.5v5.5a8 8 0 1 1-8-8v3a5 5 0 0 0 4 4z" />
+          <path d="M15 2v3.15a5.5 5.5 0 0 0 5 5v3.31A9 9 0 0 1 15 10v9.5a5.5 5.5 0 1 1-5.5-5.5V17a2 2 0 1 0 2 2z" />
         </svg>
       )
     case 'globe':
@@ -121,6 +122,15 @@ export function LinkIcon({ name }: { name: IconName }) {
           <circle cx="12" cy="12" r="10" />
           <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
           <path d="M2 12h20" />
+        </svg>
+      )
+    case 'gonovi':
+      return (
+        <svg {...COMMON}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 12V3" />
+          <path d="M12 12l-7.5 4.5" />
+          <path d="M12 12l7.5 4.5" />
         </svg>
       )
   }

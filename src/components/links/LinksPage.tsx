@@ -27,6 +27,7 @@ export function LinksPage() {
 
   return (
     <main className={styles.main} data-phase={phase}>
+      <div className={styles.introOverlay} aria-hidden="true" />
       <div className={styles.noise} aria-hidden="true" />
       <div className={styles.shardOne} aria-hidden="true" />
       <div className={styles.shardTwo} aria-hidden="true" />
@@ -80,7 +81,7 @@ export function LinksPage() {
       <div className={styles.container}>
         <header className={styles.header}>
           <h1 className={styles.brand}>{HEADER.brand}</h1>
-          <p className={styles.subtitle}>{HEADER.subtitle}</p>
+          {HEADER.subtitle && <p className={styles.subtitle}>{HEADER.subtitle}</p>}
         </header>
 
         <ul className={styles.list}>

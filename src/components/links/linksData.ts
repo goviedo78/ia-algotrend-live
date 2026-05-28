@@ -18,8 +18,8 @@ export type LinkItem = {
 }
 
 export const HEADER = {
-  brand: 'GONOVI',
-  subtitle: 'Indicadores, herramientas y recursos para traders.',
+  brand: 'LINKS',
+  subtitle: '',
 }
 
 // Banner de patrocinadores — aparece arriba de la lista de links.
@@ -37,7 +37,7 @@ export const LINKS: LinkItem[] = [
   { title: 'Canal de YouTube', href: 'https://youtube.com/...', external: true, icon: 'youtube', color: '#FF0000' },
   { title: 'Instagram', href: 'https://instagram.com/...', external: true, icon: 'instagram', color: '#E1306C' },
   { title: 'TikTok', href: 'https://tiktok.com/...', external: true, icon: 'tiktok', color: '#00f2fe' },
-  { title: 'GONOVI App', href: 'https://gonovi.app/official', external: true, icon: 'globe', color: '#C9A87A' },
+  { title: 'GONOVI App', href: 'https://gonovi.app/official', external: true, icon: 'gonovi', color: '#C9A87A' },
   { title: 'Contacto comercial / sponsors', href: 'mailto:?subject=Sponsors%20GONOVI', external: false, icon: 'mail', color: '#A8AABA' },
   { title: 'Apps y herramientas', href: '#', external: true, icon: 'grid', color: '#C9A87A' },
   
