@@ -12,6 +12,15 @@ import {
   type LinkItem,
 } from '@/components/links/linksData'
 
+export type CustomIcon = {
+  /** id único, kebab-case (ej: 'gumroad', 'discord') */
+  id: string
+  /** Nombre legible para el dropdown ('Gumroad') */
+  name: string
+  /** SVG completo ya sanitizado. Hereda color via currentColor cuando aplica. */
+  svg: string
+}
+
 export type LinksConfig = {
   header: { brand: string; subtitle: string }
   sponsor: {
@@ -23,6 +32,8 @@ export type LinksConfig = {
   links: LinkItem[]
   ecosystemLabel: string
   copyright: string
+  /** Iconos SVG agregados por el usuario desde el dashboard */
+  customIcons?: CustomIcon[]
 }
 
 export const DEFAULT_CONFIG: LinksConfig = {
@@ -31,6 +42,7 @@ export const DEFAULT_CONFIG: LinksConfig = {
   links: DEFAULT_LINKS,
   ecosystemLabel: DEFAULT_ECOSYSTEM,
   copyright: DEFAULT_COPYRIGHT,
+  customIcons: [],
 }
 
 function isValidConfig(value: unknown): value is LinksConfig {

@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { LinkIcon, type IconName } from '@/components/links/LinkIcon'
+import { IconDisplay } from '@/components/links/IconDisplay'
 import { saveConfigAction } from '@/app/official/links/actions'
-import type { LinksConfig } from '@/lib/links-config'
+import type { LinksConfig, CustomIcon } from '@/lib/links-config'
 import styles from './LinksAdmin.module.css'
 
 type LinkRow = LinksConfig['links'][number]
 
-const ICON_OPTIONS: IconName[] = [
+const BUILT_IN_ICONS: IconName[] = [
   'chart', 'chart-pro', 'bot', 'layers',
   'youtube', 'play', 'mail', 'whatsapp',
   'grid', 'instagram', 'tiktok', 'globe',
@@ -36,8 +37,16 @@ export function LinksAdmin({ pin, initialConfig }: Props) {
   const [isPending, startTransition] = useTransition()
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [previewBust, setPreviewBust] = useState(0)
   const dragIndexRef = useRef<number | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  function refreshPreview() {
+    const iframe = iframeRef.current
+    if (!iframe) return
+    // Cambiar src con timestamp fuerza al browser a hacer nueva request
+    // (evita cache HTTP) y al servidor a re-render (force-dynamic en /links).
+    iframe.src = `/links?preview=${Date.now()}`
+  }
 
   const isDirty = useMemo(
     () => JSON.stringify(config) !== JSON.stringify(initialConfig),
@@ -77,6 +86,28 @@ export function LinksAdmin({ pin, initialConfig }: Props) {
     setConfig((prev) => ({
       ...prev,
       links: prev.links.filter((_, i) => i !== index),
+    }))
+  }
+
+  // ── Custom icons helpers ─────────────────────────────────
+  function addCustomIcon(icon: CustomIcon) {
+    setConfig((prev) => ({
+      ...prev,
+      customIcons: [...(prev.customIcons ?? []), icon],
+    }))
+  }
+
+  function deleteCustomIcon(id: string) {
+    const inUse = config.links.some((l) => l.icon === id)
+    const msg = inUse
+      ? `El icono "${id}" está usándose en algún link. ¿Borrar igualmente?`
+      : `¿Borrar el icono "${id}"?`
+    if (!confirm(msg)) return
+    setConfig((prev) => ({
+      ...prev,
+      customIcons: (prev.customIcons ?? []).filter((ic) => ic.id !== id),
+      // Si estaba en uso, lo quitamos del link también
+      links: prev.links.map((l) => (l.icon === id ? { ...l, icon: undefined } : l)),
     }))
   }
 
@@ -120,7 +151,7 @@ export function LinksAdmin({ pin, initialConfig }: Props) {
       const res = await saveConfigAction(fd)
       if (res?.ok) {
         setSaveStatus('saved')
-        setPreviewBust((n) => n + 1)
+        refreshPreview()
         setTimeout(() => setSaveStatus('idle'), 3000)
       } else {
         setSaveStatus('error')
@@ -299,15 +330,22 @@ export function LinksAdmin({ pin, initialConfig }: Props) {
                         }
                       >
                         <option value="">(sin icono)</option>
-                        {ICON_OPTIONS.map((n) => (
-                          <option key={n} value={n}>
-                            {n}
-                          </option>
-                        ))}
+                        <optgroup label="Built-in">
+                          {BUILT_IN_ICONS.map((n) => (
+                            <option key={n} value={n}>{n}</option>
+                          ))}
+                        </optgroup>
+                        {(config.customIcons?.length ?? 0) > 0 && (
+                          <optgroup label="Custom (subidos por vos)">
+                            {(config.customIcons ?? []).map((ic) => (
+                              <option key={ic.id} value={ic.id}>{ic.name}</option>
+                            ))}
+                          </optgroup>
+                        )}
                       </select>
                       {link.icon && (
                         <span className={styles.iconPreview} style={{ color: link.color ?? 'var(--ink-muted)' }}>
-                          <LinkIcon name={link.icon} />
+                          <IconDisplay name={link.icon} customIcons={config.customIcons} />
                         </span>
                       )}
                     </Field>
@@ -362,6 +400,20 @@ export function LinksAdmin({ pin, initialConfig }: Props) {
             </div>
           </details>
 
+          {/* CUSTOM ICONS */}
+          <details className={styles.group}>
+            <summary className={styles.groupSummary}>
+              Iconos custom ({config.customIcons?.length ?? 0})
+            </summary>
+            <div className={styles.groupBody}>
+              <CustomIconsManager
+                icons={config.customIcons ?? []}
+                onAdd={addCustomIcon}
+                onDelete={deleteCustomIcon}
+              />
+            </div>
+          </details>
+
           {/* FOOTER (ecosystem + copyright) */}
           <details className={styles.group}>
             <summary className={styles.groupSummary}>Footer</summary>
@@ -394,15 +446,15 @@ export function LinksAdmin({ pin, initialConfig }: Props) {
             <button
               type="button"
               className={styles.previewRefreshBtn}
-              onClick={() => setPreviewBust((n) => n + 1)}
+              onClick={refreshPreview}
               title="Refrescar preview"
             >
               ↻
             </button>
           </div>
           <iframe
-            key={previewBust}
-            src={`/links?preview=${previewBust}`}
+            ref={iframeRef}
+            src="/links"
             className={styles.previewFrame}
             title="Preview /links"
           />
@@ -421,5 +473,242 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className={styles.fieldLabel}>{label}</span>
       {children}
     </label>
+  )
+}
+
+// ── Custom icons manager (upload + lista) ─────────────────
+const RESERVED_IDS = new Set([
+  'chart', 'chart-pro', 'bot', 'layers', 'youtube', 'play',
+  'mail', 'whatsapp', 'grid', 'instagram', 'tiktok', 'globe',
+])
+
+function CustomIconsManager({
+  icons,
+  onAdd,
+  onDelete,
+}: {
+  icons: CustomIcon[]
+  onAdd: (icon: CustomIcon) => void
+  onDelete: (id: string) => void
+}) {
+  const [id, setId] = useState('')
+  const [name, setName] = useState('')
+  const [svg, setSvg] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function validateLocal(): string | null {
+    if (!id.trim()) return 'Falta el ID'
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/.test(id)) {
+      return 'ID inválido: solo minúsculas, números y guiones (ej: "gumroad", "discord")'
+    }
+    if (RESERVED_IDS.has(id)) return `"${id}" ya es un icono built-in. Usá otro ID.`
+    if (icons.some((ic) => ic.id === id)) return `Ya existe un icono custom con ID "${id}"`
+    if (!name.trim()) return 'Falta el nombre legible'
+    if (!svg.trim()) return 'Falta el SVG'
+    if (!/^<svg[\s>]/i.test(svg.trim())) return 'El SVG debe empezar con <svg'
+    if (!/<\/svg>\s*$/i.test(svg.trim())) return 'El SVG debe terminar con </svg>'
+    if (svg.length > 12000) return 'SVG demasiado grande (max ~12KB sin sanitizar)'
+    return null
+  }
+
+  function handleAdd() {
+    setError(null)
+    const err = validateLocal()
+    if (err) {
+      setError(err)
+      return
+    }
+    onAdd({ id: id.trim(), name: name.trim(), svg: svg.trim() })
+    setId('')
+    setName('')
+    setSvg('')
+  }
+
+  async function handleFile(file: File) {
+    if (!file.name.endsWith('.svg') && file.type !== 'image/svg+xml') {
+      setError('Solo se aceptan archivos .svg')
+      return
+    }
+    if (file.size > 12000) {
+      setError(`Archivo demasiado grande (${(file.size / 1024).toFixed(1)} KB). Max 12KB.`)
+      return
+    }
+    const text = await file.text()
+    setSvg(text)
+    setError(null)
+    // Auto-sugerir id si está vacío
+    if (!id) {
+      const stem = file.name.replace(/\.svg$/i, '').toLowerCase().replace(/[^a-z0-9-]+/g, '-')
+      setId(stem.substring(0, 32))
+    }
+    if (!name) {
+      setName(file.name.replace(/\.svg$/i, ''))
+    }
+  }
+
+  return (
+    <>
+      <p style={{ fontSize: '0.78rem', color: 'var(--ink-muted)', margin: '0 0 0.5rem' }}>
+        Subí un SVG line-art con <code>stroke=&quot;currentColor&quot;</code> para que herede el color
+        que elegís en cada link. Ver <a
+          href="https://simpleicons.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'var(--primary)' }}
+        >simpleicons.org</a> (logos de marcas) o <a
+          href="https://lucide.dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'var(--primary)' }}
+        >lucide.dev</a> (genéricos line-art).
+      </p>
+
+      {error && (
+        <div
+          style={{
+            background: 'rgba(244,78,28,0.12)',
+            border: '1px solid var(--primary)',
+            color: 'var(--primary)',
+            padding: '0.55rem 0.8rem',
+            borderRadius: '7px',
+            fontSize: '0.78rem',
+            marginBottom: '0.5rem',
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      <Field label="ID (kebab-case, ej: gumroad)">
+        <input
+          className={styles.input}
+          type="text"
+          value={id}
+          maxLength={32}
+          placeholder="gumroad"
+          onChange={(e) => setId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+        />
+      </Field>
+
+      <Field label="Nombre legible">
+        <input
+          className={styles.input}
+          type="text"
+          value={name}
+          maxLength={40}
+          placeholder="Gumroad"
+          onChange={(e) => setName(e.target.value)}
+        />
+      </Field>
+
+      <Field label="SVG (pegar acá o arrastrar archivo)">
+        <textarea
+          className={styles.textarea}
+          value={svg}
+          rows={6}
+          placeholder='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">...</svg>'
+          onChange={(e) => setSvg(e.target.value)}
+          onDrop={(e) => {
+            e.preventDefault()
+            const file = e.dataTransfer.files?.[0]
+            if (file) void handleFile(file)
+          }}
+          onDragOver={(e) => e.preventDefault()}
+        />
+      </Field>
+
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".svg,image/svg+xml"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) void handleFile(file)
+            if (fileInputRef.current) fileInputRef.current.value = ''
+          }}
+        />
+        <button
+          type="button"
+          className={styles.addBtn}
+          style={{ marginTop: 0, flex: 1 }}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          📁 Elegir archivo SVG
+        </button>
+        <button
+          type="button"
+          className={styles.addBtn}
+          style={{ marginTop: 0, background: 'var(--primary)', color: 'var(--background)', borderStyle: 'solid', borderColor: 'var(--primary)', flex: 1 }}
+          onClick={handleAdd}
+        >
+          + Agregar icono
+        </button>
+      </div>
+
+      {svg && (
+        <div style={{ marginTop: '0.5rem', padding: '0.7rem', background: 'var(--background)', border: '1px solid var(--border)', borderRadius: '7px', display: 'flex', gap: '0.7rem', alignItems: 'center' }}>
+          <span style={{ display: 'inline-grid', placeItems: 'center', width: 40, height: 40, color: 'var(--foreground)', background: 'rgba(229,212,182,0.05)', borderRadius: '7px' }}>
+            <span
+              style={{ display: 'inline-block', width: 24, height: 24, lineHeight: 0 }}
+              dangerouslySetInnerHTML={{ __html: svg }}
+            />
+          </span>
+          <span style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>
+            Preview crudo (sin sanitizar). El servidor lo limpiará al guardar.
+          </span>
+        </div>
+      )}
+
+      {icons.length > 0 && (
+        <div style={{ marginTop: '1rem' }}>
+          <p style={{ fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-dim)', fontWeight: 600, margin: '0 0 0.5rem' }}>
+            Tus iconos custom
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            {icons.map((ic) => (
+              <div
+                key={ic.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.7rem',
+                  padding: '0.55rem 0.7rem',
+                  background: 'rgba(255,255,255,0.02)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '7px',
+                }}
+              >
+                <span style={{ display: 'inline-grid', placeItems: 'center', width: 32, height: 32, color: 'var(--foreground)' }}>
+                  <span style={{ display: 'inline-block', width: 20, height: 20, lineHeight: 0 }} dangerouslySetInnerHTML={{ __html: ic.svg }} />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{ic.name}</div>
+                  <code style={{ fontSize: '0.7rem', color: 'var(--ink-dim)' }}>{ic.id}</code>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onDelete(ic.id)}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(244,78,28,0.4)',
+                    color: 'var(--primary)',
+                    borderRadius: '6px',
+                    padding: '0.3rem 0.7rem',
+                    fontSize: '0.74rem',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  Borrar
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   )
 }
