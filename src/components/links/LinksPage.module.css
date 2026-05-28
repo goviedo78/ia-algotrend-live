@@ -39,6 +39,110 @@
   opacity: 0;
 }
 
+/* ── HUD / Overlay Text (brand-3d.html replica) ────────── */
+.hud {
+  position: fixed;
+  top: 32px; 
+  left: 32px;
+  z-index: 10;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: 1.8;
+  color: rgba(229, 212, 182, 0.6);
+  pointer-events: none;
+  transition: opacity 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.hudBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--hub-bone);
+  color: var(--hub-ink);
+  margin-bottom: 12px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+}
+
+.hudRow { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+}
+
+.hudDot { 
+  width: 6px; 
+  height: 6px; 
+  border-radius: 50%; 
+  background: var(--primary); 
+  animation: blink 1.4s ease-in-out infinite; 
+}
+
+@keyframes blink { 
+  0%, 100% { opacity: 1; } 
+  50% { opacity: 0.3; } 
+}
+
+.fps {
+  position: fixed;
+  top: 32px; 
+  right: 32px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  color: rgba(229, 212, 182, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  pointer-events: none;
+  transition: opacity 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 10;
+}
+
+.fps strong { 
+  color: var(--hub-bone); 
+  margin-left: 6px; 
+}
+
+.caption {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: rgba(229, 212, 182, 0.6);
+  pointer-events: none;
+  transition: opacity 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 10;
+}
+
+.footerMeta {
+  position: fixed;
+  bottom: 32px; 
+  right: 32px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(229, 212, 182, 0.3);
+  text-align: right;
+  line-height: 1.6;
+  pointer-events: none;
+  transition: opacity 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 10;
+}
+
+[data-phase="content"] .hud,
+[data-phase="content"] .fps,
+[data-phase="content"] .caption,
+[data-phase="content"] .footerMeta {
+  opacity: 0;
+}
+
 /* ── Noise & Shards (Materia aesthetic) ─────────────────── */
 .noise {
   position: fixed;

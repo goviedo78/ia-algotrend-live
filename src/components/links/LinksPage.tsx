@@ -17,17 +17,48 @@ const MateriaLogo = dynamic(
 
 export function LinksPage() {
   const [phase, setPhase] = useState<'intro' | 'content'>('intro')
+  const [fps, setFps] = useState(60)
 
   useEffect(() => {
+    let interval: ReturnType<typeof setInterval>
+    if (phase === 'intro') {
+      interval = setInterval(() => {
+        setFps(60 - Math.floor(Math.random() * 3)) // Simula 58-60 fps fluctuantes
+      }, 500)
+    }
     const timer = setTimeout(() => {
       setPhase('content')
     }, 2500) // 2.5s intro
-    return () => clearTimeout(timer)
-  }, [])
+    return () => {
+      clearTimeout(timer)
+      if (interval) clearInterval(interval)
+    }
+  }, [phase])
 
   return (
     <main className={styles.main} data-phase={phase}>
       <div className={styles.introOverlay} aria-hidden="true" />
+      
+      {/* ── HUD de Intro ── */}
+      <div className={styles.hud} aria-hidden="true">
+        <div className={styles.hudBadge}>GONOVI . LINK</div>
+        <div className={styles.hudRow}>
+          <div className={styles.hudDot} /> MATERIA VIVA
+        </div>
+      </div>
+
+      <div className={styles.fps} aria-hidden="true">
+        RENDERING <strong>{fps} FPS</strong>
+      </div>
+
+      <div className={styles.caption} aria-hidden="true">
+        CARGANDO<span style={{ color: 'var(--primary)' }}>...</span>
+      </div>
+
+      <div className={styles.footerMeta} aria-hidden="true">
+        GONOVI<br/>2026
+      </div>
+
       <div className={styles.noise} aria-hidden="true" />
       <div className={styles.shardOne} aria-hidden="true" />
       <div className={styles.shardTwo} aria-hidden="true" />
