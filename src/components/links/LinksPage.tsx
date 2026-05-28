@@ -36,8 +36,11 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
   const ECOSYSTEM_LABEL = config?.ecosystemLabel ?? DEFAULT_ECOSYSTEM
   const COPYRIGHT = config?.copyright ?? DEFAULT_COPYRIGHT
   const SPONSOR = config?.sponsor ?? DEFAULT_SPONSOR
+  
   const [phase, setPhase] = useState<'intro' | 'content'>('intro')
   const [fps, setFps] = useState(60)
+  
+  const [isScrolled, setIsScrolled] = useState(false)
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>
@@ -54,6 +57,16 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
       if (interval) clearInterval(interval)
     }
   }, [phase])
+
+  useEffect(() => {
+    const el = document.getElementById('scroll-sentinel')
+    if (!el) return
+    const observer = new IntersectionObserver(([entry]) => {
+      setIsScrolled(!entry.isIntersecting)
+    }, { threshold: 0, rootMargin: '-20px 0px 0px 0px' })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   return (
     <main className={styles.main} data-phase={phase}>
@@ -84,25 +97,6 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
       <div className={styles.shardTwo} aria-hidden="true" />
       <div className={styles.shardThree} aria-hidden="true" />
 
-      {/* ── Top Bar (Sticky edge with Logo and CTA) ── */}
-      <aside className={styles.topBar} aria-label="Navegación principal">
-        <div className={styles.topBarInner}>
-          <div className={styles.topBarBrand}>
-            <Image
-              src="/logo-orange-graphite-navy/01-navy-cream-orange-transparent.svg"
-              alt="GONOVI"
-              width={32}
-              height={32}
-              priority
-            />
-            <span>GONOVI</span>
-          </div>
-          <a className={styles.sponsorCta} href={SPONSOR.ctaHref}>
-            {SPONSOR.ctaText}
-          </a>
-        </div>
-      </aside>
-
       {/* ── 3D Logo Background ── */}
       <div className={styles.materiaWrapper} aria-hidden="true">
         <MateriaLogo
@@ -130,6 +124,32 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
       </div>
 
       <div className={styles.container}>
+        <div id="scroll-sentinel" style={{ position: 'absolute', top: 0, height: '1px', width: '100%', pointerEvents: 'none' }} aria-hidden="true" />
+        
+        {/* ── Top Bar (Sticky with Collapse) ── */}
+        <aside className={`${styles.topBar} ${isScrolled ? styles.scrolled : ''}`} aria-label="Información para patrocinadores">
+          <div className={styles.topBarTopRow}>
+            <div className={styles.topBarBrand}>
+              <Image
+                src="/logo-orange-graphite-navy/01-navy-cream-orange-transparent.svg"
+                alt="GONOVI"
+                width={32}
+                height={32}
+                priority
+              />
+              <span>GONOVI</span>
+            </div>
+            <a className={styles.sponsorCta} href={SPONSOR.ctaHref}>
+              {SPONSOR.ctaText}
+            </a>
+          </div>
+          
+          <div className={styles.topBarExpandedContent}>
+            <p className={styles.sponsorPitch}>{SPONSOR.pitch}</p>
+            <p className={styles.sponsorDesc}>{SPONSOR.description}</p>
+          </div>
+        </aside>
+
         <header className={styles.header}>
           <h1 className={styles.brand}>{HEADER.brand}</h1>
           {HEADER.subtitle && <p className={styles.subtitle}>{HEADER.subtitle}</p>}
