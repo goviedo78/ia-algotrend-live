@@ -18,7 +18,9 @@
 .backdrop {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 100%, rgba(13, 17, 34, 0.2) 0%, rgba(0, 0, 0, 0.7) 100%);
+  background: rgba(0, 0, 0, 0.4); /* Darken the rest of the screen */
+  backdrop-filter: blur(12px); /* Blur the rest of the screen so the background loses focus */
+  -webkit-backdrop-filter: blur(12px);
   opacity: 0;
   transition: opacity 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -31,8 +33,8 @@
   position: relative;
   width: 100%;
   max-width: 520px;
-  /* Ultra-Premium Liquid Glass */
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  /* Ultra-Premium Smoked Liquid Glass (Dark base for legibility) */
+  background: linear-gradient(135deg, rgba(20, 24, 44, 0.65) 0%, rgba(10, 12, 22, 0.5) 100%);
   backdrop-filter: blur(48px) saturate(150%);
   -webkit-backdrop-filter: blur(48px) saturate(150%);
   
