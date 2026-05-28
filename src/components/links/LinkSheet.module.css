@@ -19,8 +19,8 @@
   position: absolute;
   inset: 0;
   background: transparent; /* Solo difuminado, sin lona oscura */
-  backdrop-filter: blur(8px); /* 50% menos agresivo */
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(4px); /* Aún menos agresivo */
+  -webkit-backdrop-filter: blur(4px);
   opacity: 0;
   transition: opacity 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }

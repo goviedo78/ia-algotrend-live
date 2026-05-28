@@ -458,7 +458,7 @@
 /* Aplicamos el blur individualmente a cada botón para que no se genere
    una "cortina rectangular" sobre todo el contenedor ul */
 .listBlurred .linkBtn {
-  filter: blur(2.5px);
+  filter: blur(1.5px);
 }
   /* Sin animation acá — el stagger por linkItem maneja la entrada.
      Tener 2 animations sobre padre+hijo crea race conditions en
