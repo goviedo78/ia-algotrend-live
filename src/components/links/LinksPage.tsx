@@ -11,7 +11,8 @@ import {
   SPONSOR as DEFAULT_SPONSOR,
   type LinkItem,
 } from './linksData'
-import { LinkIcon } from './LinkIcon'
+import { IconDisplay } from './IconDisplay'
+import type { CustomIcon } from '@/lib/links-config'
 import styles from './LinksPage.module.css'
 
 type LinksConfigShape = {
@@ -20,6 +21,7 @@ type LinksConfigShape = {
   links: LinkItem[]
   ecosystemLabel: string
   copyright: string
+  customIcons?: CustomIcon[]
 }
 
 const MateriaLogo = dynamic(
@@ -36,6 +38,7 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
   const ECOSYSTEM_LABEL = config?.ecosystemLabel ?? DEFAULT_ECOSYSTEM
   const COPYRIGHT = config?.copyright ?? DEFAULT_COPYRIGHT
   const SPONSOR = config?.sponsor ?? DEFAULT_SPONSOR
+  const CUSTOM_ICONS = config?.customIcons ?? []
   
   const [phase, setPhase] = useState<'intro' | 'content'>('intro')
   const [fps, setFps] = useState(60)
@@ -63,7 +66,7 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
     if (!el) return
     const observer = new IntersectionObserver(([entry]) => {
       setIsScrolled(!entry.isIntersecting)
-    }, { threshold: 0, rootMargin: '-20px 0px 0px 0px' })
+    }, { threshold: 0, rootMargin: '-1px 0px 0px 0px' })
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
@@ -123,11 +126,11 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
         />
       </div>
 
-      <div className={styles.container}>
-        <div id="scroll-sentinel" style={{ position: 'absolute', top: 0, height: '1px', width: '100%', pointerEvents: 'none' }} aria-hidden="true" />
-        
-        {/* ── Top Bar (Sticky with Collapse) ── */}
-        <aside className={`${styles.topBar} ${isScrolled ? styles.scrolled : ''}`} aria-label="Información para patrocinadores">
+      <div id="scroll-sentinel" style={{ position: 'absolute', top: 0, height: '1px', width: '100%', pointerEvents: 'none' }} aria-hidden="true" />
+      
+      {/* ── Top Bar (Sticky Header) ── */}
+      <aside className={`${styles.topBar} ${isScrolled ? styles.scrolled : ''}`} aria-label="Información para patrocinadores">
+        <div className={styles.topBarInner}>
           <div className={styles.topBarTopRow}>
             <div className={styles.topBarBrand}>
               <Image
@@ -148,8 +151,10 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
             <p className={styles.sponsorPitch}>{SPONSOR.pitch}</p>
             <p className={styles.sponsorDesc}>{SPONSOR.description}</p>
           </div>
-        </aside>
+        </div>
+      </aside>
 
+      <div className={styles.container}>
         <header className={styles.header}>
           <h1 className={styles.brand}>{HEADER.brand}</h1>
           {HEADER.subtitle && <p className={styles.subtitle}>{HEADER.subtitle}</p>}
@@ -172,7 +177,7 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
                 >
                   {link.icon && (
                     <span className={styles.linkIcon}>
-                      <LinkIcon name={link.icon} />
+                      <IconDisplay name={link.icon} customIcons={CUSTOM_ICONS} />
                     </span>
                   )}
                   <span className={styles.linkTitle}>{link.title}</span>
