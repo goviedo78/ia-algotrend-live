@@ -132,7 +132,7 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
       <div id="scroll-sentinel" style={{ position: 'absolute', top: 0, height: '1px', width: '100%', pointerEvents: 'none' }} aria-hidden="true" />
       
       {/* ── Top Bar (Sticky Header) ── */}
-      <aside className={`${styles.topBar} ${isScrolled ? styles.scrolled : ''}`} aria-label="Información para patrocinadores">
+      <aside className={`${styles.topBar} ${isScrolled ? styles.scrolled : ''} ${sheetLink ? styles.listBlurred : ''}`} aria-label="Información para patrocinadores">
         <div className={styles.topBarInner}>
           <div className={styles.topBarTopRow}>
             <div className={styles.topBarBrand}>
@@ -158,12 +158,12 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
       </aside>
 
       <div className={styles.container}>
-        <header className={styles.header}>
+        <header className={`${styles.header} ${sheetLink ? styles.listBlurred : ''}`}>
           <h1 className={styles.brand}>{HEADER.brand}</h1>
           {HEADER.subtitle && <p className={styles.subtitle}>{HEADER.subtitle}</p>}
         </header>
 
-        <ul className={styles.list}>
+        <ul className={`${styles.list} ${sheetLink ? styles.listBlurred : ''}`}>
           {LINKS.filter(link => !link.hidden).map((link) => {
             // Color de marca dinámico vía CSS variable.
             // Stagger entry de las pills usa nth-child en CSS (más robusto que --i).
