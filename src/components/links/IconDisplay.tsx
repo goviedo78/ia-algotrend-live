@@ -29,7 +29,7 @@ export function IconDisplay({ name, customIcons }: Props) {
   if (!custom) return null
   return (
     <span
-      style={{ display: 'inline-block', width: 20, height: 20, lineHeight: 0 }}
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}
       // SVG ya sanitizado server-side antes de guardarse en DB.
       dangerouslySetInnerHTML={{ __html: custom.svg }}
       aria-hidden="true"
