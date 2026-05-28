@@ -194,15 +194,15 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
           })}
         </ul>
 
-        <LinkSheet
-          link={sheetLink}
-          customIcons={CUSTOM_ICONS}
-          onClose={() => setSheetLink(null)}
-        />
-
         <p className={styles.ecosystem}>{ECOSYSTEM_LABEL}</p>
         <p className={styles.footer}>{COPYRIGHT}</p>
       </div>
+
+      <LinkSheet
+        link={sheetLink}
+        customIcons={CUSTOM_ICONS}
+        onClose={() => setSheetLink(null)}
+      />
     </main>
   )
 }
