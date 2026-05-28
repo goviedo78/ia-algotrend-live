@@ -445,22 +445,37 @@
   list-style: none;
   padding: 0;
   margin: 0;
-  animation: fadeInDown 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+  /* Sin animation acá — el stagger por linkItem maneja la entrada.
+     Tener 2 animations sobre padre+hijo crea race conditions en
+     mobile Safari y "esconde" las primeras pills. */
 }
 
 .linkItem {
   margin: 0;
-  opacity: 0;
-  transform: translateY(14px);
-  animation: linkItemEnter 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  /* La pill aparece con delay basado en su índice (--i pasado desde React). */
-  animation-delay: calc(var(--i, 0) * 60ms + 0.18s);
+  /* Animation con `both`: aplica el estado FROM antes del delay, y el TO
+     después. Si por algún motivo la animation no se gatilla, el fallback
+     es que el item queda visible (sin opacity:0 fijo en el base style). */
+  animation: linkItemEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+/* Stagger sin depender de CSS variables custom (que fallan en algunos
+   mobile browsers cuando se pasan como número desde React). */
+.linkItem:nth-child(1)  { animation-delay: 0.18s; }
+.linkItem:nth-child(2)  { animation-delay: 0.24s; }
+.linkItem:nth-child(3)  { animation-delay: 0.30s; }
+.linkItem:nth-child(4)  { animation-delay: 0.36s; }
+.linkItem:nth-child(5)  { animation-delay: 0.42s; }
+.linkItem:nth-child(6)  { animation-delay: 0.48s; }
+.linkItem:nth-child(7)  { animation-delay: 0.54s; }
+.linkItem:nth-child(8)  { animation-delay: 0.60s; }
+.linkItem:nth-child(9)  { animation-delay: 0.66s; }
+.linkItem:nth-child(10) { animation-delay: 0.72s; }
+.linkItem:nth-child(n+11) { animation-delay: 0.78s; }
 
 @keyframes linkItemEnter {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -470,8 +485,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .linkItem {
-    opacity: 1;
-    transform: none;
     animation: none;
   }
 }

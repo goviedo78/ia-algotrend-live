@@ -164,20 +164,15 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
         </header>
 
         <ul className={styles.list}>
-          {LINKS.filter(link => !link.hidden).map((link, index) => {
-            // Asignamos el color dinámico + índice como variables CSS.
-            // --i lo usa el stagger entry de .linkItem.
-            const customStyle = {
-              ...(link.color ? { '--brand-color': link.color } : {}),
-              '--i': index,
-            } as React.CSSProperties
+          {LINKS.filter(link => !link.hidden).map((link) => {
+            // Color de marca dinámico vía CSS variable.
+            // Stagger entry de las pills usa nth-child en CSS (más robusto que --i).
+            const customStyle = link.color
+              ? ({ '--brand-color': link.color } as React.CSSProperties)
+              : undefined
 
             return (
-              <li
-                key={link.title}
-                className={styles.linkItem}
-                style={{ ['--i' as string]: index } as React.CSSProperties}
-              >
+              <li key={link.title} className={styles.linkItem}>
                 <button
                   type="button"
                   className={styles.linkBtn}
