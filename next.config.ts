@@ -41,7 +41,10 @@ const nextConfig: NextConfig = {
         // Security headers for all routes (excepto brand-*.html que tienen su propia regla arriba)
         source: "/:path((?!brand-).*)",
         headers: [
-          { key: "X-Frame-Options", value: "DENY" },
+          // SAMEORIGIN en vez de DENY: permite que /links se embeba en el
+          // iframe del preview de /official/links (mismo origen).
+          // Sigue bloqueando iframes cross-origin (la amenaza real de clickjacking).
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
