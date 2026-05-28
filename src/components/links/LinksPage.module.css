@@ -546,10 +546,10 @@
   background: rgba(255, 255, 255, 0.03);
   transform: translateY(-2px) scale(1.012);
   box-shadow:
-    0 12px 36px color-mix(in srgb, var(--brand-color, var(--cyan)) 18%, transparent),
+    0 12px 32px -2px color-mix(in srgb, var(--brand-color, var(--cyan)) 20%, transparent),
     inset 0 1px 2px rgba(255, 255, 255, 0.18),
     inset 0 -1px 2px rgba(0, 0, 0, 0.5),
-    0 8px 24px rgba(0, 0, 0, 0.4);
+    0 8px 24px -2px rgba(0, 0, 0, 0.4);
 }
 
 .linkBtn:focus-visible {
