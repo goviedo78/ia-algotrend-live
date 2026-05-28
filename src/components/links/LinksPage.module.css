@@ -458,7 +458,6 @@
   /* Sin animation acá — el stagger por linkItem maneja la entrada.
      Tener 2 animations sobre padre+hijo crea race conditions en
      mobile Safari y "esconde" las primeras pills. */
-}
 
 .linkItem {
   margin: 0;
