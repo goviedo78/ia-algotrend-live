@@ -164,12 +164,20 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
         </header>
 
         <ul className={styles.list}>
-          {LINKS.filter(link => !link.hidden).map((link) => {
-            // Asignamos el color dinámico como variable CSS para que el módulo lo use
-            const customStyle = link.color ? { '--brand-color': link.color } as React.CSSProperties : {}
+          {LINKS.filter(link => !link.hidden).map((link, index) => {
+            // Asignamos el color dinámico + índice como variables CSS.
+            // --i lo usa el stagger entry de .linkItem.
+            const customStyle = {
+              ...(link.color ? { '--brand-color': link.color } : {}),
+              '--i': index,
+            } as React.CSSProperties
 
             return (
-              <li key={link.title} className={styles.linkItem}>
+              <li
+                key={link.title}
+                className={styles.linkItem}
+                style={{ ['--i' as string]: index } as React.CSSProperties}
+              >
                 <button
                   type="button"
                   className={styles.linkBtn}

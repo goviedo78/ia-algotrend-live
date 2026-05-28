@@ -105,13 +105,13 @@
 
 .closeBtn:hover,
 .closeBtn:focus-visible {
-  background: var(--primary, #f44e1c);
+  background: var(--cyan, #c9a87a);
   color: var(--background, #11162a);
-  border-color: var(--primary, #f44e1c);
+  border-color: var(--cyan, #c9a87a);
 }
 
 .closeBtn:focus-visible {
-  outline: 2px solid var(--primary, #f44e1c);
+  outline: 2px solid var(--cyan, #c9a87a);
   outline-offset: 2px;
 }
 
@@ -159,7 +159,7 @@
   letter-spacing: 0.12em;
   padding: 0.18rem 0.5rem;
   border-radius: 999px;
-  background: var(--primary, #f44e1c);
+  background: var(--cyan, #c9a87a);
   color: var(--background, #11162a);
   font-weight: 700;
   text-transform: uppercase;
@@ -195,31 +195,40 @@
   gap: 0.4rem;
   width: 100%;
   max-width: 18rem;
-  padding: 0.95rem 1.5rem;
-  background: var(--primary, #f44e1c);
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, var(--cyan, #c9a87a) 0%, #d8c8a6 100%);
   color: var(--background, #11162a);
-  border-radius: 12px;
+  border: 1px solid rgba(229, 212, 182, 0.4);
+  border-top-color: rgba(255, 255, 255, 0.55);
+  border-radius: 14px;
   font-family: var(--font-sans), system-ui, sans-serif;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.96rem;
+  letter-spacing: 0.01em;
   text-decoration: none;
-  transition: filter 0.15s ease, transform 0.12s ease;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, filter 0.15s ease;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 8px 24px rgba(244, 78, 28, 0.3);
+  box-shadow:
+    0 10px 26px color-mix(in srgb, var(--cyan, #c9a87a) 28%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .cta:hover,
 .cta:focus-visible {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+  box-shadow:
+    0 16px 36px color-mix(in srgb, var(--cyan, #c9a87a) 38%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .cta:active {
-  transform: translateY(0);
-  filter: brightness(0.95);
+  transform: translateY(0) scale(0.985);
+  transition-duration: 0.1s;
+  filter: brightness(0.96);
 }
 
 .cta:focus-visible {
   outline: 2px solid var(--foreground, #e5d4b6);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
