@@ -12,6 +12,15 @@ interface Props {
   onClose: () => void
 }
 
+function getContrastColor(hex?: string) {
+  if (!hex || !hex.startsWith('#') || hex.length !== 7) return '#11162a'
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000
+  return yiq >= 160 ? '#11162a' : '#ffffff'
+}
+
 export function LinkSheet({ link, customIcons, onClose }: Props) {
   // Cerrar con Escape
   useEffect(() => {
@@ -46,6 +55,10 @@ export function LinkSheet({ link, customIcons, onClose }: Props) {
         className={styles.sheet}
         // Stop propagation para que click adentro no cierre
         onClick={(e) => e.stopPropagation()}
+        style={link?.color ? { 
+          '--brand-color': link.color,
+          '--brand-text': getContrastColor(link.color)
+        } as React.CSSProperties : undefined}
       >
         <div className={styles.handle} aria-hidden="true" />
 

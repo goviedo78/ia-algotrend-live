@@ -275,8 +275,8 @@
   width: 100%;
   max-width: 20rem;
   padding: 1.1rem 1.8rem;
-  background: linear-gradient(135deg, #e0cdab 0%, #c9a87a 100%);
-  color: #11162a;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--brand-color, #e0cdab) 25%, #ffffff) 0%, var(--brand-color, #c9a87a) 100%);
+  color: var(--brand-text, #11162a);
   border: 1px solid rgba(255, 255, 255, 0.6);
   border-top-color: rgba(255, 255, 255, 1);
   border-bottom-color: rgba(201, 168, 122, 0.5);
@@ -289,9 +289,9 @@
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   -webkit-tap-highlight-color: transparent;
   box-shadow:
-    0 12px 32px color-mix(in srgb, var(--cyan, #c9a87a) 40%, transparent),
-    inset 0 2px 4px rgba(255, 255, 255, 0.8),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+    0 12px 32px color-mix(in srgb, var(--brand-color, #c9a87a) 40%, transparent),
+    inset 0 2px 4px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .cta:hover,
@@ -299,9 +299,9 @@
   transform: translateY(-4px) scale(1.02);
   filter: brightness(1.1);
   box-shadow:
-    0 20px 48px color-mix(in srgb, var(--cyan, #c9a87a) 50%, transparent),
-    inset 0 2px 4px rgba(255, 255, 255, 0.9),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+    0 20px 48px color-mix(in srgb, var(--brand-color, #c9a87a) 50%, transparent),
+    inset 0 2px 4px rgba(255, 255, 255, 0.7),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .cta:active {
