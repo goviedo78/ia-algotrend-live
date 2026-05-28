@@ -1,0 +1,225 @@
+/* Bottom sheet animado tipo iOS / Linktree pro.
+   Mobile: full-width abajo. Desktop: centrado tipo card. */
+
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.root.open {
+  pointer-events: auto;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.root.open .backdrop {
+  opacity: 1;
+}
+
+.sheet {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  background: var(--surface, #1c223a);
+  border-top: 1px solid var(--border, #4f5570);
+  border-radius: 22px 22px 0 0;
+  padding: 1.5rem 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  transform: translateY(100%);
+  transition: transform 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.5);
+  z-index: 1;
+}
+
+.root.open .sheet {
+  transform: translateY(0);
+}
+
+/* Desktop: sheet centrado con padding alrededor */
+@media (min-width: 768px) {
+  .root {
+    align-items: center;
+    padding: 2rem;
+  }
+  .sheet {
+    border-radius: 18px;
+    border: 1px solid var(--border, #4f5570);
+    transform: translateY(40px) scale(0.95);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  }
+  .root.open .sheet {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Handle visual (estilo iOS bottom sheet) */
+.handle {
+  width: 44px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(229, 212, 182, 0.2);
+  margin-bottom: 0.25rem;
+}
+
+@media (min-width: 768px) {
+  .handle {
+    display: none;
+  }
+}
+
+.closeBtn {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--border, #4f5570);
+  color: var(--ink-muted, #a8aaba);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.closeBtn:hover,
+.closeBtn:focus-visible {
+  background: var(--primary, #f44e1c);
+  color: var(--background, #11162a);
+  border-color: var(--primary, #f44e1c);
+}
+
+.closeBtn:focus-visible {
+  outline: 2px solid var(--primary, #f44e1c);
+  outline-offset: 2px;
+}
+
+.iconWrap {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  background: rgba(229, 212, 182, 0.06);
+  border: 1px solid var(--border, #4f5570);
+  margin-top: 0.4rem;
+}
+
+.iconWrap svg,
+.iconWrap > span > svg {
+  width: 40px;
+  height: 40px;
+}
+
+.iconFallback {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--ink-muted, #a8aaba);
+}
+
+.title {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--foreground, #e5d4b6);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  letter-spacing: 0.02em;
+}
+
+.badge {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  background: var(--primary, #f44e1c);
+  color: var(--background, #11162a);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.description {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.92rem;
+  color: var(--ink-muted, #a8aaba);
+  text-align: center;
+  margin: 0;
+  line-height: 1.5;
+  max-width: 30rem;
+}
+
+.urlPreview {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: var(--ink-dim, #6b7385);
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.cta {
+  margin-top: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  max-width: 18rem;
+  padding: 0.95rem 1.5rem;
+  background: var(--primary, #f44e1c);
+  color: var(--background, #11162a);
+  border-radius: 12px;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: filter 0.15s ease, transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 8px 24px rgba(244, 78, 28, 0.3);
+}
+
+.cta:hover,
+.cta:focus-visible {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.cta:active {
+  transform: translateY(0);
+  filter: brightness(0.95);
+}
+
+.cta:focus-visible {
+  outline: 2px solid var(--foreground, #e5d4b6);
+  outline-offset: 2px;
+}

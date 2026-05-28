@@ -15,6 +15,9 @@ export type LinkItem = {
   color?: string
   /** Si es true, la tarjeta no se renderiza en la página */
   hidden?: boolean
+  /** Descripción opcional que aparece en el bottom sheet al tocar el link.
+   *  Ej: "+50k subs · contenido semanal sobre trading cripto" */
+  description?: string
 }
 
 export const HEADER = {

@@ -391,6 +391,17 @@ export function LinksAdmin({ pin, initialConfig }: Props) {
                       onChange={(e) => updateLink(index, { badge: e.target.value || undefined })}
                     />
                   </Field>
+
+                  <Field label="Descripción (opcional, aparece en el sheet al tocar el link)">
+                    <textarea
+                      className={styles.textarea}
+                      value={link.description ?? ''}
+                      maxLength={240}
+                      rows={2}
+                      placeholder='Ej: "+50k subs · contenido semanal de trading cripto"'
+                      onChange={(e) => updateLink(index, { description: e.target.value || undefined })}
+                    />
+                  </Field>
                 </div>
               ))}
 

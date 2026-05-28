@@ -12,6 +12,7 @@ import {
   type LinkItem,
 } from './linksData'
 import { IconDisplay } from './IconDisplay'
+import { LinkSheet } from './LinkSheet'
 import type { CustomIcon } from '@/lib/links-config'
 import styles from './LinksPage.module.css'
 
@@ -39,6 +40,8 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
   const COPYRIGHT = config?.copyright ?? DEFAULT_COPYRIGHT
   const SPONSOR = config?.sponsor ?? DEFAULT_SPONSOR
   const CUSTOM_ICONS = config?.customIcons ?? []
+
+  const [sheetLink, setSheetLink] = useState<LinkItem | null>(null)
   
   const [phase, setPhase] = useState<'intro' | 'content'>('intro')
   const [fps, setFps] = useState(60)
@@ -162,18 +165,18 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
 
         <ul className={styles.list}>
           {LINKS.filter(link => !link.hidden).map((link) => {
-            const isExternal = link.external !== false && /^https?:\/\//.test(link.href)
             // Asignamos el color dinámico como variable CSS para que el módulo lo use
             const customStyle = link.color ? { '--brand-color': link.color } as React.CSSProperties : {}
-            
+
             return (
               <li key={link.title} className={styles.linkItem}>
-                <a
-                  href={link.href}
+                <button
+                  type="button"
                   className={styles.linkBtn}
                   style={customStyle}
-                  {...(isExternal && { target: '_blank', rel: 'noopener noreferrer' })}
+                  onClick={() => setSheetLink(link)}
                   aria-label={link.badge ? `${link.title} (${link.badge})` : link.title}
+                  aria-haspopup="dialog"
                 >
                   {link.icon && (
                     <span className={styles.linkIcon}>
@@ -182,11 +185,17 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
                   )}
                   <span className={styles.linkTitle}>{link.title}</span>
                   {link.badge && <span className={styles.badge}>{link.badge}</span>}
-                </a>
+                </button>
               </li>
             )
           })}
         </ul>
+
+        <LinkSheet
+          link={sheetLink}
+          customIcons={CUSTOM_ICONS}
+          onClose={() => setSheetLink(null)}
+        />
 
         <p className={styles.ecosystem}>{ECOSYSTEM_LABEL}</p>
         <p className={styles.footer}>{COPYRIGHT}</p>

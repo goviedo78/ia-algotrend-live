@@ -107,6 +107,7 @@ function sanitizeConfig(raw: unknown): LinksConfig {
           icon: l?.icon as LinksConfig['links'][number]['icon'],
           color: sanitizeColor(l?.color),
           hidden: !!l?.hidden,
+          description: l?.description ? String(l.description).substring(0, 240) : undefined,
         }))
       : [],
     ecosystemLabel: String(c.ecosystemLabel ?? '').substring(0, 200),
