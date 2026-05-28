@@ -18,9 +18,9 @@
 .backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4); /* Darken the rest of the screen */
-  backdrop-filter: blur(12px); /* Blur the rest of the screen so the background loses focus */
-  -webkit-backdrop-filter: blur(12px);
+  background: transparent; /* Solo difuminado, sin lona oscura */
+  backdrop-filter: blur(16px); /* Aumentamos un poquito el blur para compensar la falta de oscuridad */
+  -webkit-backdrop-filter: blur(16px);
   opacity: 0;
   transition: opacity 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
