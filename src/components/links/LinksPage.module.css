@@ -179,15 +179,15 @@
   line-height: 1.5;
 }
 
-/* ── Sponsor banner (Top Sticky Edge) ──────────────────────── */
-.sponsorBannerTop {
+/* ── Top Bar (Sticky Header) ────────────────────────────── */
+.topBar {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 100;
-  background: rgba(201, 168, 122, 0.05);
-  border-bottom: 1px solid rgba(201, 168, 122, 0.15);
+  background: rgba(13, 17, 34, 0.4);
+  border-bottom: 1px solid rgba(255, 138, 61, 0.1);
   backdrop-filter: blur(24px) saturate(120%);
   -webkit-backdrop-filter: blur(24px) saturate(120%);
   transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
@@ -195,52 +195,33 @@
   justify-content: center;
 }
 
-[data-phase="intro"] .sponsorBannerTop {
+[data-phase="intro"] .topBar {
   transform: translateY(-100%);
 }
 
-[data-phase="content"] .sponsorBannerTop {
+[data-phase="content"] .topBar {
   transform: translateY(0);
 }
 
-.sponsorBannerInner {
+.topBarInner {
   width: 100%;
   max-width: 480px;
   display: flex;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
 }
 
-.sponsorTextGroup {
+.topBarBrand {
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  flex: 1;
-}
-
-.sponsorPitch {
+  align-items: center;
+  gap: 0.65rem;
   font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 700;
-  font-size: 0.85rem;
-  color: var(--cyan);
-  margin: 0;
-  letter-spacing: 0.02em;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-}
-
-.sponsorDesc {
-  font-family: var(--font-sans), system-ui, sans-serif;
-  font-size: 0.7rem;
-  color: rgba(229, 212, 182, 0.7);
-  line-height: 1.3;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  font-size: 1.1rem;
+  color: var(--hub-bone);
+  letter-spacing: 0.08em;
 }
 
 .sponsorCta {

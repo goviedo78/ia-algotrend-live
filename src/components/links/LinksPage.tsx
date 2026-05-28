@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { HEADER, LINKS, ECOSYSTEM_LABEL, COPYRIGHT, SPONSOR } from './linksData'
 import { LinkIcon } from './LinkIcon'
@@ -31,12 +32,18 @@ export function LinksPage() {
       <div className={styles.shardTwo} aria-hidden="true" />
       <div className={styles.shardThree} aria-hidden="true" />
 
-      {/* ── Top Sponsor Banner (Sticky edge) ── */}
-      <aside className={styles.sponsorBannerTop} aria-label="Información para patrocinadores">
-        <div className={styles.sponsorBannerInner}>
-          <div className={styles.sponsorTextGroup}>
-            <p className={styles.sponsorPitch}>{SPONSOR.pitch}</p>
-            <p className={styles.sponsorDesc}>{SPONSOR.description}</p>
+      {/* ── Top Bar (Sticky edge with Logo and CTA) ── */}
+      <aside className={styles.topBar} aria-label="Navegación principal">
+        <div className={styles.topBarInner}>
+          <div className={styles.topBarBrand}>
+            <Image
+              src="/logo-orange-graphite-navy/01-navy-cream-orange-transparent.svg"
+              alt="GONOVI"
+              width={32}
+              height={32}
+              priority
+            />
+            <span>GONOVI</span>
           </div>
           <a className={styles.sponsorCta} href={SPONSOR.ctaHref}>
             {SPONSOR.ctaText}
