@@ -534,6 +534,10 @@
   text-align: left;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   -webkit-tap-highlight-color: transparent;
+  
+  /* Fix WebKit backdrop-filter clipping bug on hover scale */
+  transform: translate3d(0, 0, 0);
+  will-change: transform, box-shadow;
 }
 
 .linkBtn:hover,
