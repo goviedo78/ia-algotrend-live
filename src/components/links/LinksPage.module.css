@@ -465,7 +465,13 @@
      mobile Safari y "esconde" las primeras pills. */
 
 .linkItem {
-  margin: 0;
+  /* Expandimos físicamente el contenedor con padding, y lo compensamos con margen negativo.
+     Esto hace que la capa de composición generada por la animación sea más grande que el botón.
+     Así, cuando el botón hace el hover scale(1.012), no choca con los límites de su padre 
+     y evitamos el clipping de Safari! */
+  margin: -8px;
+  padding: 8px;
+  
   /* Animation con `both`: aplica el estado FROM antes del delay, y el TO
      después. Si por algún motivo la animation no se gatilla, el fallback
      es que el item queda visible (sin opacity:0 fijo en el base style). */
