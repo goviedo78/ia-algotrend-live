@@ -3,9 +3,24 @@
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
-import { HEADER, LINKS, ECOSYSTEM_LABEL, COPYRIGHT, SPONSOR } from './linksData'
+import {
+  HEADER as DEFAULT_HEADER,
+  LINKS as DEFAULT_LINKS,
+  ECOSYSTEM_LABEL as DEFAULT_ECOSYSTEM,
+  COPYRIGHT as DEFAULT_COPYRIGHT,
+  SPONSOR as DEFAULT_SPONSOR,
+  type LinkItem,
+} from './linksData'
 import { LinkIcon } from './LinkIcon'
 import styles from './LinksPage.module.css'
+
+type LinksConfigShape = {
+  header: typeof DEFAULT_HEADER
+  sponsor: typeof DEFAULT_SPONSOR
+  links: LinkItem[]
+  ecosystemLabel: string
+  copyright: string
+}
 
 const MateriaLogo = dynamic(
   () => import('@/components/brand/MateriaLogo').then((mod) => mod.MateriaLogo),
@@ -15,7 +30,12 @@ const MateriaLogo = dynamic(
   }
 )
 
-export function LinksPage() {
+export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
+  const HEADER = config?.header ?? DEFAULT_HEADER
+  const LINKS = config?.links ?? DEFAULT_LINKS
+  const ECOSYSTEM_LABEL = config?.ecosystemLabel ?? DEFAULT_ECOSYSTEM
+  const COPYRIGHT = config?.copyright ?? DEFAULT_COPYRIGHT
+  const SPONSOR = config?.sponsor ?? DEFAULT_SPONSOR
   const [phase, setPhase] = useState<'intro' | 'content'>('intro')
   const [fps, setFps] = useState(60)
 

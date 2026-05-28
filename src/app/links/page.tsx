@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { LinksPage } from '@/components/links/LinksPage'
+import { loadLinksConfig } from '@/lib/links-config'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://gonovi.app'),
@@ -25,6 +26,9 @@ export const metadata: Metadata = {
   },
 }
 
-export default function Page() {
-  return <LinksPage />
+export const dynamic = 'force-dynamic'
+
+export default async function Page() {
+  const config = await loadLinksConfig()
+  return <LinksPage config={config} />
 }
