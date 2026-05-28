@@ -31,6 +31,19 @@ export function LinksPage() {
       <div className={styles.shardTwo} aria-hidden="true" />
       <div className={styles.shardThree} aria-hidden="true" />
 
+      {/* ── Top Sponsor Banner (Sticky edge) ── */}
+      <aside className={styles.sponsorBannerTop} aria-label="Información para patrocinadores">
+        <div className={styles.sponsorBannerInner}>
+          <div className={styles.sponsorTextGroup}>
+            <p className={styles.sponsorPitch}>{SPONSOR.pitch}</p>
+            <p className={styles.sponsorDesc}>{SPONSOR.description}</p>
+          </div>
+          <a className={styles.sponsorCta} href={SPONSOR.ctaHref}>
+            {SPONSOR.ctaText}
+          </a>
+        </div>
+      </aside>
+
       {/* ── 3D Logo Background ── */}
       <div className={styles.materiaWrapper} aria-hidden="true">
         <MateriaLogo
@@ -63,22 +76,18 @@ export function LinksPage() {
           <p className={styles.subtitle}>{HEADER.subtitle}</p>
         </header>
 
-        <aside className={styles.sponsorBanner} aria-label="Información para patrocinadores">
-          <p className={styles.sponsorPitch}>{SPONSOR.pitch}</p>
-          <p className={styles.sponsorDesc}>{SPONSOR.description}</p>
-          <a className={styles.sponsorCta} href={SPONSOR.ctaHref}>
-            {SPONSOR.ctaText}
-          </a>
-        </aside>
-
         <ul className={styles.list}>
           {LINKS.map((link) => {
             const isExternal = link.external !== false && /^https?:\/\//.test(link.href)
+            // Asignamos el color dinámico como variable CSS para que el módulo lo use
+            const customStyle = link.color ? { '--brand-color': link.color } as React.CSSProperties : {}
+            
             return (
               <li key={link.title} className={styles.linkItem}>
                 <a
                   href={link.href}
                   className={styles.linkBtn}
+                  style={customStyle}
                   {...(isExternal && { target: '_blank', rel: 'noopener noreferrer' })}
                   aria-label={link.badge ? `${link.title} (${link.badge})` : link.title}
                 >
