@@ -84,7 +84,7 @@ export function LinksPage() {
         </header>
 
         <ul className={styles.list}>
-          {LINKS.map((link) => {
+          {LINKS.filter(link => !link.hidden).map((link) => {
             const isExternal = link.external !== false && /^https?:\/\//.test(link.href)
             // Asignamos el color dinámico como variable CSS para que el módulo lo use
             const customStyle = link.color ? { '--brand-color': link.color } as React.CSSProperties : {}

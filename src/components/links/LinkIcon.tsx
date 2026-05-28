@@ -12,6 +12,9 @@ export type IconName =
   | 'mail'         // contacto / sponsors
   | 'whatsapp'     // WhatsApp / comunidad
   | 'grid'         // apps y herramientas
+  | 'instagram'    // instagram
+  | 'tiktok'       // tiktok
+  | 'globe'        // website
 
 const COMMON = {
   width: 20,
@@ -96,6 +99,28 @@ export function LinkIcon({ name }: { name: IconName }) {
           <rect x="14" y="3" width="7" height="7" rx="1.5" />
           <rect x="3" y="14" width="7" height="7" rx="1.5" />
           <rect x="14" y="14" width="7" height="7" rx="1.5" />
+        </svg>
+      )
+    case 'instagram':
+      return (
+        <svg {...COMMON}>
+          <rect x="2" y="2" width="20" height="20" rx="5" />
+          <circle cx="12" cy="12" r="4" />
+          <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none" />
+        </svg>
+      )
+    case 'tiktok':
+      return (
+        <svg {...COMMON}>
+          <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5v3a8 8 0 0 1-5-1.5v5.5a8 8 0 1 1-8-8v3a5 5 0 0 0 4 4z" />
+        </svg>
+      )
+    case 'globe':
+      return (
+        <svg {...COMMON}>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          <path d="M2 12h20" />
         </svg>
       )
   }

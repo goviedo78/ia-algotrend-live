@@ -13,6 +13,8 @@ export type LinkItem = {
   icon?: IconName
   /** Color de marca específico para el icono (ej. '#FF0000' para YouTube) */
   color?: string
+  /** Si es true, la tarjeta no se renderiza en la página */
+  hidden?: boolean
 }
 
 export const HEADER = {
@@ -32,15 +34,20 @@ export const SPONSOR = {
 }
 
 export const LINKS: LinkItem[] = [
-  { title: 'Descargar indicadores gratis', href: '#', external: true, icon: 'chart', color: '#4FBC72' },
-  { title: 'Ver indicadores PRO', href: '#', external: true, badge: 'PRO', icon: 'chart-pro', color: '#ff8a3d' },
-  { title: 'IA AlgoTrend', href: '#', external: true, icon: 'bot', color: '#3b82f6' },
-  { title: 'Fusion X10', href: '#', external: true, icon: 'layers', color: '#8b5cf6' },
-  { title: 'Unirme a la membresía de YouTube', href: 'https://youtube.com/...', external: true, icon: 'youtube', color: '#FF0000' },
-  { title: 'Ver último video', href: 'https://youtube.com/...', external: true, icon: 'play', color: '#FF0000' },
+  { title: 'Canal de YouTube', href: 'https://youtube.com/...', external: true, icon: 'youtube', color: '#FF0000' },
+  { title: 'Instagram', href: 'https://instagram.com/...', external: true, icon: 'instagram', color: '#E1306C' },
+  { title: 'TikTok', href: 'https://tiktok.com/...', external: true, icon: 'tiktok', color: '#00f2fe' },
+  { title: 'GONOVI App', href: 'https://gonovi.app/official', external: true, icon: 'globe', color: '#C9A87A' },
   { title: 'Contacto comercial / sponsors', href: 'mailto:?subject=Sponsors%20GONOVI', external: false, icon: 'mail', color: '#A8AABA' },
-  { title: 'WhatsApp / comunidad', href: 'https://wa.me/...', external: true, icon: 'whatsapp', color: '#25D366' },
   { title: 'Apps y herramientas', href: '#', external: true, icon: 'grid', color: '#C9A87A' },
+  
+  // -- Elementos ocultos temporalmente --
+  { title: 'Descargar indicadores gratis', href: '#', external: true, icon: 'chart', color: '#4FBC72', hidden: true },
+  { title: 'Ver indicadores PRO', href: '#', external: true, badge: 'PRO', icon: 'chart-pro', color: '#ff8a3d', hidden: true },
+  { title: 'IA AlgoTrend', href: '#', external: true, icon: 'bot', color: '#3b82f6', hidden: true },
+  { title: 'Fusion X10', href: '#', external: true, icon: 'layers', color: '#8b5cf6', hidden: true },
+  { title: 'Ver último video', href: 'https://youtube.com/...', external: true, icon: 'play', color: '#FF0000', hidden: true },
+  { title: 'WhatsApp / comunidad', href: 'https://wa.me/...', external: true, icon: 'whatsapp', color: '#25D366', hidden: true },
 ]
 
 export const ECOSYSTEM_LABEL = 'TradingView · YouTube · Gumroad · Herramientas propias'
