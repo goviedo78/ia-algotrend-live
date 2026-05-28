@@ -329,7 +329,7 @@
   max-width: 480px;
   display: flex;
   flex-direction: column;
-  padding: 1.25rem;
+  padding: 0.8rem 1rem;
   gap: 0.8rem;
   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
