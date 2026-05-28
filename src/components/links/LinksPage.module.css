@@ -592,6 +592,13 @@
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
 }
 
+.linkIcon svg,
+.linkIcon > span > svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
 .linkBtn:hover .linkIcon,
 .linkBtn:focus-visible .linkIcon {
   color: var(--brand-color, var(--cyan));
