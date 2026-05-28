@@ -52,7 +52,8 @@
     0 0 120px rgba(201, 168, 122, 0.08); /* Volumetric glow */
     
   border-radius: 32px 32px 0 0;
-  padding: 2rem 1.5rem 2.5rem;
+  padding: 2rem 1.5rem calc(2.5rem + 120px); /* Extra padding for bottom bounce gap */
+  margin-bottom: -120px; /* Offset the extra padding */
   display: flex;
   flex-direction: column;
   align-items: center;
