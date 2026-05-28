@@ -1,5 +1,4 @@
-/* Bottom sheet animado tipo iOS / Linktree pro.
-   Mobile: full-width abajo. Desktop: centrado tipo card. */
+/* Bottom sheet animado tipo iOS / Linktree pro con diseño ultra-premium (Liquid Glass + 3D) */
 
 .root {
   position: fixed;
@@ -9,6 +8,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  perspective: 2000px; /* Perspective on the parent for true 3D space */
 }
 
 .root.open {
@@ -18,9 +18,9 @@
 .backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.15); /* Light dim, no blur */
+  background: radial-gradient(circle at 50% 100%, rgba(13, 17, 34, 0.2) 0%, rgba(0, 0, 0, 0.7) 100%);
   opacity: 0;
-  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .root.open .backdrop {
@@ -31,34 +31,64 @@
   position: relative;
   width: 100%;
   max-width: 520px;
-  /* Genuine Liquid Glass (matches link buttons) */
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(48px) saturate(140%);
-  -webkit-backdrop-filter: blur(48px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  /* Ultra-Premium Liquid Glass */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  backdrop-filter: blur(48px) saturate(150%);
+  -webkit-backdrop-filter: blur(48px) saturate(150%);
+  
+  /* Complex bevels for 3D glass thickness */
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
   border-bottom: none;
+  
+  /* Drop shadows and inner rim lights */
   box-shadow:
-    inset 0 1px 2px rgba(255, 255, 255, 0.08),
+    inset 0 1px 2px rgba(255, 255, 255, 0.15),
     inset 0 -1px 2px rgba(0, 0, 0, 0.4),
-    0 -16px 48px rgba(0, 0, 0, 0.6);
-  border-radius: 22px 22px 0 0;
-  padding: 1.5rem 1.5rem 2rem;
+    0 -20px 60px rgba(0, 0, 0, 0.6),
+    0 0 120px rgba(201, 168, 122, 0.08); /* Volumetric glow */
+    
+  border-radius: 32px 32px 0 0;
+  padding: 2rem 1.5rem 2.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
+  gap: 1rem;
   
-  /* True 3D Unfold Animation (perspective MUST be first) */
-  transform-origin: center bottom;
-  transform: perspective(1200px) translateY(100%) rotateX(25deg) scale(0.95);
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  /* 3D Unfold Animation (Spring effect) */
+  transform-origin: center 120%;
+  transform: translateY(100%) rotateX(25deg) scale(0.9);
+  transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1); /* Apple-like spring bounce */
   z-index: 1;
+  overflow: hidden; /* To clip the diagonal reflection */
+}
+
+/* Diagonal glass reflection sweep */
+.sheet::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  transform: skewX(-25deg);
+  transition: left 0.8s ease-out;
+  pointer-events: none;
+}
+
+.root.open .sheet::before {
+  left: 200%; /* Sweep across when opened */
 }
 
 .root.open .sheet {
-  transform: perspective(1200px) translateY(0) rotateX(0deg) scale(1);
+  transform: translateY(0) rotateX(0deg) scale(1);
 }
 
 /* Desktop: sheet centrado con padding alrededor */
@@ -68,34 +98,36 @@
     padding: 2rem;
   }
   .sheet {
-    border-radius: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
-    border-left: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow:
-      inset 0 1px 2px rgba(255, 255, 255, 0.08),
+      inset 0 1px 2px rgba(255, 255, 255, 0.15),
       inset 0 -1px 2px rgba(0, 0, 0, 0.4),
-      0 16px 48px rgba(0, 0, 0, 0.6);
+      0 24px 60px rgba(0, 0, 0, 0.6),
+      0 0 120px rgba(201, 168, 122, 0.08); /* Volumetric glow centered */
       
     /* True 3D Unfold Desktop */
     transform-origin: center center;
-    transform: perspective(1200px) translateY(60px) rotateX(-15deg) scale(0.9);
+    transform: translateY(80px) rotateX(-20deg) scale(0.85);
     opacity: 0;
-    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease;
+    transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease;
   }
   .root.open .sheet {
-    transform: perspective(1200px) translateY(0) rotateX(0deg) scale(1);
+    transform: translateY(0) rotateX(0deg) scale(1);
     opacity: 1;
   }
 }
 
 /* Handle visual (estilo iOS bottom sheet) */
 .handle {
-  width: 44px;
-  height: 4px;
+  width: 48px;
+  height: 5px;
   border-radius: 999px;
-  background: rgba(229, 212, 182, 0.2);
-  margin-bottom: 0.25rem;
+  background: rgba(255, 255, 255, 0.2);
+  margin-bottom: 0.5rem;
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.2), 0 1px 2px rgba(255,255,255,0.1);
 }
 
 @media (min-width: 768px) {
@@ -106,27 +138,29 @@
 
 .closeBtn {
   position: absolute;
-  top: 0.85rem;
-  right: 0.85rem;
-  width: 32px;
-  height: 32px;
+  top: 1.2rem;
+  right: 1.2rem;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
-  background: transparent;
-  border: 1px solid var(--border, #4f5570);
-  color: var(--ink-muted, #a8aaba);
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
   border-radius: 50%;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-family: inherit;
-  transition: background 0.15s ease, color 0.15s ease;
+  backdrop-filter: blur(12px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .closeBtn:hover,
 .closeBtn:focus-visible {
-  background: var(--cyan, #c9a87a);
-  color: var(--background, #11162a);
-  border-color: var(--cyan, #c9a87a);
+  background: rgba(201, 168, 122, 0.2);
+  color: #fff;
+  border-color: rgba(201, 168, 122, 0.5);
+  transform: scale(1.1);
 }
 
 .closeBtn:focus-visible {
@@ -137,118 +171,143 @@
 .iconWrap {
   display: grid;
   place-items: center;
-  width: 72px;
-  height: 72px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.04);
-  margin-top: 0.4rem;
+  width: 80px;
+  height: 80px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 
+    inset 0 2px 4px rgba(255, 255, 255, 0.2),
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    0 0 30px rgba(201, 168, 122, 0.15);
+  margin-top: 0;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.root.open .iconWrap {
+  animation: floatIcon 3s ease-in-out infinite alternate;
+}
+
+@keyframes floatIcon {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-6px); }
 }
 
 .iconWrap svg,
 .iconWrap > span > svg {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  filter: drop-shadow(0 4px 12px rgba(201, 168, 122, 0.4));
 }
 
 .iconFallback {
-  font-size: 1.7rem;
+  font-size: 1.8rem;
   font-weight: 700;
-  color: var(--ink-muted, #a8aaba);
+  color: #fff;
 }
 
 .title {
   font-family: var(--font-display), system-ui, sans-serif;
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   font-weight: 700;
   margin: 0;
-  color: var(--foreground, #e5d4b6);
+  color: #fff;
   text-align: center;
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.6rem;
   flex-wrap: wrap;
   justify-content: center;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  text-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 
 .badge {
   font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.62rem;
+  font-size: 0.65rem;
   letter-spacing: 0.12em;
-  padding: 0.18rem 0.5rem;
+  padding: 0.25rem 0.6rem;
   border-radius: 999px;
-  background: var(--cyan, #c9a87a);
+  background: linear-gradient(135deg, var(--cyan, #c9a87a) 0%, #d8c8a6 100%);
   color: var(--background, #11162a);
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(201, 168, 122, 0.3);
 }
 
 .description {
   font-family: var(--font-sans), system-ui, sans-serif;
-  font-size: 0.92rem;
-  color: var(--ink-muted, #a8aaba);
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
   text-align: center;
   margin: 0;
-  line-height: 1.5;
-  max-width: 30rem;
+  line-height: 1.6;
+  max-width: 32rem;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
 .urlPreview {
   font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.7rem;
-  color: var(--ink-dim, #6b7385);
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
   margin: 0;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  padding: 0.5rem 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .cta {
-  margin-top: 0.5rem;
+  margin-top: 0.8rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   width: 100%;
-  max-width: 18rem;
-  padding: 1rem 1.5rem;
-  background: linear-gradient(135deg, var(--cyan, #c9a87a) 0%, #d8c8a6 100%);
-  color: var(--background, #11162a);
-  border: 1px solid rgba(229, 212, 182, 0.4);
-  border-top-color: rgba(255, 255, 255, 0.55);
-  border-radius: 14px;
+  max-width: 20rem;
+  padding: 1.1rem 1.8rem;
+  background: linear-gradient(135deg, #e0cdab 0%, #c9a87a 100%);
+  color: #11162a;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-top-color: rgba(255, 255, 255, 1);
+  border-bottom-color: rgba(201, 168, 122, 0.5);
+  border-radius: 18px;
   font-family: var(--font-sans), system-ui, sans-serif;
-  font-weight: 700;
-  font-size: 0.96rem;
-  letter-spacing: 0.01em;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
   text-decoration: none;
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, filter 0.15s ease;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   -webkit-tap-highlight-color: transparent;
   box-shadow:
-    0 10px 26px color-mix(in srgb, var(--cyan, #c9a87a) 28%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    0 12px 32px color-mix(in srgb, var(--cyan, #c9a87a) 40%, transparent),
+    inset 0 2px 4px rgba(255, 255, 255, 0.8),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .cta:hover,
 .cta:focus-visible {
-  transform: translateY(-2px);
-  filter: brightness(1.06);
+  transform: translateY(-4px) scale(1.02);
+  filter: brightness(1.1);
   box-shadow:
-    0 16px 36px color-mix(in srgb, var(--cyan, #c9a87a) 38%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    0 20px 48px color-mix(in srgb, var(--cyan, #c9a87a) 50%, transparent),
+    inset 0 2px 4px rgba(255, 255, 255, 0.9),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .cta:active {
-  transform: translateY(0) scale(0.985);
+  transform: translateY(0) scale(0.98);
   transition-duration: 0.1s;
-  filter: brightness(0.96);
+  filter: brightness(0.95);
 }
 
 .cta:focus-visible {
-  outline: 2px solid var(--foreground, #e5d4b6);
-  outline-offset: 3px;
+  outline: 3px solid #fff;
+  outline-offset: 4px;
 }
