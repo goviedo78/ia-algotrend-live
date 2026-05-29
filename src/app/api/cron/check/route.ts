@@ -201,7 +201,9 @@ async function findActionableSignal(
 
 export async function GET(req: NextRequest) {
   try {
-    // Verify cron secret (Fail-Closed)
+    // Verify cron secret (Fail-Closed). Uses isAuthorizedCronRequest() which
+    // already sanitizes CRON_SECRET (strips literal "\n" + trim) and accepts
+    // Bearer header, x-cron-secret header, or ?secret/?token query param.
     if (!isAuthorizedCronRequest(req)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
