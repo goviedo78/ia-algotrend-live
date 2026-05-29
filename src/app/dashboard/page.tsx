@@ -348,6 +348,7 @@ function AdminDashboard() {
                 value={pushTitle}
                 onChange={(e) => setPushTitle(e.target.value)}
                 placeholder="🔔 AlgoTrend — Aviso"
+                maxLength={100}
                 className="w-full rounded-lg bg-[#0B1220] border border-[#1F2937] px-3 py-2.5 text-sm text-white placeholder:text-[#4B5563] focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-colors"
               />
             </div>
@@ -358,6 +359,7 @@ function AdminDashboard() {
                 value={pushBody}
                 onChange={(e) => setPushBody(e.target.value)}
                 placeholder="Texto del mensaje…"
+                maxLength={300}
                 className="w-full rounded-lg bg-[#0B1220] border border-[#1F2937] px-3 py-2.5 text-sm text-white placeholder:text-[#4B5563] focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-colors"
               />
             </div>

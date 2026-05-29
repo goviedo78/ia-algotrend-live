@@ -20,14 +20,17 @@ export async function POST(req: NextRequest) {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
     const visitorId = crypto.createHash('sha256').update(`${ip}:${ua}`).digest('hex').substring(0, 16)
 
-    for (const body of events) {
-      const path = body.path || '/'
-      const referrer = body.referrer || null
+    const trunc = (v: unknown, n: number) => typeof v === 'string' ? v.slice(0, n) : null
 
-      if (body.event_type && body.event_type !== 'pageview') {
-        await logEvent(body.event_type, {
-          card_id: body.card_id,
-          card_title: body.card_title,
+    for (const body of events) {
+      const path = trunc(body.path, 256) || '/'
+      const referrer = trunc(body.referrer, 512)
+      const eventType = trunc(body.event_type, 64)
+
+      if (eventType && eventType !== 'pageview') {
+        await logEvent(eventType, {
+          card_id: trunc(body.card_id, 64),
+          card_title: trunc(body.card_title, 128),
           path,
           device,
           country,

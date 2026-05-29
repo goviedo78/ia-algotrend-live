@@ -10,8 +10,9 @@ export async function POST(req: NextRequest) {
 
     for (const body of events) {
       const { type, metadata } = body
-      if (!type) continue // Skip invalid events in batch
-      await logEvent(type, metadata || {})
+      if (typeof type !== 'string' || type.length === 0 || type.length > 64) continue
+      const safeMeta = metadata && typeof metadata === 'object' ? metadata : {}
+      await logEvent(type, safeMeta as Record<string, unknown>)
     }
 
     return NextResponse.json({ ok: true })

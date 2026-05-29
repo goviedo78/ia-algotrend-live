@@ -618,6 +618,7 @@ function CustomIconsManager({
           className={styles.textarea}
           value={svg}
           rows={6}
+          maxLength={20000}
           placeholder='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">...</svg>'
           onChange={(e) => setSvg(e.target.value)}
           onDrop={(e) => {

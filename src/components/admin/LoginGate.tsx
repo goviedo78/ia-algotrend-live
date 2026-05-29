@@ -49,6 +49,7 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Contraseña"
+          maxLength={200}
           autoFocus
           className="w-full rounded-xl bg-[#0B1220] border border-[#1F2937] px-4 py-3 text-white placeholder:text-[#6B7280] focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-colors font-mono"
         />

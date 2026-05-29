@@ -1,0 +1,51 @@
+name: BTC cron — disparar /api/cron/check cada hora
+
+# Reemplaza el servicio externo opaco que estaba disparando el endpoint.
+# Vercel Hobby no permite crons sub-diarios → usamos GitHub Actions.
+#
+# El endpoint /api/cron/check analiza candles 1h de Bitstamp, abre/cierra
+# trades en algotrend_trades y replica a BingX (testnet VST en demo).
+#
+# Schedule: minuto 2 de cada hora UTC.
+# Damos 2 min de margen para que Bitstamp publique la vela recién cerrada
+# en xx:00. GitHub Actions cron tiene un delay típico de 1-10 min adicional
+# (no es preciso al segundo), aceptable para velas 1h.
+
+on:
+  schedule:
+    - cron: '2 * * * *'
+  # Permitir invocación manual desde la UI de GitHub para debug.
+  workflow_dispatch:
+
+# Solo una corrida concurrente — si una tarda más de 1h, no encolamos.
+concurrency:
+  group: btc-cron
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: POST /api/cron/check
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET no está configurado en GitHub Secrets"
+            exit 1
+          fi
+          set -o pipefail
+          HTTP_CODE=$(curl -sS -o /tmp/response.json -w "%{http_code}" \
+            -X POST "https://gonovi.app/api/cron/check" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            --max-time 60)
+          echo "HTTP $HTTP_CODE"
+          echo "--- Response (first 2 KB) ---"
+          head -c 2048 /tmp/response.json || true
+          echo
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Cron call failed with HTTP $HTTP_CODE"
+            exit 1
+          fi

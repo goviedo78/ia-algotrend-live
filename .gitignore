@@ -46,3 +46,13 @@ next-env.d.ts
 graphify-out/
 .env*.local
 
+.env.bingx-test
+test-bingx.mjs
+.env.supabase-test
+test-bingx-events.mjs
+test-bingx-postfix.mjs
+.env.cron-test
+
+# agent workspace (personal, never ship)
+.claude/briefs/
+.claude/memory/
