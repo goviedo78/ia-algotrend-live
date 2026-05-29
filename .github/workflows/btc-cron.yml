@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: POST /api/cron/check
+      - name: GET /api/cron/check
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
@@ -37,9 +37,8 @@ jobs:
           fi
           set -o pipefail
           HTTP_CODE=$(curl -sS -o /tmp/response.json -w "%{http_code}" \
-            -X POST "https://gonovi.app/api/cron/check" \
+            "https://gonovi.app/api/cron/check" \
             -H "x-cron-secret: $CRON_SECRET" \
-            -H "Content-Type: application/json" \
             --max-time 60)
           echo "HTTP $HTTP_CODE"
           echo "--- Response (first 2 KB) ---"
