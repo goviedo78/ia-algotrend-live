@@ -50,3 +50,21 @@ Reglas inviolables al crear cualquier tabla nueva en `public` schema (migracione
 
 Razón: si una tabla nueva queda sin RLS, `anon` (el rol público con la `anon_key` que va en el frontend) puede al menos leer (`SELECT`) por los default_privileges. Y si alguien olvida también revisar la migración 010 en el futuro, podría exponerse total. RLS es la primera línea de defensa, no la última.
 
+## BTC 1H Cron Logic Contract (CRITICAL)
+
+Archivo principal: `src/app/api/cron/check/route.ts`. Pine de referencia:
+`/Users/gon/Documents/New project/DATO MERCADO CVS   /Laboratorio Quant IA AlgoTrend/IA AlgoTrend - Bitcoin/ORIGINAL_BASE.pine`.
+
+El BTC 1H original usa estos defaults y el TypeScript debe respetarlos salvo orden explícita:
+
+- `sl_mode = "Porcentaje"`, `sl_pct = 2.0`.
+- `tp_mode = "Ratio R:R"`, `tp_rr = 1.5`.
+- `use_trailing = true`, `trail_trigger_pct = 1.0`, `trail_offset_pct = 0.3`.
+- `commission_value = 0.0`.
+- `process_orders_on_close = true`, `calc_on_every_tick = false`.
+
+No aplicar fixes sugeridos para otros Pine/productos que cambien BTC 1H a `SuperTrend`, `tp_rr = 1.0`, trailing OFF o comisión `0.044%` por lado sin revalidar contra `ORIGINAL_BASE.pine`.
+
+Motivo del replay en cron: cron-job puede fallar varias velas. Si el cron solo revisa la última vela cerrada, puede saltarse un cierre por SL/TP/trailing ocurrido durante la caída. Por eso el cron reconstruye la operación abierta desde los niveles originales de la vela de entrada y recorre todas las velas cerradas posteriores a `open_time`. No reemplazar esto por “solo revisar lastCandle” salvo que exista una columna persistente de `last_managed_time` y una migración que lo soporte.
+
+También hay guard de misma dirección: si ya hay una operación `LONG` abierta y llega otra señal `LONG`, o `SHORT`/`SHORT`, se ignora. Esto replica la intención visual de Pine (`visible_alcista/visible_bajista`) y evita trades fantasma por retry/reconnect.

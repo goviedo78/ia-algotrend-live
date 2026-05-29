@@ -120,6 +120,26 @@ export async function POST(req: NextRequest) {
     }
 
     if (signal === 'LONG' || signal === 'SHORT') {
+      const currentOpenTrade = await getOpenTrade()
+
+      // Pine visible_* conditions do not re-enter when the strategy is already
+      // positioned in the same direction. This keeps dashboard-triggered writes
+      // from creating phantom same-side trades after a reconnect or retry.
+      if (currentOpenTrade?.direction === signal) {
+        return NextResponse.json({ ok: true, action: `signal_${signal}_same_side_ignored` })
+      }
+
+      if (currentOpenTrade) {
+        const closed = await closeTrade(currentOpenTrade.id, time, price, 'SIGNAL')
+        await safeExecuteBingxClose(closed)
+        await notifyClose(closed)
+        await sendPush(req, {
+          title: `₿⏱ BTC 1H — ⚪ Salida ${directionLabel(closed.direction)}`,
+          body: `Precio: $${closed.close_price?.toLocaleString('es-MX')} | Resultado: ${closed.pnl_pct?.toFixed(2)}% (${closeReasonLabel(closed.close_reason)})`,
+          tag: `close-${closed.id}`
+        })
+      }
+
       const atrPct = await fetchLatestAtrPercent()
       const trade = await openTrade(signal, time, time, price, stop, tp, atrPct)
 

@@ -23,6 +23,11 @@ type ActionableSignal = {
   candle: Candle
   source: 'latest' | 'catch_up'
 }
+type OpenTrade = NonNullable<Awaited<ReturnType<typeof getOpenTrade>>>
+type TradeRiskState = {
+  stopLoss: number
+  takeProfit: number | null
+}
 
 function directionLabel(direction: TradeDirection) {
   return direction === 'LONG' ? 'Largo' : 'Corto'
@@ -99,6 +104,76 @@ function isAuthorizedCronRequest(req: NextRequest) {
 
 function signalFromResult(result: AlgoTrendResult): TradeDirection | null {
   return result.longSig ? 'LONG' : result.shortSig ? 'SHORT' : null
+}
+
+async function closeAndNotifyTrade(
+  tradeToClose: OpenTrade,
+  closeTime: number,
+  closePrice: number,
+  reason: Exclude<CloseReason, null>,
+  actions: string[],
+) {
+  const trade = await closeTrade(tradeToClose.id, closeTime, closePrice, reason)
+  await safeExecuteBingxClose(trade, actions)
+  await notifyClose(trade)
+  await sendPushDirect({
+    title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
+    body: `Precio: $${trade.close_price?.toLocaleString('es-MX')} | Resultado: ${trade.pnl_pct?.toFixed(2)}% (${closeReasonLabel(trade.close_reason)})`,
+    tag: `close-${trade.id}`
+  })
+  await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? reason)
+  actions.push(`closed_${reason}_${closeTime}`)
+  return trade
+}
+
+function evaluateTradeCandle(
+  existingTrade: OpenTrade,
+  state: TradeRiskState,
+  candle: Candle,
+): { hit: Exclude<CloseReason, null>; closePrice: number } | null {
+  const { open: o, high: h, low: l, close: price } = candle
+  const path: ('high' | 'low')[] = Math.abs(o - h) < Math.abs(o - l) ? ['high', 'low'] : ['low', 'high']
+  const trailTriggerPct = 1.0
+  const trailOffsetPct = 0.3
+
+  const hitPath = (leg: 'high' | 'low') => {
+    if (existingTrade.direction === 'LONG') {
+      if (leg === 'low' && l <= state.stopLoss) return { hit: 'SL' as const, closePrice: state.stopLoss }
+      if (leg === 'high' && state.takeProfit !== null && h >= state.takeProfit) return { hit: 'TP' as const, closePrice: state.takeProfit }
+      return null
+    }
+    if (leg === 'high' && h >= state.stopLoss) return { hit: 'SL' as const, closePrice: state.stopLoss }
+    if (leg === 'low' && state.takeProfit !== null && l <= state.takeProfit) return { hit: 'TP' as const, closePrice: state.takeProfit }
+    return null
+  }
+
+  const firstHit = hitPath(path[0])
+  if (firstHit) return firstHit
+
+  const secondHit = hitPath(path[1])
+  if (secondHit) return secondHit
+
+  if (existingTrade.direction === 'LONG') {
+    const gainPct = ((h - existingTrade.open_price) / existingTrade.open_price) * 100
+    if (gainPct >= trailTriggerPct) {
+      const trail = h * (1 - trailOffsetPct / 100)
+      state.stopLoss = Math.max(existingTrade.open_price, state.stopLoss, trail)
+      state.takeProfit = null
+    }
+  } else {
+    const gainPct = ((existingTrade.open_price - l) / existingTrade.open_price) * 100
+    if (gainPct >= trailTriggerPct) {
+      const trail = l * (1 + trailOffsetPct / 100)
+      state.stopLoss = Math.min(existingTrade.open_price, state.stopLoss, trail)
+      state.takeProfit = null
+    }
+  }
+
+  const closeHit = existingTrade.direction === 'LONG'
+    ? (price <= state.stopLoss ? 'SL' : (state.takeProfit !== null && price >= state.takeProfit ? 'TP' : null))
+    : (price >= state.stopLoss ? 'SL' : (state.takeProfit !== null && price <= state.takeProfit ? 'TP' : null))
+
+  return closeHit ? { hit: closeHit, closePrice: price } : null
 }
 
 function isSignalStillOpen(signal: TradeDirection, result: AlgoTrendResult, candlesAfterSignal: Candle[]) {
@@ -233,104 +308,50 @@ export async function GET(req: NextRequest) {
     const actions: string[] = []
 
     // ── 1. Check if there's an open trade that needs SL/TP management ──
-    const existingTrade = await getOpenTrade()
+    //
+    // Important BTC 1H contract:
+    // ORIGINAL_BASE.pine uses process_orders_on_close=true, calc_on_every_tick=false,
+    // SL=2% percentage, TP=1.5 R:R, trailing ON at 1.0% trigger / 0.3% offset,
+    // and commission_value=0.0. Do not switch this route to SuperTrend SL,
+    // tp_rr=1.0, trailing OFF, or paid-TV commission unless the Pine base changes.
+    //
+    // Cron can miss executions. When it resumes, managing only the last closed
+    // candle can skip an SL/TP/trailing exit that happened during downtime.
+    // Therefore we reconstruct the open trade from its original entry risk
+    // levels and replay every CLOSED candle after open_time. The DB may already
+    // contain a trail-updated stop, so replay must start from the engine's
+    // original signal candle levels, not the current DB stop/take_profit.
+    let existingTrade = await getOpenTrade()
     if (existingTrade) {
-      const o = lastCandle.open
-      const h = lastCandle.high
-      const l = lastCandle.low
-      const price = lastCandle.close
-
-      const trailTriggerPct = 1.0
-      const trailOffsetPct = 0.3
-
-      let stopLoss = existingTrade.stop_loss
-      let takeProfit: number | null = existingTrade.take_profit
-
-      const path: ('high' | 'low')[] = Math.abs(o - h) < Math.abs(o - l) ? ['high', 'low'] : ['low', 'high']
-
-      const hitPath = (leg: 'high' | 'low') => {
-        if (existingTrade.direction === 'LONG') {
-          if (leg === 'low' && l <= stopLoss) return { hit: 'SL' as const, closePrice: stopLoss }
-          if (leg === 'high' && takeProfit !== null && h >= takeProfit) return { hit: 'TP' as const, closePrice: takeProfit }
-          return null
-        }
-        if (leg === 'high' && h >= stopLoss) return { hit: 'SL' as const, closePrice: stopLoss }
-        if (leg === 'low' && takeProfit !== null && l <= takeProfit) return { hit: 'TP' as const, closePrice: takeProfit }
-        return null
+      const entryResult = results.find((result) => result.time === existingTrade?.signal_time)
+      const state: TradeRiskState = {
+        stopLoss: entryResult
+          ? (existingTrade.direction === 'LONG' ? entryResult.longStop : entryResult.shortStop)
+          : existingTrade.stop_loss,
+        takeProfit: entryResult
+          ? (existingTrade.direction === 'LONG' ? entryResult.longTp : entryResult.shortTp)
+          : existingTrade.take_profit,
       }
-
+      const openTime = existingTrade.open_time
+      const candlesToManage = candles.filter((candle) => candle.time > openTime)
       let closed = false
-      const firstHit = hitPath(path[0])
-      if (firstHit) {
-        const trade = await closeTrade(existingTrade.id, last.time, firstHit.closePrice, firstHit.hit)
-        await safeExecuteBingxClose(trade, actions)
-        await notifyClose(trade)
-        await sendPushDirect({
-          title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
-          body: `Precio: $${trade.close_price?.toLocaleString('es-MX')} | Resultado: ${trade.pnl_pct?.toFixed(2)}% (${closeReasonLabel(trade.close_reason)})`,
-          tag: `close-${trade.id}`
-        })
-        await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
-        closed = true
-        actions.push(`closed_${firstHit.hit}`)
-      } else {
-        const secondHit = hitPath(path[1])
-        if (secondHit) {
-          const trade = await closeTrade(existingTrade.id, last.time, secondHit.closePrice, secondHit.hit)
-          await safeExecuteBingxClose(trade, actions)
-          await notifyClose(trade)
-          await sendPushDirect({
-            title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
-            body: `Precio: $${trade.close_price?.toLocaleString('es-MX')} | Resultado: ${trade.pnl_pct?.toFixed(2)}% (${closeReasonLabel(trade.close_reason)})`,
-            tag: `close-${trade.id}`
-          })
-          await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
+
+      for (const candle of candlesToManage) {
+        const hit = evaluateTradeCandle(existingTrade, state, candle)
+        if (hit) {
+          await closeAndNotifyTrade(existingTrade, candle.time, hit.closePrice, hit.hit, actions)
           closed = true
-          actions.push(`closed_${secondHit.hit}`)
-        } else {
-          // Trailing stop update
-          if (existingTrade.direction === 'LONG') {
-            const gainPct = ((h - existingTrade.open_price) / existingTrade.open_price) * 100
-            if (gainPct >= trailTriggerPct) {
-              const trail = h * (1 - trailOffsetPct / 100)
-              stopLoss = Math.max(existingTrade.open_price, stopLoss, trail)
-              takeProfit = null
-            }
-          } else {
-            const gainPct = ((existingTrade.open_price - l) / existingTrade.open_price) * 100
-            if (gainPct >= trailTriggerPct) {
-              const trail = l * (1 + trailOffsetPct / 100)
-              stopLoss = Math.min(existingTrade.open_price, stopLoss, trail)
-              takeProfit = null
-            }
-          }
-
-          // Close-bar confirmation
-          const closeHit = existingTrade.direction === 'LONG'
-            ? (price <= stopLoss ? 'SL' : (takeProfit !== null && price >= takeProfit ? 'TP' : null))
-            : (price >= stopLoss ? 'SL' : (takeProfit !== null && price <= takeProfit ? 'TP' : null))
-
-          if (closeHit) {
-            const trade = await closeTrade(existingTrade.id, last.time, price, closeHit)
-            await safeExecuteBingxClose(trade, actions)
-            await notifyClose(trade)
-            await sendPushDirect({
-              title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
-              body: `Precio: $${trade.close_price?.toLocaleString('es-MX')} | Resultado: ${trade.pnl_pct?.toFixed(2)}% (${closeReasonLabel(trade.close_reason)})`,
-              tag: `close-${trade.id}`
-            })
-            await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
-            closed = true
-            actions.push(`closed_${closeHit}`)
-          } else if (stopLoss !== existingTrade.stop_loss || takeProfit !== existingTrade.take_profit) {
-            await updateOpenTradeRisk(existingTrade.id, stopLoss, takeProfit)
-            actions.push('trailing_updated')
-          }
+          existingTrade = null
+          break
         }
       }
 
-      if (!closed) {
-        actions.push('trade_monitored')
+      if (!closed && existingTrade) {
+        if (state.stopLoss !== existingTrade.stop_loss || state.takeProfit !== existingTrade.take_profit) {
+          existingTrade = await updateOpenTradeRisk(existingTrade.id, state.stopLoss, state.takeProfit)
+          actions.push('trailing_updated')
+        }
+        actions.push(`trade_monitored_${candlesToManage.length}_candles`)
       }
     }
 
@@ -363,32 +384,41 @@ export async function GET(req: NextRequest) {
       }
 
       if (!atrBlocked) {
-      const stop = signal === 'LONG' ? signalResult.longStop : signalResult.shortStop
-      const tp = signal === 'LONG' ? signalResult.longTp : signalResult.shortTp
-      const trade = await openTrade(signal, signalResult.time, signalResult.time, signalResult.close, stop, tp, atrPct !== null ? +atrPct.toFixed(3) : null)
+        if (existingTrade?.direction === signal) {
+          actions.push(`signal_${signal}_same_side_ignored`)
+        } else {
+          if (existingTrade) {
+            await closeAndNotifyTrade(existingTrade, signalResult.time, signalResult.close, 'SIGNAL', actions)
+            existingTrade = null
+          }
 
-      if (trade) {
-        const prob = signal === 'LONG' ? signalResult.probUp : signalResult.probDown
-        const probText = (prob * 100).toFixed(1) + '%'
+          const stop = signal === 'LONG' ? signalResult.longStop : signalResult.shortStop
+          const tp = signal === 'LONG' ? signalResult.longTp : signalResult.shortTp
+          const trade = await openTrade(signal, signalResult.time, signalResult.time, signalResult.close, stop, tp, atrPct !== null ? +atrPct.toFixed(3) : null)
 
-        await safeExecuteBingxOpen(trade, actions)
-        await notifyOpen(trade)
+          if (trade) {
+            const prob = signal === 'LONG' ? signalResult.probUp : signalResult.probDown
+            const probText = (prob * 100).toFixed(1) + '%'
 
-        const emoji = signal === 'LONG' ? '🟢' : '🔴'
-        const dir = signal === 'LONG' ? 'LARGO' : 'CORTO'
+            await safeExecuteBingxOpen(trade, actions)
+            await notifyOpen(trade)
 
-        await sendPushDirect({
-          title: `${emoji} AlgoTrend — ${dir} (${probText})`,
-          body: `Entrada: $${signalResult.close.toLocaleString('es-MX')} (ATR = ${atrPct !== null ? atrPct.toFixed(2) : '—'}%) | Stop: $${stop.toLocaleString('es-MX')} | Objetivo: ${tp ? '$' + tp.toLocaleString('es-MX') : 'Stop móvil'}`,
-          tag: `signal-${signalResult.time}`,
-        })
+            const emoji = signal === 'LONG' ? '🟢' : '🔴'
+            const dir = signal === 'LONG' ? 'LARGO' : 'CORTO'
 
-        await emailOpen(signal, signalResult.close, stop, tp, prob)
+            await sendPushDirect({
+              title: `${emoji} AlgoTrend — ${dir} (${probText})`,
+              body: `Entrada: $${signalResult.close.toLocaleString('es-MX')} (ATR = ${atrPct !== null ? atrPct.toFixed(2) : '—'}%) | Stop: $${stop.toLocaleString('es-MX')} | Objetivo: ${tp ? '$' + tp.toLocaleString('es-MX') : 'Stop móvil'}`,
+              tag: `signal-${signalResult.time}`,
+            })
 
-        actions.push(`opened_${signal}_${actionableSignal.source}`)
-      } else {
-        actions.push('signal_already_processed')
-      }
+            await emailOpen(signal, signalResult.close, stop, tp, prob)
+
+            actions.push(`opened_${signal}_${actionableSignal.source}`)
+          } else {
+            actions.push('signal_already_processed')
+          }
+        }
       } // end !atrBlocked
     }
 
