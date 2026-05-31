@@ -20,7 +20,7 @@ export async function sendEmail(subject: string, body: string) {
 
   try {
     await resend.emails.send({
-      from: 'IA AlgoTrend <onboarding@resend.dev>',
+      from: 'AlgoTrend <alerts@gonovi.app>',
       to: TO_EMAIL,
       subject,
       html: `

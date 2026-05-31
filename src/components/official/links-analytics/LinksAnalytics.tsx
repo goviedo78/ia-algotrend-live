@@ -90,6 +90,19 @@ function startOfDayUtc(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
+// Cálculo de ventanas temporales aislado en helper para mantener el cuerpo del
+// server component "puro" según react-hooks/purity (Date.now no es puro).
+function computeTimeWindow() {
+  const now = Date.now()
+  const since = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const days: { date: string; views: number; clicks: number }[] = []
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(now - i * 24 * 60 * 60 * 1000)
+    days.push({ date: startOfDayUtc(d), views: 0, clicks: 0 })
+  }
+  return { since, days }
+}
+
 function pickDevice(ua: string | null): string {
   if (!ua) return 'Desconocido'
   if (/iPhone/i.test(ua)) return 'iPhone'
@@ -109,7 +122,7 @@ export async function LinksAnalytics({ pin }: Props) {
 
   // Ventana de los últimos 30 días. El insert se hace en UTC y created_at es
   // TIMESTAMPTZ, así que comparamos en UTC.
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const { since, days } = computeTimeWindow()
 
   const [viewsRes, clicksRes] = await Promise.all([
     supabase
@@ -171,12 +184,7 @@ export async function LinksAnalytics({ pin }: Props) {
   }
   const topCountries = Array.from(countryCounts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8)
 
-  // ── Time series últimos 14 días
-  const days: { date: string; views: number; clicks: number }[] = []
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
-    days.push({ date: startOfDayUtc(d), views: 0, clicks: 0 })
-  }
+  // ── Time series últimos 14 días (días precomputados en computeTimeWindow)
   const dayIndex = new Map(days.map((d, i) => [d.date, i]))
   for (const v of views) {
     const key = v.created_at.substring(0, 10)
