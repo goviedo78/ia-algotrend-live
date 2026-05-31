@@ -111,32 +111,43 @@ export function NfcScanTable({ scans, nameByCard, pin }: Props) {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '1rem',
-          background: 'rgba(244,78,28,0.1)',
-          borderBottom: '1px solid rgba(244,78,28,0.2)',
+          padding: '0.8rem 1.25rem',
+          margin: '0.5rem 0 1rem 0',
+          background: 'rgba(28, 34, 58, 0.75)',
+          border: '1px solid rgba(244, 78, 28, 0.3)',
+          borderTop: '1px solid rgba(244, 78, 28, 0.5)',
+          borderRadius: '16px',
+          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(24px) saturate(150%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(150%)',
           position: 'sticky',
-          top: 0,
-          zIndex: 20
+          top: '1rem',
+          zIndex: 20,
+          animation: 'fadeInDown 0.3s ease-out'
         }}>
-          <span style={{ fontSize: '0.9rem', color: '#E5D4B6' }}>
-            {selectedIds.size} seleccionados
+          <span style={{ fontSize: '0.9rem', color: '#E5D4B6', fontWeight: 600, letterSpacing: '0.02em' }}>
+            <span style={{ color: '#f44e1c', marginRight: '0.3rem' }}>{selectedIds.size}</span>
+            seleccionados
           </span>
           <button
             onClick={handleDelete}
             disabled={isDeleting}
             style={{
-              background: '#f44e1c',
-              color: '#0d1122',
+              background: 'linear-gradient(135deg, #f44e1c 0%, #d83a10 100%)',
+              color: '#fff',
               border: 'none',
-              padding: '0.4rem 1rem',
-              borderRadius: '6px',
+              padding: '0.5rem 1.2rem',
+              borderRadius: '999px',
               fontSize: '0.8rem',
-              fontWeight: 'bold',
+              fontWeight: '700',
               cursor: isDeleting ? 'wait' : 'pointer',
-              opacity: isDeleting ? 0.7 : 1
+              opacity: isDeleting ? 0.7 : 1,
+              boxShadow: '0 4px 12px rgba(244, 78, 28, 0.3)',
+              transition: 'all 0.2s ease',
+              textShadow: '0 1px 2px rgba(0,0,0,0.2)'
             }}
           >
-            {isDeleting ? 'Borrando...' : 'Borrar Selección'}
+            {isDeleting ? 'Borrando...' : 'Eliminar'}
           </button>
         </div>
       )}

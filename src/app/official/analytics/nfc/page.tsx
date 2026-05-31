@@ -202,6 +202,33 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
       ) : (
         <NfcScanTable scans={scans} nameByCard={nameByCardRecord} pin={pin ?? ''} />
       )}
+
+      {/* Floating Logo GONOVI */}
+      <div style={{
+        position: 'fixed',
+        bottom: '24px',
+        right: '24px',
+        width: '52px',
+        height: '52px',
+        borderRadius: '50%',
+        background: 'rgba(28, 34, 58, 0.4)',
+        backdropFilter: 'blur(24px) saturate(120%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(120%)',
+        border: '1px solid rgba(229, 212, 182, 0.1)',
+        borderTop: '1px solid rgba(229, 212, 182, 0.25)',
+        borderLeft: '1px solid rgba(229, 212, 182, 0.15)',
+        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.05)',
+        display: 'grid',
+        placeItems: 'center',
+        zIndex: 50,
+        pointerEvents: 'none'
+      }}>
+        <img 
+          src="/logo-orange-graphite-navy/01-navy-cream-orange-transparent.svg" 
+          alt="GONOVI" 
+          style={{ width: '28px', height: '28px', opacity: 0.95, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} 
+        />
+      </div>
     </main>
   )
 }
