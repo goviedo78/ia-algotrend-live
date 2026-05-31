@@ -129,6 +129,9 @@ tmux send-keys -t GONOVI_LANDING:0.2 "" C-m
 ## 📜 Cambios recientes (chronicle 22-may → 30-may)
 
 ### 30-may
+- **Hardening warnings auditoría** (Claude, commit `98366dd`):
+  - `/api/telegram/notify` GET: removido `?token=` query fallback (terminaba en logs). Usa solo `TELEGRAM_BOT_TOKEN` env + requiere Bearer CRON_SECRET. POST eliminado (era echo zombie). Validado: GET sin auth → 401, con `?token=fake` → 401, POST → 405.
+  - `/api/push/subscribe` POST+DELETE: same-origin check anti-CSRF + validación de endpoint (URL https 20-2000 chars). NotificationBell sigue funcionando (mismo origin). Validado: origin evil.com → 403, endpoint inválido → 400.
 - **Auditoría de seguridad + hardening de `/api/signal`** (Claude, commit `d53052e`):
   - **Hallazgo crítico cerrado**: `/api/signal` estaba sin auth. Cualquier POST anónimo podía abrir/cerrar trades en `algotrend_trades`, **ejecutar órdenes a BingX** (riesgo MAX si pasa a REAL), spam push + Telegram. Fix: agregado a `SENSITIVE_ROUTES` en `proxy.ts` → ahora 401 sin admin cookie o Bearer CRON_SECRET. Dashboard.tsx sigue funcionando con cookie.
   - **Hardening `/api/links/track`**: movido a `ANALYTICS_ROUTES` para usar preset 120/min (antes default 60/min). Validado: 120 OK + 10 × 429 en stress test.
