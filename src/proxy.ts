@@ -181,11 +181,17 @@ footer{
 }
 
 // ── Route classification ──────────────────────────────────────────
-const SENSITIVE_ROUTES = ['/api/backfill', '/api/push/send', '/api/debug']
+// SENSITIVE_ROUTES: require admin cookie (algotrend_dash) o Bearer CRON_SECRET.
+// /api/signal entró acá porque inserta/cierra trades, dispara BingX, push y Telegram.
+// Sin gate cualquier POST anónimo podría manipular el bot. El Dashboard.tsx que lo
+// llama desde el browser sigue funcionando porque el visitante admin lleva la cookie.
+const SENSITIVE_ROUTES = ['/api/backfill', '/api/push/send', '/api/debug', '/api/signal']
 const AUTH_ROUTES = ['/api/dashboard/login']
 const DASHBOARD_ROUTES = ['/api/analytics/stats', '/api/dashboard/settings']
 const WEBHOOK_ROUTES = ['/api/cron', '/api/webhook']
-const ANALYTICS_ROUTES = ['/api/analytics/event', '/api/analytics/track']
+// /api/links/track entró acá para usar el preset analytics (120/min) en vez del
+// default public (60/min). Es un endpoint de tracking público igual que los otros.
+const ANALYTICS_ROUTES = ['/api/analytics/event', '/api/analytics/track', '/api/links/track']
 const SUBSCRIBE_ROUTES = ['/api/push/subscribe']
 
 function getPreset(pathname: string): string {
