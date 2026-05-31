@@ -255,12 +255,20 @@ export default function OfficialHome() {
     return items
   }, [CARDS_LENGTH, isMobileCarousel])
 
+  // Refs para el loop seamless. Medimos UNA VEZ la altura del ciclo
+  // (loopHeight) y la posición del inicio de la copia del medio para
+  // que el reset trabaje con rangos absolutos de scrollTop, no buscando
+  // la "card más cercana" (que flakea durante el momentum scroll de iOS).
+  const loopHeightRef = useRef(0)
+  const middleCopyStartRef = useRef(0)
   const isResettingRef = useRef(false)
+  const resetTimeoutRef = useRef<number | null>(null)
+  const bendFrameRef = useRef<number | null>(null)
 
-  // Aplica bend dinámico por card en mobile. Fórmula de arco circular
-  // (CircularGallery): R = (H² + B²) / (2B); arc = R − √(R² − d²);
-  // angle = ±asin(d / R). Aquí d es la distancia vertical de la card
-  // al centro del carrusel, y el desplazamiento/rotación va en X.
+  // Aplica bend dinámico por card. Fórmula de arco circular (OGL
+  // CircularGallery): R = (H² + B²)/(2B); arc = R − √(R² − d²);
+  // angle = ±asin(d/R). d = distancia vertical de la card al centro
+  // del carrusel; desplazamiento/rotación van en X.
   const applyBend = useCallback(() => {
     const carousel = carouselRef.current
     if (!carousel) return
@@ -276,7 +284,7 @@ export default function OfficialHome() {
     }
 
     const H = carousel.clientHeight / 2
-    const bend = H * BEND_RATIO // px de profundidad del arco
+    const bend = H * BEND_RATIO
     const R = (H * H + bend * bend) / (2 * bend)
     const center = carousel.scrollTop + H
 
@@ -286,22 +294,14 @@ export default function OfficialHome() {
       const absDy = Math.min(Math.abs(dy), H)
       const arcX = R - Math.sqrt(R * R - absDy * absDy)
       const angle = Math.asin(absDy / R) * (180 / Math.PI)
-      const norm = absDy / H // 0 en el centro, 1 en los extremos
+      const norm = absDy / H
 
-      // Arco "C" abierta hacia la derecha que abraza al logo (anclado a
-      // la izquierda). Card central queda a la derecha; arriba y abajo
-      // se desplazan a la izquierda (translateX negativo), encastrando
-      // en la concavidad del círculo del logo. El rotateY se mantiene
-      // moderado (factor 0.55) para que las cards NUNCA se vean de
-      // canto — siempre permanecen totalmente legibles.
       const translateX = -arcX
       const rotateY = angle * 0.55
       const translateZ = -arcX * 0.35
       const scale = 1 - norm * 0.14
       const opacity = 1 - norm * 0.45
 
-      // La card activa se eleva un 5% de su alto sobre el centro del
-      // carrusel para destacarla del resto.
       const isActive = card.dataset.active === 'true'
       const translateY = isActive ? -card.offsetHeight * 0.05 : 0
 
@@ -310,78 +310,130 @@ export default function OfficialHome() {
     })
   }, [isMobileCarousel])
 
+  // Actualiza activeCardIndex en función de la card más cercana al
+  // centro visible. Sin lógica de reset acá.
   const syncActiveCard = useCallback(() => {
     const carousel = carouselRef.current
-    if (!carousel || isResettingRef.current) return
-
+    if (!carousel) return
     const center = carousel.scrollTop + carousel.clientHeight / 2
     let nearestCardIndex = 0
-    let nearestCopyIndex = MIDDLE_COPY
-    let nearestEl: HTMLElement | null = null
     let nearest = Number.POSITIVE_INFINITY
-
     carousel.querySelectorAll<HTMLElement>('[data-card-index]').forEach((node) => {
       const cardIndex = Number(node.dataset.cardIndex)
-      const copyIndex = Number(node.dataset.copyIndex)
       const cardCenter = node.offsetTop + node.offsetHeight / 2
       const distance = Math.abs(cardCenter - center)
       if (distance < nearest) {
         nearest = distance
         nearestCardIndex = cardIndex
-        nearestCopyIndex = copyIndex
-        nearestEl = node
       }
     })
-
     setActiveCardIndex((current) => (current === nearestCardIndex ? current : nearestCardIndex))
+  }, [])
 
-    // Loop seamless: solo en mobile, reset silencioso al copy del medio
-    // si estamos en una copia extrema. Estilo wrap-around tipo OGL: el
-    // jump pasa entre cards equivalentes, no se ve corte ni franja.
-    if (isMobileCarousel && nearestEl && nearestCopyIndex !== MIDDLE_COPY) {
-      const target = carousel.querySelector<HTMLElement>(
-        `[data-card-index="${nearestCardIndex}"][data-copy-index="${MIDDLE_COPY}"]`
-      )
-      if (target) {
-        isResettingRef.current = true
-        const delta = target.offsetTop - (nearestEl as HTMLElement).offsetTop
-        carousel.scrollTop = carousel.scrollTop + delta
-        window.requestAnimationFrame(() => {
-          isResettingRef.current = false
-          applyBend()
-        })
-        return
-      }
+  // Mide la altura de un ciclo completo y la posición del middle copy.
+  // Re-medir si cambia el viewport o el contenido del carrusel.
+  const measureLoop = useCallback(() => {
+    const carousel = carouselRef.current
+    if (!carousel || !isMobileCarousel) return
+    const first0 = carousel.querySelector<HTMLElement>('[data-card-index="0"][data-copy-index="0"]')
+    const first1 = carousel.querySelector<HTMLElement>('[data-card-index="0"][data-copy-index="1"]')
+    if (!first0 || !first1) return
+    loopHeightRef.current = first1.offsetTop - first0.offsetTop
+    middleCopyStartRef.current = first1.offsetTop - carousel.clientHeight / 2 + first1.offsetHeight / 2
+  }, [isMobileCarousel])
+
+  // Reset basado en rangos absolutos de scrollTop. Se ejecuta solo
+  // cuando el scroll está QUIETO (debounce 140ms) para no chocar con el
+  // momentum scroll de iOS. Si estamos en copy 0 → saltar 1 loop adelante;
+  // si estamos en copy 2 → saltar 1 loop atrás. Las cards son idénticas
+  // entre copias, así que el jump es visualmente imperceptible.
+  const performReset = useCallback(() => {
+    const carousel = carouselRef.current
+    if (!carousel || !isMobileCarousel) return
+    const loopH = loopHeightRef.current
+    const middleStart = middleCopyStartRef.current
+    if (loopH <= 0) return
+
+    const scroll = carousel.scrollTop
+    const lowerBound = middleStart - loopH * 0.5
+    const upperBound = middleStart + loopH * 1.5
+
+    if (scroll < lowerBound) {
+      isResettingRef.current = true
+      carousel.scrollTop = scroll + loopH
+      // Liberar el flag tras 2 frames para asegurar que el browser ya
+      // procesó el cambio de scrollTop antes de aceptar nuevos events.
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        isResettingRef.current = false
+        applyBend()
+      }))
+    } else if (scroll > upperBound) {
+      isResettingRef.current = true
+      carousel.scrollTop = scroll - loopH
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        isResettingRef.current = false
+        applyBend()
+      }))
     }
+  }, [isMobileCarousel, applyBend])
 
-    applyBend()
-  }, [applyBend, isMobileCarousel])
-
-  // Scroll inicial al primer card de la copia del medio (solo mobile).
+  // Scroll inicial: posicionar al primer card del middle copy + medir
+  // la geometría del loop.
   useEffect(() => {
     const carousel = carouselRef.current
     if (!carousel) return
     if (isMobileCarousel) {
+      measureLoop()
       const first = carousel.querySelector<HTMLElement>(
         `[data-card-index="0"][data-copy-index="${MIDDLE_COPY}"]`
       )
       if (first) {
         isResettingRef.current = true
         carousel.scrollTop = first.offsetTop - carousel.clientHeight / 2 + first.offsetHeight / 2
-        window.requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
           isResettingRef.current = false
           syncActiveCard()
+          applyBend()
         })
         return
       }
     }
     applyBend()
     syncActiveCard()
-  }, [isMobileCarousel, applyBend, syncActiveCard])
+  }, [isMobileCarousel, applyBend, syncActiveCard, measureLoop])
 
+  // Re-medir loop al cambiar el viewport (resize / rotación).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onResize = () => {
+      measureLoop()
+      applyBend()
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [measureLoop, applyBend])
+
+  // Cleanup de timers/frames al desmontar.
+  useEffect(() => () => {
+    if (resetTimeoutRef.current) window.clearTimeout(resetTimeoutRef.current)
+    if (bendFrameRef.current) cancelAnimationFrame(bendFrameRef.current)
+  }, [])
+
+  // Handler unificado: bend + sync por frame (smooth visual), reset
+  // debounced (sin chocar con momentum). isResettingRef previene que
+  // el scroll event triggered por el propio reset agende otro reset.
   const handleCarouselScroll = useCallback(() => {
-    window.requestAnimationFrame(syncActiveCard)
-  }, [syncActiveCard])
+    if (isResettingRef.current) return
+    if (bendFrameRef.current) cancelAnimationFrame(bendFrameRef.current)
+    bendFrameRef.current = requestAnimationFrame(() => {
+      bendFrameRef.current = null
+      applyBend()
+      syncActiveCard()
+    })
+    if (!isMobileCarousel) return
+    if (resetTimeoutRef.current) window.clearTimeout(resetTimeoutRef.current)
+    resetTimeoutRef.current = window.setTimeout(performReset, 140)
+  }, [applyBend, syncActiveCard, performReset, isMobileCarousel])
 
   const handleCardExpand = useCallback((cardIndex: number) => {
     setExpandedCardIndex((current) => (current === cardIndex ? null : cardIndex))
