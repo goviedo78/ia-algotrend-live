@@ -60,15 +60,20 @@ export async function deleteCardName(formData: FormData) {
 
 export async function deleteScans(scanIds: string[], pin: string) {
   const validPin = process.env.ANALYTICS_PIN ?? process.env.DASHBOARD_PASSWORD
-  if (!validPin || pin !== validPin) return
+  if (!validPin || pin !== validPin) throw new Error('Unauthorized')
   if (!Array.isArray(scanIds) || scanIds.length === 0) return
 
   // Limitar cantidad de borrados por request (ej. 1000)
-  const safeIds = scanIds.slice(0, 1000).filter(id => typeof id === 'string')
+  const safeIds = scanIds.slice(0, 1000).filter(id => typeof id === 'string' || typeof id === 'number')
   if (safeIds.length === 0) return
 
   const supabase = createAdminClient()
-  await supabase.from('nfc_analytics').delete().in('id', safeIds)
+  const { error } = await supabase.from('nfc_analytics').delete().in('id', safeIds)
+  
+  if (error) {
+    console.error('[deleteScans] Supabase error:', error)
+    throw new Error('Database error during deletion')
+  }
 
   revalidatePath('/official/analytics/nfc')
 }
