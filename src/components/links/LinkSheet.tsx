@@ -4,10 +4,12 @@ import { useEffect } from 'react'
 import type { LinkItem } from './linksData'
 import type { CustomIcon } from '@/lib/links-config'
 import { IconDisplay } from './IconDisplay'
+import { trackClick } from '@/lib/links-tracker'
 import styles from './LinkSheet.module.css'
 
 interface Props {
   link: LinkItem | null
+  linkIndex?: number
   customIcons?: CustomIcon[]
   onClose: () => void
 }
@@ -21,7 +23,7 @@ function getContrastColor(hex?: string) {
   return yiq >= 160 ? '#11162a' : '#ffffff'
 }
 
-export function LinkSheet({ link, customIcons, onClose }: Props) {
+export function LinkSheet({ link, linkIndex = -1, customIcons, onClose }: Props) {
   // Cerrar con Escape
   useEffect(() => {
     if (!link) return
@@ -99,6 +101,9 @@ export function LinkSheet({ link, customIcons, onClose }: Props) {
               href={link.href}
               {...(isExternal && { target: '_blank', rel: 'noopener noreferrer' })}
               onClick={() => {
+                // Fire-and-forget: el tracking nunca debe bloquear la navegación.
+                // trackClick usa sendBeacon, sobrevive incluso si se cierra la tab.
+                trackClick({ title: link.title, href: link.href, index: linkIndex })
                 // Pequeño delay para que se vea la animación de tap antes de cerrar
                 setTimeout(onClose, 200)
               }}

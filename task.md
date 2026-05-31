@@ -126,7 +126,20 @@ tmux send-keys -t GONOVI_LANDING:0.2 "" C-m
 
 ---
 
-## 📜 Cambios recientes (chronicle 22-may → 28-may)
+## 📜 Cambios recientes (chronicle 22-may → 30-may)
+
+### 30-may
+- **Migración email Resend → `alerts@gonovi.app`** (Claude):
+  - Cloudflare API: 3 DNS records insertados en `gonovi.app` (DKIM TXT en `resend._domainkey`, SPF TXT y MX en `send`)
+  - Resend domain creado, DKIM verificado al instante; SPF (MX+TXT) en pending — esperando re-chequeo de Resend (DNS público OK desde 1.1.1.1 y 8.8.8.8)
+  - `src/lib/email.ts:23` cambiado de `onboarding@resend.dev` → `alerts@gonovi.app` (NO commiteado todavía; se commitea+deploya cuando SPF verifique para evitar romper emails del bot en prod)
+- **Analytics de `/links` MVP** (Claude, commit pendiente):
+  - Migración `012_links_analytics.sql` aplicada al remoto: `link_views` + `link_clicks` con RLS y sin policies (deny-all anon)
+  - Endpoint `/api/links/track` (POST, fire-and-forget vía `after()`, IP hasheada con `NFC_HASH_SALT`, bot filter, geo desde headers Vercel)
+  - `src/lib/links-tracker.ts` (cliente): `sessionId` UUID en `localStorage`, parse de UTM, `sendBeacon` para clicks (sobrevive navegación)
+  - Hooks en `LinksPage` (view al mount, skip si `?preview=`) y `LinkSheet` (click antes de abrir el link)
+  - Tab "📊 Analytics" en `/official/links?tab=analytics`: stats (visitas, únicos, clicks, CTR), bar chart 14 días, top fuentes (UTM + referrer combinados), top links, geo, dispositivos, últimas 20 visitas, **generador de UTM con 10 presets** (Instagram bio/stories, TikTok bio/video, YouTube desc/pinned, Twitter, WhatsApp, Email)
+  - PIN-gated igual que el resto. `next tsc --noEmit` clean.
 
 ### 29-may
 - **Fase 8 XSS hardening completada** (commit `0d5e455`):

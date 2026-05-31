@@ -14,6 +14,7 @@ import {
 import { IconDisplay } from './IconDisplay'
 import { LinkSheet } from './LinkSheet'
 import type { CustomIcon } from '@/lib/links-config'
+import { trackView } from '@/lib/links-tracker'
 import styles from './LinksPage.module.css'
 
 type LinksConfigShape = {
@@ -41,12 +42,21 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
   const SPONSOR = config?.sponsor ?? DEFAULT_SPONSOR
   const CUSTOM_ICONS = config?.customIcons ?? []
 
-  const [sheetLink, setSheetLink] = useState<LinkItem | null>(null)
-  
+  const [sheet, setSheet] = useState<{ link: LinkItem; index: number } | null>(null)
+
   const [phase, setPhase] = useState<'intro' | 'content'>('intro')
   const [fps, setFps] = useState(60)
-  
+
   const [isScrolled, setIsScrolled] = useState(false)
+
+  // Fire view-tracking una sola vez por mount.
+  // Skip cuando la página se carga dentro del iframe del editor (?preview=...)
+  // para no inflar las métricas con cada save en /official/links.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.location.search.includes('preview=')) return
+    trackView()
+  }, [])
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>
@@ -132,7 +142,7 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
       <div id="scroll-sentinel" style={{ position: 'absolute', top: 0, height: '1px', width: '100%', pointerEvents: 'none' }} aria-hidden="true" />
       
       {/* ── Top Bar (Sticky Header) ── */}
-      <aside className={`${styles.topBar} ${isScrolled ? styles.scrolled : ''} ${sheetLink ? styles.listBlurred : ''}`} aria-label="Información para patrocinadores">
+      <aside className={`${styles.topBar} ${isScrolled ? styles.scrolled : ''} ${sheet ? styles.listBlurred : ''}`} aria-label="Información para patrocinadores">
         <div className={styles.topBarInner}>
           <div className={styles.topBarTopRow}>
             <div className={styles.topBarBrand}>
@@ -158,13 +168,13 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
       </aside>
 
       <div className={styles.container}>
-        <header className={`${styles.header} ${sheetLink ? styles.listBlurred : ''}`}>
+        <header className={`${styles.header} ${sheet ? styles.listBlurred : ''}`}>
           <h1 className={styles.brand}>{HEADER.brand}</h1>
           {HEADER.subtitle && <p className={styles.subtitle}>{HEADER.subtitle}</p>}
         </header>
 
-        <ul className={`${styles.list} ${sheetLink ? styles.listBlurred : ''}`}>
-          {LINKS.filter(link => !link.hidden).map((link) => {
+        <ul className={`${styles.list} ${sheet ? styles.listBlurred : ''}`}>
+          {LINKS.filter(link => !link.hidden).map((link, index) => {
             // Color de marca dinámico vía CSS variable.
             // Stagger entry de las pills usa nth-child en CSS (más robusto que --i).
             const customStyle = link.color
@@ -177,7 +187,7 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
                   type="button"
                   className={styles.linkBtn}
                   style={customStyle}
-                  onClick={() => setSheetLink(link)}
+                  onClick={() => setSheet({ link, index })}
                   aria-label={link.badge ? `${link.title} (${link.badge})` : link.title}
                   aria-haspopup="dialog"
                 >
@@ -199,9 +209,10 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
       </div>
 
       <LinkSheet
-        link={sheetLink}
+        link={sheet?.link ?? null}
+        linkIndex={sheet?.index ?? -1}
         customIcons={CUSTOM_ICONS}
-        onClose={() => setSheetLink(null)}
+        onClose={() => setSheet(null)}
       />
     </main>
   )
