@@ -1,0 +1,284 @@
+.root {
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.contentLayer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  position: relative;
+  z-index: 10;
+  transition: opacity 1s ease-in-out;
+}
+
+[data-phase="intro"] .contentLayer {
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-phase="content"] .contentLayer {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.introOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: #1a1814;
+  z-index: 0;
+  pointer-events: none;
+  transition: opacity 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+[data-phase="intro"] .introOverlay {
+  opacity: 1;
+}
+
+[data-phase="content"] .introOverlay {
+  opacity: 0;
+}
+
+.hud {
+  position: fixed;
+  top: 32px; 
+  left: 32px;
+  z-index: 10;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: 1.8;
+  color: rgba(229, 212, 182, 0.6);
+  pointer-events: none;
+  transition: opacity 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.hudBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--hub-bone, #e5d4b6);
+  color: var(--hub-ink, #0d1122);
+  margin-bottom: 12px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+}
+
+.hudRow { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+}
+
+.hudDot { 
+  width: 6px; 
+  height: 6px; 
+  border-radius: 50%; 
+  background: var(--primary, #f44e1c); 
+  animation: blink 1.4s ease-in-out infinite; 
+}
+
+@keyframes blink { 
+  0%, 100% { opacity: 1; } 
+  50% { opacity: 0.3; } 
+}
+
+.fps {
+  position: fixed;
+  top: 32px; 
+  right: 32px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  color: rgba(229, 212, 182, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  pointer-events: none;
+  transition: opacity 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 10;
+}
+
+.fps strong { 
+  color: var(--hub-bone, #e5d4b6); 
+  margin-left: 6px; 
+}
+
+.caption {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: rgba(229, 212, 182, 0.6);
+  pointer-events: none;
+  transition: opacity 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 10;
+}
+
+.footerMeta {
+  position: fixed;
+  bottom: 32px; 
+  right: 32px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(229, 212, 182, 0.3);
+  text-align: right;
+  line-height: 1.6;
+  pointer-events: none;
+  transition: opacity 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 10;
+}
+
+[data-phase="content"] .hud,
+[data-phase="content"] .fps,
+[data-phase="content"] .caption,
+[data-phase="content"] .footerMeta {
+  opacity: 0;
+}
+
+[data-phase="content"][data-logo-placement="left"] .noise {
+  opacity: 0;
+}
+
+.noise {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(to right, rgba(79, 85, 112, 0.15) 1px, transparent 1px) 0 0 / 34px 34px,
+    linear-gradient(to bottom, rgba(201, 168, 122, 0.075) 1px, transparent 1px) 0 0 / 34px 34px;
+  mask-image: linear-gradient(to bottom, black 0%, transparent 84%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 84%);
+}
+
+.shardOne,
+.shardTwo,
+.shardThree {
+  position: fixed;
+  z-index: -1;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(244, 78, 28, 0.12), rgba(201, 168, 122, 0.02));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 12px rgba(244, 78, 28, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transform: rotate(-18deg);
+  animation: shardFloat 12s ease-in-out infinite alternate;
+}
+
+@keyframes shardFloat {
+  0% { transform: translateY(0) rotate(-18deg) scale(1); }
+  100% { transform: translateY(-20px) rotate(-16deg) scale(1.02); }
+}
+
+.shardOne {
+  right: -5vw;
+  top: 15vh;
+  width: 10rem;
+  height: 1.5rem;
+}
+
+.shardTwo {
+  left: -10vw;
+  top: 45vh;
+  width: 14rem;
+  height: 1px;
+  animation-delay: -3s;
+}
+
+.shardThree {
+  right: 15vw;
+  bottom: 10vh;
+  width: 8rem;
+  height: 1px;
+  animation-delay: -6s;
+}
+
+.materiaWrapper {
+  position: fixed;
+  z-index: 1;
+  pointer-events: auto;
+  transition: all 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+[data-phase="intro"] .materiaWrapper {
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+[data-phase="content"] .materiaWrapper {
+  top: -5vh;
+  left: 0;
+  width: 100vw;
+  height: 55vh;
+  mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+}
+
+[data-phase="content"][data-logo-placement="left"] .materiaWrapper {
+  top: 4vh;
+  left: -22vw;
+  width: 92vw;
+  height: 76vh;
+  mask-image: linear-gradient(to right, black 0%, black 68%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 0%, black 68%, transparent 100%);
+}
+
+.materiaFallback {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, rgba(244, 78, 28, 0.1), transparent 60%);
+}
+
+.materiaLogo {
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+@media (max-width: 767px) {
+  /* El canvas de MateriaLogo (R3F) se dimensiona al wrapper y renderiza
+     el logo en el centro. Para que el logo no quede tapado por el
+     carrusel (que vive en la mitad derecha del viewport), corremos el
+     wrapper -25vw: así el centro del canvas (centro del logo) cae en
+     el cuarto izquierdo del viewport (~x=25vw), zona libre.
+     La máscara se calibra contra coords internas del wrapper:
+       viewport x=0     → wrapper 25%
+       viewport x=25vw  → wrapper 50%  (centro del logo)
+       viewport x=50vw  → wrapper 75%
+     Visible 22-70% (mitad izq del logo y casi toda la derecha),
+     fade 70-92% (donde empiezan las cards). */
+  [data-phase="content"][data-logo-placement="left"] .materiaWrapper {
+    top: 0;
+    left: 0;
+    z-index: 1;
+    width: 100vw;
+    height: 100vh;
+    opacity: 1;
+    transform: translateX(-30vw) scale(1.05);
+    transform-origin: 25% 50%;
+    pointer-events: none;
+    /* Logo mucho más sólido: zona negra extendida (15-82%) y fade
+       más corto/tardío para mantener el 3D claramente visible. */
+    mask-image: linear-gradient(to right, transparent 0%, black 15%, black 82%, rgba(0, 0, 0, 0.6) 90%, transparent 98%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%, black 82%, rgba(0, 0, 0, 0.6) 90%, transparent 98%);
+  }
+}

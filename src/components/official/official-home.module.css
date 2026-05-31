@@ -15,9 +15,9 @@
   overflow-x: hidden;
   padding: clamp(0.75rem, 2vw, 1.5rem);
   background:
-    radial-gradient(circle at 14% 4%, rgba(244, 78, 28, 0.16), transparent 30rem),
-    radial-gradient(circle at 86% 12%, rgba(241, 222, 200, 0.1), transparent 28rem),
-    linear-gradient(180deg, #1c223a 0%, #11162a 42%, #0d1122 100%);
+    radial-gradient(circle at 14% 4%, rgba(244, 78, 28, 0.14), transparent 30rem),
+    radial-gradient(circle at 86% 12%, rgba(201, 168, 122, 0.09), transparent 28rem),
+    linear-gradient(180deg, rgba(28, 34, 58, 0.62) 0%, rgba(17, 22, 42, 0.74) 42%, rgba(13, 17, 34, 0.88) 100%);
   color: var(--official-bone);
 }
 
@@ -95,8 +95,8 @@
     inset 0 1px 1px rgba(255, 255, 255, 0.05),
     inset 1px 0 1px rgba(255, 255, 255, 0.02),
     0 18px 46px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(32px) saturate(120%);
+  -webkit-backdrop-filter: blur(32px) saturate(120%);
 }
 
 .topbar {
@@ -623,7 +623,8 @@
 
 .profileAction:focus-visible,
 .heroNavCard:focus-visible,
-.quickAction:focus-visible {
+.quickAction:focus-visible,
+.mobileDockAction:focus-visible {
   outline: 2px solid rgba(244, 78, 28, 0.68);
   outline-offset: 3px;
 }
@@ -752,6 +753,10 @@
   padding-right: 1.15rem;
 }
 
+.mobileDock {
+  display: none;
+}
+
 /* Mobile / touch: arrancan colapsados (3 círculos centrados).
    El doble-tap del componente expande sólo el botón con data-expanded="true". */
 
@@ -793,7 +798,8 @@
   color: inherit;
   padding: 0.9rem;
   text-decoration: none;
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(32px) saturate(120%);
+  -webkit-backdrop-filter: blur(32px) saturate(120%);
   transform-style: preserve-3d;
   transition:
     border-color 180ms var(--gon-ease-out, ease-out),
@@ -802,6 +808,68 @@
     box-shadow 180ms var(--gon-ease-out, ease-out);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+
+.heroCardButton {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+}
+
+.heroCardDetails {
+  position: relative;
+  z-index: 1;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-0.35rem);
+  transition:
+    max-height 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 220ms ease,
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.heroNavCard[data-expanded="true"] .heroCardDetails {
+  max-height: 11rem;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.heroCardDetails p {
+  margin-top: 0.8rem;
+  -webkit-line-clamp: unset;
+}
+
+.heroCardOpen {
+  display: inline-flex;
+  width: max-content;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.8rem;
+  border: 1px solid rgba(244, 78, 28, 0.3);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(244, 78, 28, 0.18), transparent 62%),
+    rgba(244, 78, 28, 0.1);
+  color: var(--official-cream);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  padding: 0.58rem 0.75rem;
+  text-decoration: none;
+  text-transform: uppercase;
 }
 
 .heroNavCard::before {
@@ -1017,10 +1085,93 @@
 
   .profileCard {
     grid-template-columns: auto minmax(0, 1fr) auto;
+    min-height: clamp(5.7rem, 11vh, 7.25rem);
+    overflow: hidden;
+    gap: clamp(0.82rem, 1.8vw, 1.35rem);
+    border-radius: 20px;
+    border-color: rgba(240, 236, 228, 0.16);
+    background:
+      linear-gradient(112deg, rgba(240, 236, 228, 0.11), rgba(240, 236, 228, 0.035) 34%, rgba(7, 12, 28, 0.74) 72%),
+      radial-gradient(circle at 82% 18%, rgba(244, 78, 28, 0.18), transparent 19rem),
+      radial-gradient(circle at 16% 90%, rgba(229, 212, 182, 0.08), transparent 18rem),
+      rgba(8, 13, 30, 0.76);
+    padding: clamp(0.72rem, 1.35vw, 0.98rem) clamp(0.9rem, 2.2vw, 1.45rem);
+    box-shadow:
+      inset 0 1px 0 rgba(240, 236, 228, 0.18),
+      inset 0 -1px 0 rgba(8, 13, 30, 0.7),
+      0 22px 64px rgba(0, 0, 0, 0.34);
+    backdrop-filter: blur(42px) saturate(1.36) brightness(0.86);
+    -webkit-backdrop-filter: blur(42px) saturate(1.36) brightness(0.86);
+  }
+
+  .profileCard::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    z-index: 0;
+    border-radius: inherit;
+    background:
+      linear-gradient(96deg, rgba(240, 236, 228, 0.16), transparent 18% 78%, rgba(244, 78, 28, 0.12)),
+      radial-gradient(ellipse at 30% 0%, rgba(255, 255, 255, 0.14), transparent 48%);
+    opacity: 0.42;
+    pointer-events: none;
+  }
+
+  .profileCard::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: clamp(4rem, 13vw, 10rem);
+    z-index: 0;
+    width: clamp(8.5rem, 18vw, 14rem);
+    aspect-ratio: 1;
+    background: url("/logo-gon-mark-3d.svg") center / contain no-repeat;
+    filter:
+      brightness(0) invert(1)
+      drop-shadow(0 0 30px rgba(244, 78, 28, 0.34))
+      drop-shadow(0 18px 42px rgba(0, 0, 0, 0.42));
+    opacity: 0.07;
+    transform: translateY(-50%) rotate(-10deg);
+    pointer-events: none;
+  }
+
+  .profileMark,
+  .profileContent,
+  .profileAction {
+    position: relative;
+    z-index: 1;
+  }
+
+  .profileMark {
+    width: clamp(3.15rem, 4.4vw, 4rem);
+    box-shadow:
+      inset 0 1px 0 rgba(240, 236, 228, 0.14),
+      0 16px 40px rgba(244, 78, 28, 0.14);
+  }
+
+  .profileMark img {
+    width: clamp(2.35rem, 3.7vw, 3.15rem);
+  }
+
+  .profileContent h1 {
+    max-width: 22ch;
+    font-size: clamp(1.18rem, 1.85vw, 1.72rem);
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+
+  .profileContent p {
+    max-width: 34rem;
+    color: rgba(229, 212, 182, 0.76);
+    font-size: clamp(0.78rem, 1.18vw, 0.92rem);
+    margin-top: 0.24rem;
   }
 
   .profileAction {
     margin-top: 0;
+    min-height: 2.36rem;
+    padding: 0.62rem clamp(0.85rem, 1.55vw, 1.08rem);
+    white-space: nowrap;
   }
 
   .appGrid {
@@ -1071,16 +1222,54 @@
 
 @media (max-width: 767px) {
   .shell {
+    height: 100dvh;
+    min-height: 100dvh;
+    /* overflow-x visible para permitir que las cards del carrusel se
+       desplacen hacia el logo sin recortarse. overflow-y hidden para
+       que el dock fijo y el layout vertical no scrollee. */
+    overflow-x: visible;
+    overflow-y: hidden;
     place-items: stretch;
-    padding: 0.65rem;
+    padding: 0.52rem;
+    /* Mobile: background semi-transparente para que el logo 3D del
+       MateriaLoadingScreen (z-index 1 detrás del contentLayer) se
+       difumine a través del shell. Solo dejamos un velo oscuro para
+       legibilidad. */
+    background:
+      radial-gradient(circle at 8% 18%, rgba(244, 78, 28, 0.08), transparent 17rem),
+      radial-gradient(circle at 100% 0%, rgba(229, 212, 182, 0.035), transparent 18rem),
+      radial-gradient(circle at 62% 58%, rgba(9, 22, 55, 0.22), transparent 20rem),
+      linear-gradient(180deg, rgba(26, 24, 20, 0.32) 0%, rgba(18, 20, 27, 0.5) 36%, rgba(8, 11, 21, 0.76) 100%);
+  }
+
+  .noise {
+    display: none;
   }
 
   .appFrame {
-    min-height: calc(100dvh - 1.3rem);
+    height: calc(100dvh - 1.04rem);
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.48rem;
+    /* overflow-y: hidden para que el scroll interno del carrusel
+       funcione; overflow-x: visible para que las cards arriba/abajo
+       puedan moverse hacia la izquierda (bend que abraza al logo)
+       sin que se corten. */
+    overflow-x: visible;
+    overflow-y: hidden;
+    padding-bottom: 0;
   }
 
   .topbar {
     grid-template-columns: 1fr auto;
+    min-height: 2.75rem;
+    border-radius: 1.2rem;
+    padding: 0.38rem 0.5rem 0.38rem 0.78rem;
+    background:
+      linear-gradient(135deg, rgba(240, 236, 228, 0.08), rgba(240, 236, 228, 0.02)),
+      rgba(16, 13, 15, 0.52);
+    backdrop-filter: blur(34px) saturate(1.25);
+    -webkit-backdrop-filter: blur(34px) saturate(1.25);
   }
 
   .topnav,
@@ -1094,11 +1283,37 @@
 
   .menuButton {
     display: inline-flex;
+    width: 2.05rem;
+    height: 2.05rem;
+    border-radius: 0.9rem;
   }
 
   .appCanvas {
-    align-content: start;
-    perspective: none;
+    display: block;
+    min-height: 0;
+    /* overflow visible para no recortar las cards del carrusel cuando
+       el bend las desplaza fuera del rectángulo del cardsStage. */
+    overflow: visible;
+    padding: 0.48rem;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    /* Mobile: dejamos el canvas totalmente transparente para que el logo 3D
+       del MateriaLoadingScreen se vea nítido detrás. Las cards del carrusel
+       ya tienen su propio glass por separado. */
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    perspective: 980px;
+  }
+
+  .heroGeometry span {
+    border-color: rgba(229, 212, 182, 0.07);
+    background:
+      radial-gradient(circle at 50% 50%, rgba(229, 212, 182, 0.055), transparent 70%),
+      linear-gradient(90deg, rgba(244, 78, 28, 0.085), rgba(10, 25, 63, 0.07) 52%, transparent 82%);
+    box-shadow: 0 18px 52px rgba(244, 78, 28, 0.035);
+    opacity: 0.18;
   }
 
   .materiaBackdrop {
@@ -1163,85 +1378,374 @@
   }
 
   .profileCard {
-    z-index: 4;
-    grid-template-columns: 1fr;
-    min-height: 18.4rem;
-    overflow: hidden;
-    background:
-      linear-gradient(135deg, rgba(240, 236, 228, 0.11), rgba(240, 236, 228, 0.035) 34%, rgba(13, 17, 34, 0.68)),
-      radial-gradient(circle at 58% 42%, rgba(244, 78, 28, 0.12), transparent 15rem),
-      radial-gradient(circle at 10% 0%, rgba(244, 78, 28, 0.09), transparent 22rem),
-      rgba(13, 17, 34, 0.9);
-    border-color: rgba(240, 236, 228, 0.14);
-    box-shadow:
-      inset 0 1px 0 rgba(240, 236, 228, 0.1),
-      inset 0 -1px 0 rgba(13, 17, 34, 0.42),
-      0 20px 50px rgba(0, 0, 0, 0.28);
-    backdrop-filter: blur(28px) saturate(1.28) brightness(0.9);
-    -webkit-backdrop-filter: blur(28px) saturate(1.28) brightness(0.9);
+    display: none;
   }
 
-  .profileMark {
-    width: 4.25rem;
+  .profileCard::before,
+  .profileCard::after {
+    display: none;
   }
 
-  .profileContent h1 {
-    font-size: clamp(1.85rem, 10vw, 2.75rem);
-  }
-
+  .profileMark,
+  .profileContent,
   .profileAction {
-    position: relative;
-    z-index: 2;
-    width: 100%;
-    margin-top: auto;
+    display: none;
   }
 
+  /* Franja "REINICIO" entre copias del loop infinito. Señala que el
+     carrusel acaba de empezar de nuevo. Se queda fuera del scroll-snap
+     para no ser una "parada" propia. */
+  .carouselDivider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    margin: 0.35rem 0.5rem;
+    padding: 0.55rem 0.4rem;
+    color: rgba(244, 78, 28, 0.72);
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    font-size: 0.5rem;
+    font-weight: 900;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    scroll-snap-align: none;
+    pointer-events: none;
+  }
+
+  .carouselDivider::before,
+  .carouselDivider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(244, 78, 28, 0.55), transparent);
+  }
+
+  .carouselDivider span::before {
+    content: '↻ ';
+    margin-right: 0.15rem;
+  }
+
+  /* ── Liquid glass card ──────────────────────────────────────────
+     El transform de bend lo aplica JS dinámicamente desde
+     applyBend() (fórmula de arco tipo OGL CircularGallery). Acá solo
+     el aspecto glass: backdrop-blur, inset highlights blancos estilo
+     Apple Liquid Glass, y el SVG filter de refracción en ::before. */
   .heroNavCard {
+    position: relative;
+    aspect-ratio: auto;
+    /* Cards 15% más grandes en alto. */
+    min-height: clamp(7.8rem, 21vh, 10rem);
+    padding: 0.85rem;
+    scroll-snap-align: center;
+    /* "normal" en lugar de "always" → scroll más fluido y suave entre
+       cards, sin frenones bruscos en cada una. */
+    scroll-snap-stop: normal;
+    /* Mismo color/tono que la versión desktop (dark con tinte naranja
+       sutil en la esquina superior), no el blanco translúcido del
+       liquid glass crudo. Los inset shadows blancos siguen dando el
+       highlight glossy estilo Apple, pero la base es oscura. */
     background:
-      linear-gradient(135deg, rgba(240, 236, 228, 0.11), rgba(240, 236, 228, 0.035) 34%, rgba(13, 17, 34, 0.68)),
-      radial-gradient(circle at 14% 0%, rgba(244, 78, 28, 0.08), transparent 58%),
-      rgba(13, 17, 34, 0.9);
-    border-color: rgba(240, 236, 228, 0.14);
+      radial-gradient(circle at 14% 0%, rgba(244, 78, 28, 0.12), transparent 58%),
+      rgba(7, 11, 24, 0.55);
+    border: 1px solid rgba(240, 236, 228, 0.12);
+    border-radius: 1.55rem;
     box-shadow:
-      inset 0 1px 0 rgba(240, 236, 228, 0.1),
-      inset 0 -1px 0 rgba(13, 17, 34, 0.42),
-      0 18px 42px rgba(0, 0, 0, 0.26);
-    padding: 0.82rem;
-    backdrop-filter: blur(28px) saturate(1.28) brightness(0.9);
-    -webkit-backdrop-filter: blur(28px) saturate(1.28) brightness(0.9);
+      inset 1px 1px 0 0 rgba(255, 255, 255, 0.18),
+      inset -1px -1px 0 1px rgba(255, 255, 255, 0.08),
+      0 18px 44px rgba(0, 0, 0, 0.34);
+    transform-origin: 0 50%;
+    backdrop-filter: blur(18px) saturate(1.6);
+    -webkit-backdrop-filter: blur(18px) saturate(1.6);
+    isolation: isolate;
+    will-change: transform, opacity;
+    transition:
+      min-height 280ms cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 220ms ease,
+      box-shadow 220ms ease,
+      background 220ms ease;
+  }
+
+  /* Capa interna que aplica el SVG filter de distorsión líquida
+     (definido en OfficialHome como `#gonovi-liquid-glass`). */
+  .heroNavCard::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    filter: url(#gonovi-liquid-glass);
+    pointer-events: none;
+  }
+
+  .heroNavCard[data-active="true"] {
+    background:
+      radial-gradient(circle at 14% 0%, rgba(244, 78, 28, 0.18), transparent 58%),
+      radial-gradient(circle at 86% 76%, rgba(14, 36, 90, 0.34), transparent 60%),
+      rgba(8, 13, 28, 0.62);
+    border-color: rgba(244, 78, 28, 0.36);
+    box-shadow:
+      inset 1px 1px 0 0 rgba(255, 255, 255, 0.22),
+      inset -1px -1px 0 1px rgba(255, 255, 255, 0.1),
+      0 22px 58px rgba(0, 0, 0, 0.46),
+      0 0 32px rgba(244, 78, 28, 0.2);
+  }
+
+  .heroNavCard[data-expanded="true"] {
+    /* Expandido proporcional al nuevo tamaño base (+15%). */
+    min-height: clamp(10.5rem, 29vh, 12.9rem);
   }
 
   .quickActions {
-    width: max-content;
-    max-width: 100%;
-    gap: 0.42rem;
-    justify-content: center;
-    margin-top: -0.1rem;
-    border: 1px solid rgba(240, 236, 228, 0.08);
-    border-radius: 999px;
-    padding: 0.38rem;
+    display: none;
+  }
+
+  .cardsStage {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.05rem;
+    bottom: 4.35rem;
+    z-index: 8;
+    /* Ancho extendido para alojar el bend negativo (cards arriba/abajo
+       que se mueven hacia el logo). Padding-left grande crea el "buffer"
+       para que el desplazamiento -arcX no llegue al borde del viewport. */
+    width: calc(100% - 0.1rem);
+    max-width: none;
+    height: auto;
+    margin: 0;
+    overflow-x: visible;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* padding-left 26vw: buffer para el bend negativo. Reducido desde
+       35vw para que las cards sean ~15% más anchas. El BEND_RATIO en
+       OfficialHome se mantiene en 0.25 para no exceder este buffer. */
+    padding: 9.5vh 0.55rem 9vh 26vw;
+    perspective: 920px;
+    scroll-padding-block: 18vh 12vh;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+    transform-style: preserve-3d;
+    /* Máscara vertical más amplia (20-80) para que las cards en los
+       extremos del scroll SIEMPRE se vean fundidas, NUNCA cortadas
+       abruptamente, sin importar el viewport del mobile. */
+    mask-image: linear-gradient(to bottom, transparent 0%, black 22%, black 78%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 22%, black 78%, transparent 100%);
+  }
+
+  .cardsStage::-webkit-scrollbar {
+    display: none;
+  }
+
+  .appGrid {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 0.75rem;
+    transform-style: preserve-3d;
+  }
+
+  .heroCardButton {
+    min-height: 4.75rem;
+  }
+
+  .heroNavCard strong {
+    font-size: clamp(0.86rem, 4vw, 1.05rem);
+  }
+
+  .heroNavCard p {
+    font-size: 0.68rem;
+    line-height: 1.26;
+    -webkit-line-clamp: 2;
+  }
+
+  .heroCardDetails p {
+    font-size: 0.76rem;
+    line-height: 1.32;
+  }
+
+  .heroCardOpen {
+    font-size: 0.56rem;
+    padding: 0.52rem 0.68rem;
+  }
+
+  .mobileDock {
+    position: fixed;
+    left: 50%;
+    bottom: max(0.5rem, env(safe-area-inset-bottom));
+    z-index: 40;
+    isolation: isolate;
+    display: grid;
+    width: min(calc(100vw - 2.25rem), 15.8rem);
+    height: 3rem;
+    grid-template-columns: minmax(0, 1fr) 3.22rem minmax(0, 1fr);
+    align-items: end;
+    gap: 0.12rem;
+    padding: 0.32rem 0.4rem 0.36rem;
+    transform: translateX(-50%);
+    border: 1px solid rgba(240, 236, 228, 0.16);
+    border-radius: 1.45rem 1.45rem 1.08rem 1.08rem;
     background:
-      radial-gradient(circle at 50% 0%, rgba(244, 78, 28, 0.12), transparent 68%),
-      rgba(8, 14, 32, 0.52);
+      radial-gradient(circle at 50% -12%, rgba(244, 78, 28, 0.24), transparent 38%),
+      linear-gradient(135deg, rgba(240, 236, 228, 0.12), rgba(240, 236, 228, 0.028) 42%, rgba(8, 13, 29, 0.92)),
+      #060a17;
     box-shadow:
-      inset 0 1px 0 rgba(240, 236, 228, 0.045),
-      0 16px 36px rgba(0, 0, 0, 0.22);
-    backdrop-filter: blur(18px);
+      0 -1px 0 rgba(255, 255, 255, 0.08),
+      0 24px 60px rgba(0, 0, 0, 0.48),
+      0 0 32px rgba(244, 78, 28, 0.12),
+      inset 0 1px 0 rgba(240, 236, 228, 0.1),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(28px) saturate(1.34);
+    -webkit-backdrop-filter: blur(28px) saturate(1.34);
+  }
+
+  .mobileDock::before {
+    position: absolute;
+    inset: 0.32rem 0.55rem auto;
+    height: 1rem;
+    content: "";
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 50% 100%, transparent 0 1.78rem, rgba(240, 236, 228, 0.34) 1.82rem 1.88rem, transparent 1.94rem),
+      linear-gradient(90deg, transparent 0 6%, rgba(240, 236, 228, 0.28) 18%, transparent 41%, transparent 59%, rgba(240, 236, 228, 0.28) 82%, transparent 94%);
+    opacity: 0.72;
+    filter: drop-shadow(0 0 8px rgba(244, 78, 28, 0.14));
+  }
+
+  .mobileDock::after {
+    position: absolute;
+    left: 50%;
+    top: -0.12rem;
+    width: 4.08rem;
+    height: 2.28rem;
+    content: "";
+    pointer-events: none;
+    transform: translateX(-50%);
+    border-radius: 0 0 999px 999px;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(13, 17, 34, 0.94) 0 1.62rem, transparent 1.7rem);
+    opacity: 0.96;
+  }
+
+  .mobileDockAction {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    min-width: 0;
+    min-height: 2.28rem;
+    place-items: center;
+    gap: 0.16rem;
+    border: 0;
+    border-radius: 1.05rem;
+    background: transparent;
+    color: rgba(240, 236, 228, 0.64);
+    cursor: pointer;
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    font-size: 0.45rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition:
+      color 180ms var(--gon-ease-out, ease-out),
+      transform 180ms var(--gon-ease-out, ease-out),
+      opacity 180ms var(--gon-ease-out, ease-out);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .mobileDockAction::before {
+    position: absolute;
+    inset: 0.12rem 0.08rem;
+    z-index: -1;
+    content: "";
+    border: 1px solid rgba(240, 236, 228, 0.075);
+    border-radius: 0.9rem;
+    background:
+      linear-gradient(135deg, rgba(240, 236, 228, 0.08), rgba(240, 236, 228, 0.018) 45%, rgba(4, 8, 18, 0.68)),
+      #070b18;
+    box-shadow:
+      inset 0 1px 0 rgba(240, 236, 228, 0.06),
+      0 10px 22px rgba(0, 0, 0, 0.18);
+    opacity: 0.96;
+    transition:
+      border-color 180ms var(--gon-ease-out, ease-out),
+      opacity 180ms var(--gon-ease-out, ease-out),
+      background 180ms var(--gon-ease-out, ease-out);
+  }
+
+  .mobileDockAction:hover::before,
+  .mobileDockActive::before {
+    border-color: rgba(244, 78, 28, 0.18);
+    background:
+      radial-gradient(circle at 50% 0%, rgba(244, 78, 28, 0.14), transparent 58%),
+      linear-gradient(135deg, rgba(240, 236, 228, 0.1), rgba(240, 236, 228, 0.024) 45%, rgba(4, 8, 18, 0.88)),
+      #070b18;
+    opacity: 0.94;
+  }
+
+  .mobileDockAction:active {
+    transform: translateY(1px) scale(0.96);
+  }
+
+  .mobileDockAction:disabled {
+    cursor: default;
+    opacity: 0.72;
+  }
+
+  .mobileDockActive {
+    color: var(--official-cream);
+  }
+
+  .mobileDockPrimary {
+    width: 3.32rem;
+    height: 3.32rem;
+    min-height: 3.32rem;
+    align-self: start;
+    justify-self: center;
+    margin-top: -0.88rem;
+    border: 1px solid rgba(240, 236, 228, 0.32);
+    border-radius: 999px;
+    background:
+      radial-gradient(circle at 38% 24%, rgba(255, 255, 255, 0.18), transparent 22%),
+      radial-gradient(circle at 50% 100%, rgba(244, 78, 28, 0.32), transparent 64%),
+      linear-gradient(180deg, rgba(16, 21, 39, 0.98), rgba(5, 8, 17, 0.98));
+    color: var(--official-pulse);
+    box-shadow:
+      0 0 0 0.26rem rgba(7, 12, 28, 0.84),
+      0 0 0 0.32rem rgba(240, 236, 228, 0.12),
+      0 14px 30px rgba(0, 0, 0, 0.48),
+      0 0 22px rgba(244, 78, 28, 0.2),
+      inset 0 1px 0 rgba(240, 236, 228, 0.14);
+  }
+
+  .mobileDockPrimary::before {
+    display: none;
+  }
+
+  .mobileDockPrimary:active {
+    transform: translateY(1px) scale(0.94);
+  }
+
+  .mobileDockIcon {
+    display: grid;
+    width: 1.05rem;
+    height: 1.05rem;
+    place-items: center;
+  }
+
+  .mobileDockIcon svg {
+    width: 0.86rem;
+    height: 0.86rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
   }
 
   .bottombar {
-    width: min(100%, 22rem);
-    min-height: calc(3rem + env(safe-area-inset-bottom));
-    justify-self: center;
-    justify-content: center;
-    border-radius: 999px;
-    padding: 0.26rem 1rem env(safe-area-inset-bottom);
-    background:
-      radial-gradient(circle at 50% 0%, rgba(244, 78, 28, 0.09), transparent 66%),
-      rgba(7, 15, 36, 0.72);
-    box-shadow:
-      inset 0 1px 0 rgba(240, 236, 228, 0.055),
-      0 18px 40px rgba(0, 0, 0, 0.28);
+    display: none;
   }
 
   .ticker {

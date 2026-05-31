@@ -1,21 +1,12 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { memo, useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
-import { motion, useMotionValue, useReducedMotion } from 'motion/react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import styles from './official-home.module.css'
 import { track } from '@/lib/client-analytics'
 import { createClient } from '@/lib/supabase/client'
-
-const MateriaLogo = dynamic(
-  () => import('@/components/brand/MateriaLogo').then((mod) => mod.MateriaLogo),
-  {
-    ssr: false,
-    loading: () => <div className={styles.materiaFallback} aria-hidden="true" />,
-  }
-)
+import { MateriaLoadingScreen } from '@/components/ui/MateriaLoadingScreen'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -37,6 +28,7 @@ const hubCards = [
   {
     num: '01', label: 'Módulo',
     title: 'Indicadores en vivo',
+    summary: 'Señales live',
     text: 'Librería de señales AlgoTrend en tiempo real.',
     href: 'https://algotrend.gonovi.app',
     side: 'left' as const, external: true,
@@ -44,6 +36,7 @@ const hubCards = [
   {
     num: '02', label: 'Resultados',
     title: 'Resultados en vivo',
+    summary: 'WR mensual',
     text: 'Rendimiento mensual de BTC 1H, Oro 15M y Oro 30M.',
     href: '/official/estrategias',
     side: 'right' as const, external: false,
@@ -51,6 +44,7 @@ const hubCards = [
   {
     num: '03', label: 'Práctica',
     title: 'Centro de Entrenamiento',
+    summary: 'Lab interactivo',
     text: 'Trading Lab, Backtesting vela a vela y retos interactivos.',
     href: '/official/practica',
     side: 'left' as const, external: false,
@@ -58,6 +52,7 @@ const hubCards = [
   {
     num: '04', label: 'Auditoría',
     title: 'Auditoría Montecarlo',
+    summary: 'Riesgo extremo',
     text: 'Stress test, drawdown extremo y probabilidad de ruina.',
     href: '/official/montecarlo',
     side: 'right' as const, external: false,
@@ -65,6 +60,7 @@ const hubCards = [
   {
     num: '05', label: 'Educación',
     title: 'Videos y Tutoriales',
+    summary: 'YouTube + setups',
     text: 'Análisis, setups y masterclasses en YouTube.',
     href: '/official/videos',
     side: 'left' as const, external: false,
@@ -72,35 +68,74 @@ const hubCards = [
   {
     num: '06', label: 'Licencia',
     title: 'Obtener Script',
+    summary: 'Pine completo',
     text: 'Código fuente Pine Script completo, entrega inmediata.',
     href: '/official/checkout',
     side: 'right' as const, external: false,
   },
 ]
 
-const HubCard = memo(function HubCard({ card }: { card: typeof hubCards[number] }) {
-  const handleClick = useCallback(() => {
+const HubCard = memo(function HubCard({
+  active,
+  card,
+  expanded,
+  cardIndex,
+  copyIndex,
+  onExpand,
+}: {
+  active: boolean
+  card: typeof hubCards[number]
+  expanded: boolean
+  cardIndex: number
+  copyIndex: number
+  onExpand: (cardIndex: number) => void
+}) {
+  const handleOpen = useCallback(() => {
     track({ event_type: 'hub_card_click', card_id: card.num, card_title: card.title, path: '/official' })
   }, [card.num, card.title])
 
-  const inner = (
-    <>
+  const handleExpand = useCallback(() => {
+    onExpand(cardIndex)
+  }, [cardIndex, onExpand])
+
+  const openLabel = card.external ? 'Abrir demo →' : 'Abrir sección →'
+  const openCta = card.external ? (
+    <a className={styles.heroCardOpen} href={card.href} rel="noreferrer" target="_blank" onClick={handleOpen}>
+      {openLabel}
+    </a>
+  ) : (
+    <Link className={styles.heroCardOpen} href={card.href} onClick={handleOpen}>
+      {openLabel}
+    </Link>
+  )
+
+  return (
+    <article
+      className={styles.heroNavCard}
+      data-active={active ? 'true' : undefined}
+      data-card-index={cardIndex}
+      data-copy-index={copyIndex}
+      data-expanded={expanded ? 'true' : undefined}
+      style={{ '--card-i': cardIndex } as CSSProperties}
+    >
+      <button className={styles.heroCardButton} onClick={handleExpand} type="button">
       <span>{card.num} · {card.label}</span>
       <strong>{card.title}</strong>
-      <p>{card.text}</p>
-    </>
+      <p>{card.summary}</p>
+      </button>
+      <div className={styles.heroCardDetails} aria-hidden={!expanded}>
+        <p>{card.text}</p>
+        {openCta}
+      </div>
+    </article>
   )
-  if (card.external) {
-    return <a className={styles.heroNavCard} href={card.href} rel="noreferrer" target="_blank" onClick={handleClick}>{inner}</a>
-  }
-  return <Link className={styles.heroNavCard} href={card.href} onClick={handleClick}>{inner}</Link>
 })
 
 export default function OfficialHome() {
   const pathname = usePathname()
   const router = useRouter()
-  const materiaRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
+  const carouselRef = useRef<HTMLDivElement>(null)
   const [user, setUser] = useState<{ id: string; email: string } | null | undefined>(undefined)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [btcChange, setBtcChange] = useState<{ pct: string; up: boolean } | null>(null)
@@ -111,15 +146,11 @@ export default function OfficialHome() {
   const [notificationLoading, setNotificationLoading] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [activeCardIndex, setActiveCardIndex] = useState(0)
+  const [expandedCardIndex, setExpandedCardIndex] = useState<number | null>(null)
   // En touch devices: primer tap expande el botón (preview del label), segundo tap confirma.
   const [confirmingAction, setConfirmingAction] = useState<'install' | 'notify' | 'share' | null>(null)
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [materiaCompact, setMateriaCompact] = useState(false)
-  // Splash de entrada del logo 3D:
-  //   loading    → logo en primer plano (z-index alto), fondo borroso, cartel "Cargando..."
-  //   background → logo al fondo de todo (debajo de cards), se ve a través del glass
-  const [materiaPhase, setMateriaPhase] = useState<'loading' | 'floating'>('loading')
-  const [logoMenuOpen, setLogoMenuOpen] = useState(false)
 
   useEffect(() => {
     // ── Truco de caché: durante el splash (~4.4s) prefetcheamos TODAS las
@@ -143,87 +174,7 @@ export default function OfficialHome() {
     ]
     subpages.forEach((path) => router.prefetch(path))
 
-    const t = setTimeout(() => setMateriaPhase('floating'), 4400)
-    return () => clearTimeout(t)
   }, [router])
-
-  // Cierra el menú del logo al clickear fuera o presionar Escape.
-  useEffect(() => {
-    if (!logoMenuOpen) return
-    const handlePointer = (e: globalThis.PointerEvent) => {
-      const wrap = materiaRef.current
-      if (!wrap) return
-      if (!wrap.contains(e.target as Node)) setLogoMenuOpen(false)
-    }
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setLogoMenuOpen(false)
-    }
-    document.addEventListener('pointerdown', handlePointer)
-    document.addEventListener('keydown', handleKey)
-    return () => {
-      document.removeEventListener('pointerdown', handlePointer)
-      document.removeEventListener('keydown', handleKey)
-    }
-  }, [logoMenuOpen])
-  const prefersReducedMotion = useReducedMotion()
-  const materiaRepelX = useMotionValue(0)
-  const materiaRepelY = useMotionValue(0)
-
-  const resetMateriaRepel = useCallback(() => {
-    materiaRepelX.set(0)
-    materiaRepelY.set(0)
-  }, [materiaRepelX, materiaRepelY])
-
-  // Al entrar en floating, anclamos el logo en la esquina (CSS) y limpiamos
-  // cualquier x/y residual del repel previo para que no haya salto inicial.
-  useEffect(() => {
-    if (materiaPhase === 'floating') resetMateriaRepel()
-  }, [materiaPhase, resetMateriaRepel])
-
-  const handleMateriaRepel = useCallback((event: PointerEvent<HTMLElement>) => {
-    if (prefersReducedMotion) return
-    // Durante el splash, el logo debe quedar quieto en el centro.
-    if (materiaPhase === 'loading') return
-    // En floating, el logo está anclado en la esquina inferior derecha
-    // (position: fixed por CSS). NO debe moverse con el cursor.
-    if (materiaPhase === 'floating') return
-    // Con el menú abierto, congelamos el logo para que el panel quede anclado.
-    if (logoMenuOpen) return
-
-    const materia = materiaRef.current
-    if (!materia) return
-
-    const bounds = materia.getBoundingClientRect()
-    const materiaCenterX = bounds.left + bounds.width * 0.52
-    const materiaCenterY = bounds.top + bounds.height * 0.5
-    const deltaX = materiaCenterX - event.clientX
-    const deltaY = materiaCenterY - event.clientY
-    const distance = Math.hypot(deltaX, deltaY) || 1
-    const isCoarsePointer = event.pointerType !== 'mouse' || window.matchMedia('(pointer: coarse)').matches
-    const maxDistance = isCoarsePointer ? 340 : 520
-    // Captura: dentro de este radio el logo se "rinde" y queda quieto para
-    // poder clickearlo. Fuera, sigue el repel normal.
-    const captureRadius = isCoarsePointer ? 110 : 140
-
-    if (distance > maxDistance) {
-      resetMateriaRepel()
-      return
-    }
-
-    if (distance < captureRadius) {
-      resetMateriaRepel()
-      return
-    }
-
-    // Suavizado: la fuerza arranca en 0 al borde del captureRadius y
-    // alcanza el máximo en maxDistance, evitando saltos visuales.
-    const proximity = 1 - (distance - captureRadius) / (maxDistance - captureRadius)
-    const force = proximity * proximity * (3 - 2 * proximity)
-    const maxPush = isCoarsePointer ? 34 : 78
-
-    materiaRepelX.set((deltaX / distance) * maxPush * force)
-    materiaRepelY.set((deltaY / distance) * maxPush * force * 0.82)
-  }, [materiaRepelX, materiaRepelY, prefersReducedMotion, resetMateriaRepel, materiaPhase, logoMenuOpen])
 
   // Quick-action: Ejecuta la acción inmediatamente y expande el botón
   // para dar feedback visual al usuario en móviles. Auto-cierra a los 3s.
@@ -245,7 +196,7 @@ export default function OfficialHome() {
     if (!confirmingAction) return
     const close = (e: Event) => {
       const target = e.target as Element | null
-      if (target?.closest(`.${styles.quickActions}`)) return
+      if (target?.closest(`.${styles.quickActions}`) || target?.closest(`.${styles.mobileDock}`)) return
       if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
       setConfirmingAction(null)
     }
@@ -256,6 +207,199 @@ export default function OfficialHome() {
   // Cleanup del timer al desmontar
   useEffect(() => () => {
     if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+  }, [])
+
+  // ── Carrusel mobile (loop seamless + bend matemático) ─────────────
+  // Solo en mobile triplicamos las cards y aplicamos loop infinito +
+  // bend dinámico tipo CircularGallery (OGL). En desktop renderizamos
+  // las 6 cards una sola vez con layout normal, sin loop ni bend.
+  const CARDS_LENGTH = hubCards.length
+  const COPIES = 3
+  const MIDDLE_COPY = 1
+  // El bend se escala dinámicamente como % del semi-alto del carrusel
+  // dentro de applyBend (BEND_RATIO * H). En el ejemplo OGL el bend se
+  // mide en unidades de world-space (viewport ≈ 10u); acá trabajamos en
+  // píxeles, así que normalizamos al alto real para que la curva tenga
+  // siempre la misma intensidad visual sin importar el viewport.
+  // Bend reducido a 0.25: con el padding-left del cardsStage en 26vw,
+  // el buffer disponible para el desplazamiento es ~101px, justo igual
+  // al max arcX para que las cards lejanas no salgan del viewport.
+  const BEND_RATIO = 0.25
+
+  const [isMobileCarousel, setIsMobileCarousel] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(max-width: 767px)')
+    const apply = () => setIsMobileCarousel(mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
+
+  type RenderCard = { kind: 'card'; card: typeof hubCards[number]; copyIndex: number; cardIndex: number }
+  type RenderDivider = { kind: 'divider'; copyIndex: number }
+  type RenderItem = RenderCard | RenderDivider
+
+  const renderItems = useMemo<RenderItem[]>(() => {
+    if (!isMobileCarousel) {
+      return hubCards.map((card, cardIndex) => ({ kind: 'card', card, copyIndex: 0, cardIndex }))
+    }
+    const items: RenderItem[] = []
+    for (let c = 0; c < COPIES; c++) {
+      for (let i = 0; i < CARDS_LENGTH; i++) {
+        items.push({ kind: 'card', card: hubCards[i], copyIndex: c, cardIndex: i })
+      }
+      if (c < COPIES - 1) items.push({ kind: 'divider', copyIndex: c })
+    }
+    return items
+  }, [CARDS_LENGTH, isMobileCarousel])
+
+  const isResettingRef = useRef(false)
+
+  // Aplica bend dinámico por card en mobile. Fórmula de arco circular
+  // (CircularGallery): R = (H² + B²) / (2B); arc = R − √(R² − d²);
+  // angle = ±asin(d / R). Aquí d es la distancia vertical de la card
+  // al centro del carrusel, y el desplazamiento/rotación va en X.
+  const applyBend = useCallback(() => {
+    const carousel = carouselRef.current
+    if (!carousel) return
+    const cards = carousel.querySelectorAll<HTMLElement>('[data-card-index]')
+    if (!cards.length) return
+
+    if (!isMobileCarousel) {
+      cards.forEach((c) => {
+        c.style.transform = ''
+        c.style.opacity = ''
+      })
+      return
+    }
+
+    const H = carousel.clientHeight / 2
+    const bend = H * BEND_RATIO // px de profundidad del arco
+    const R = (H * H + bend * bend) / (2 * bend)
+    const center = carousel.scrollTop + H
+
+    cards.forEach((card) => {
+      const cardCenter = card.offsetTop + card.offsetHeight / 2
+      const dy = cardCenter - center
+      const absDy = Math.min(Math.abs(dy), H)
+      const arcX = R - Math.sqrt(R * R - absDy * absDy)
+      const angle = Math.asin(absDy / R) * (180 / Math.PI)
+      const norm = absDy / H // 0 en el centro, 1 en los extremos
+
+      // Arco "C" abierta hacia la derecha que abraza al logo (anclado a
+      // la izquierda). Card central queda a la derecha; arriba y abajo
+      // se desplazan a la izquierda (translateX negativo), encastrando
+      // en la concavidad del círculo del logo. El rotateY se mantiene
+      // moderado (factor 0.55) para que las cards NUNCA se vean de
+      // canto — siempre permanecen totalmente legibles.
+      const translateX = -arcX
+      const rotateY = angle * 0.55
+      const translateZ = -arcX * 0.35
+      const scale = 1 - norm * 0.14
+      const opacity = 1 - norm * 0.45
+
+      // La card activa se eleva un 5% de su alto sobre el centro del
+      // carrusel para destacarla del resto.
+      const isActive = card.dataset.active === 'true'
+      const translateY = isActive ? -card.offsetHeight * 0.05 : 0
+
+      card.style.transform = `translate3d(${translateX}px, ${translateY}px, ${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`
+      card.style.opacity = String(opacity)
+    })
+  }, [isMobileCarousel])
+
+  const syncActiveCard = useCallback(() => {
+    const carousel = carouselRef.current
+    if (!carousel || isResettingRef.current) return
+
+    const center = carousel.scrollTop + carousel.clientHeight / 2
+    let nearestCardIndex = 0
+    let nearestCopyIndex = MIDDLE_COPY
+    let nearestEl: HTMLElement | null = null
+    let nearest = Number.POSITIVE_INFINITY
+
+    carousel.querySelectorAll<HTMLElement>('[data-card-index]').forEach((node) => {
+      const cardIndex = Number(node.dataset.cardIndex)
+      const copyIndex = Number(node.dataset.copyIndex)
+      const cardCenter = node.offsetTop + node.offsetHeight / 2
+      const distance = Math.abs(cardCenter - center)
+      if (distance < nearest) {
+        nearest = distance
+        nearestCardIndex = cardIndex
+        nearestCopyIndex = copyIndex
+        nearestEl = node
+      }
+    })
+
+    setActiveCardIndex((current) => (current === nearestCardIndex ? current : nearestCardIndex))
+
+    // Loop seamless: solo en mobile, reset silencioso al copy del medio
+    // si estamos en una copia extrema. Estilo wrap-around tipo OGL: el
+    // jump pasa entre cards equivalentes, no se ve corte ni franja.
+    if (isMobileCarousel && nearestEl && nearestCopyIndex !== MIDDLE_COPY) {
+      const target = carousel.querySelector<HTMLElement>(
+        `[data-card-index="${nearestCardIndex}"][data-copy-index="${MIDDLE_COPY}"]`
+      )
+      if (target) {
+        isResettingRef.current = true
+        const delta = target.offsetTop - (nearestEl as HTMLElement).offsetTop
+        carousel.scrollTop = carousel.scrollTop + delta
+        window.requestAnimationFrame(() => {
+          isResettingRef.current = false
+          applyBend()
+        })
+        return
+      }
+    }
+
+    applyBend()
+  }, [applyBend, isMobileCarousel])
+
+  // Scroll inicial al primer card de la copia del medio (solo mobile).
+  useEffect(() => {
+    const carousel = carouselRef.current
+    if (!carousel) return
+    if (isMobileCarousel) {
+      const first = carousel.querySelector<HTMLElement>(
+        `[data-card-index="0"][data-copy-index="${MIDDLE_COPY}"]`
+      )
+      if (first) {
+        isResettingRef.current = true
+        carousel.scrollTop = first.offsetTop - carousel.clientHeight / 2 + first.offsetHeight / 2
+        window.requestAnimationFrame(() => {
+          isResettingRef.current = false
+          syncActiveCard()
+        })
+        return
+      }
+    }
+    applyBend()
+    syncActiveCard()
+  }, [isMobileCarousel, applyBend, syncActiveCard])
+
+  const handleCarouselScroll = useCallback(() => {
+    window.requestAnimationFrame(syncActiveCard)
+  }, [syncActiveCard])
+
+  const handleCardExpand = useCallback((cardIndex: number) => {
+    setExpandedCardIndex((current) => (current === cardIndex ? null : cardIndex))
+    setActiveCardIndex(cardIndex)
+    window.requestAnimationFrame(() => {
+      const carousel = carouselRef.current
+      if (!carousel) return
+      const allInstances = carousel.querySelectorAll<HTMLElement>(`[data-card-index="${cardIndex}"]`)
+      if (!allInstances.length) return
+      const center = carousel.scrollTop + carousel.clientHeight / 2
+      let closest = allInstances[0]
+      let minDist = Number.POSITIVE_INFINITY
+      allInstances.forEach((node) => {
+        const dist = Math.abs(node.offsetTop + node.offsetHeight / 2 - center)
+        if (dist < minDist) { minDist = dist; closest = node }
+      })
+      closest.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    })
   }, [])
 
   const handleInstall = useCallback(async () => {
@@ -428,36 +572,6 @@ export default function OfficialHome() {
     }
   }, [menuOpen])
 
-  /* ── Mobile Materia: panel hero → compact floating mark on scroll ── */
-  useEffect(() => {
-    let frame = 0
-    let lastCompact = false
-
-    const syncMateriaMode = () => {
-      frame = 0
-      const nextCompact = window.scrollY > 170
-      if (nextCompact === lastCompact) return
-      lastCompact = nextCompact
-      setMateriaCompact(nextCompact)
-    }
-
-    frame = window.requestAnimationFrame(syncMateriaMode)
-
-    const onScroll = () => {
-      if (frame) return
-      frame = window.requestAnimationFrame(syncMateriaMode)
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll, { passive: true })
-
-    return () => {
-      if (frame) window.cancelAnimationFrame(frame)
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
-    }
-  }, [])
-
   /* ── Auth Session ── */
   useEffect(() => {
     const supabase = createClient()
@@ -505,94 +619,22 @@ export default function OfficialHome() {
   }
 
   return (
-    <main
-      className={styles.shell}
-      onPointerCancel={resetMateriaRepel}
-      onPointerDown={handleMateriaRepel}
-      onPointerLeave={resetMateriaRepel}
-      onPointerMove={handleMateriaRepel}
-    >
+    <MateriaLoadingScreen badgeText="GONOVI . INICIO" logoPlacement="left" waitDuration={2500}>
+    <main className={styles.shell}>
+      {/* SVG filter usado por .heroNavCard::before para el efecto liquid
+          glass tipo Apple — refracción + distorsión líquida sobre el
+          contenido detrás. Inline para no requerir asset externo. */}
+      <svg aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}>
+        <filter id="gonovi-liquid-glass" x="0%" y="0%" width="100%" height="100%" filterUnits="objectBoundingBox">
+          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.018" numOctaves="2" seed="17" result="turbulence" />
+          <feGaussianBlur in="turbulence" stdDeviation="2" result="softMap" />
+          <feDisplacementMap in="SourceGraphic" in2="softMap" scale="38" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </svg>
       <div className={styles.noise} />
       <div className={styles.shardOne} aria-hidden="true" />
       <div className={styles.shardTwo} aria-hidden="true" />
       <div className={styles.shardThree} aria-hidden="true" />
-
-      <motion.div
-        aria-hidden="false"
-        role="button"
-        tabIndex={materiaPhase === 'floating' ? 0 : -1}
-        onClick={() => {
-          if (materiaPhase !== 'floating') return
-          // Al abrir, volvemos el logo al centro para que el panel quede anclado.
-          if (!logoMenuOpen) resetMateriaRepel()
-          setLogoMenuOpen((open) => !open)
-        }}
-        className={`${styles.materiaBackdrop} ${materiaPhase === 'floating' ? styles.materiaFloating : ''} ${materiaCompact && materiaPhase !== 'floating' ? styles.materiaBackdropCompact : ''}`}
-        data-phase={materiaPhase}
-        ref={materiaRef}
-        style={{
-          // Los motion values x/y se aplicaban como transform y rompían el
-          // translate de centrado en mobile. El repel hoy está deshabilitado
-          // en todas las phases, así que se quitan para que el CSS gane.
-          pointerEvents: materiaPhase === 'floating' ? 'auto' : 'none',
-          cursor: materiaPhase === 'floating' ? 'pointer' : 'default',
-        }}
-      >
-        <div className={styles.materiaFloat}>
-          <MateriaLogo
-            amplitude={7}
-            autoRotateIdle
-            baseColor={0x120d0a}
-            bloomIntensity={0.2}
-            cameraDistance={2700}
-            className={styles.materiaLogo}
-            cursorTilt
-            enableZoom={false}
-            environmentIntensity={0.18}
-            gyroscope
-            globalPointerHeat
-            heatColor={[0.98, 0.28, 0.08]}
-            heatEmissive={[1, 0.24, 0.02]}
-            heatEmissiveStrength={2.1}
-            heatTintStrength={1.1}
-            height="100%"
-            material={{ clearcoat: 0.32, clearcoatRoughness: 0.38, reflectivity: 0.08, roughness: 0.56 }}
-            preset="brasa"
-            svgUrl="/logo-gon-mark-3d.svg"
-            toneMappingExposure={0.78}
-            transparentBackground
-          />
-        </div>
-
-        {logoMenuOpen && materiaPhase === 'floating' && (
-          <div className={styles.logoMenu} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.logoMenuHeader}>
-              <span className={styles.brandDot} aria-hidden="true" />
-              <span>GONOVI</span>
-            </div>
-            <div className={styles.logoMenuLinks}>
-              <Link href="/official/montecarlo" className={styles.logoMenuItem} onClick={() => setLogoMenuOpen(false)}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                Auditoría Estocástica
-              </Link>
-              <Link href="/official/estrategias" className={styles.logoMenuItem} onClick={() => setLogoMenuOpen(false)}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
-                Resultados en vivo
-              </Link>
-            </div>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Splash de bienvenida: overlay borroso + cartel "Cargando..." mientras el 3D entra */}
-      {materiaPhase === 'loading' && (
-        <>
-          <div className={styles.splashOverlay} aria-hidden="true" />
-          <div className={styles.splashLabel} role="status" aria-live="polite">
-            Cargando<span className={styles.splashDots}>···</span>
-          </div>
-        </>
-      )}
 
       <section className={styles.appFrame} aria-label="GONOVI Inicio">
         <header className={styles.topbar}>
@@ -709,12 +751,12 @@ export default function OfficialHome() {
               />
             </div>
             <div className={styles.profileContent}>
-              <span className={styles.profileEyebrow}>GONOVI · INICIO</span>
-              <h1>Trading algorítmico BTC 1H</h1>
-              <p>Indicadores · Lab · Educación</p>
+              <span className={styles.profileEyebrow}>GONOVI · OFICIAL</span>
+              <h1>Canales y recursos</h1>
+              <p>Todo lo importante en una sola página.</p>
             </div>
-            <Link className={styles.profileAction} href="/official/lab">
-              Probar demo gratis →
+            <Link className={styles.profileAction} href="/links">
+              Ver canales →
             </Link>
           </div>
 
@@ -753,9 +795,65 @@ export default function OfficialHome() {
             </button>
           </div>
 
-          <div className={styles.cardsStage}>
+          <nav className={styles.mobileDock} aria-label="Navegación rápida móvil">
+            <Link
+              className={`${styles.mobileDockAction} ${pathname === '/official/estrategias' ? styles.mobileDockActive : ''}`}
+              href="/official/estrategias"
+              aria-current={pathname === '/official/estrategias' ? 'page' : undefined}
+            >
+              <span className={styles.mobileDockIcon} aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 5-7" /></svg>
+              </span>
+              <span>Gráfico</span>
+            </Link>
+            <Link
+              className={`${styles.mobileDockAction} ${styles.mobileDockPrimary} ${pathname === '/official' ? styles.mobileDockActive : ''}`}
+              href="/official"
+              aria-current={pathname === '/official' ? 'page' : undefined}
+            >
+              <span className={styles.mobileDockIcon} aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 11.5 12 5l8 6.5V20H5v-8.5" /></svg>
+              </span>
+              <span>Inicio</span>
+            </Link>
+            <Link
+              className={`${styles.mobileDockAction} ${pathname === '/official/store' ? styles.mobileDockActive : ''}`}
+              href="/official/store"
+              aria-current={pathname === '/official/store' ? 'page' : undefined}
+            >
+              <span className={styles.mobileDockIcon} aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" /></svg>
+              </span>
+              <span>Apps</span>
+            </Link>
+          </nav>
+
+          <div className={styles.cardsStage} onScroll={handleCarouselScroll} ref={carouselRef}>
             <nav className={styles.appGrid} aria-label="Herramientas GONOVI">
-              {hubCards.map((card) => <HubCard card={card} key={card.title} />)}
+              {renderItems.map((item) => {
+                if (item.kind === 'divider') {
+                  return (
+                    <div
+                      key={`divider-${item.copyIndex}`}
+                      className={styles.carouselDivider}
+                      aria-hidden="true"
+                    >
+                      <span>Reinicio</span>
+                    </div>
+                  )
+                }
+                return (
+                  <HubCard
+                    key={`${item.card.title}-${item.copyIndex}`}
+                    active={item.cardIndex === activeCardIndex}
+                    card={item.card}
+                    cardIndex={item.cardIndex}
+                    copyIndex={item.copyIndex}
+                    expanded={item.cardIndex === expandedCardIndex}
+                    onExpand={handleCardExpand}
+                  />
+                )
+              })}
             </nav>
           </div>
         </section>
@@ -789,5 +887,6 @@ export default function OfficialHome() {
         </footer>
       </section>
     </main>
+    </MateriaLoadingScreen>
   )
 }
