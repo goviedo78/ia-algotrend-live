@@ -17,6 +17,7 @@ export async function saveCardName(formData: FormData) {
   const cardIdRaw = String(formData.get('card_id') ?? '').trim()
   const nameRaw = String(formData.get('name') ?? '').trim()
   const redirectRaw = String(formData.get('redirect_url') ?? '').trim()
+  const colorRaw = String(formData.get('color') ?? '').trim()
   const pin = String(formData.get('pin') ?? '')
 
   const validPin = process.env.ANALYTICS_PIN ?? process.env.DASHBOARD_PASSWORD
@@ -27,6 +28,7 @@ export async function saveCardName(formData: FormData) {
 
   const name = nameRaw.substring(0, 80)
   const redirectUrl = sanitizeRedirect(redirectRaw)
+  const color = /^#[0-9A-Fa-f]{6}$/.test(colorRaw) ? colorRaw : null
 
   const supabase = createAdminClient()
   await supabase
@@ -36,6 +38,7 @@ export async function saveCardName(formData: FormData) {
         card_id: cardIdRaw,
         name,
         redirect_url: redirectUrl,
+        color,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'card_id' }

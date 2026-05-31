@@ -25,6 +25,7 @@ interface NfcScan {
 interface Props {
   scans: NfcScan[]
   nameByCard: Record<string, string>
+  colorByCard: Record<string, string>
   pin: string
 }
 
@@ -66,7 +67,7 @@ function parseUserAgent(ua: string | null): { device: string; browser: string; s
   return { device, browser, system, summary: `${device} · ${browser} · ${system}` }
 }
 
-export function NfcScanTable({ scans, nameByCard, pin }: Props) {
+export function NfcScanTable({ scans, nameByCard, colorByCard, pin }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [isDeleting, setIsDeleting] = useState(false)
@@ -249,6 +250,7 @@ export function NfcScanTable({ scans, nameByCard, pin }: Props) {
                 : null
 
             const cardLabel = nameByCard[scan.card_id]
+            const cardColor = colorByCard[scan.card_id]
             const isSelected = selectedIds.has(scan.id)
             const isExpanded = expandedIds.has(scan.id)
 
@@ -256,7 +258,10 @@ export function NfcScanTable({ scans, nameByCard, pin }: Props) {
               <tr 
                 key={scan.id} 
                 className={`${s.row} ${!isExpanded ? s.collapsed : ''}`} 
-                style={isSelected ? { background: 'rgba(244,78,28,0.05)' } : {}}
+                style={{
+                  ...(isSelected ? { background: 'rgba(244,78,28,0.05)' } : {}),
+                  ...(cardColor ? { borderLeft: `3px solid ${cardColor}` } : {})
+                }}
                 onClick={() => toggleExpand(scan.id)}
               >
                 <td className={`${s.td} ${s.tdCheckbox}`} style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
@@ -273,6 +278,11 @@ export function NfcScanTable({ scans, nameByCard, pin }: Props) {
                       <span
                         title={cardLabel ? `Código físico: ${scan.card_id}` : undefined}
                         className={s.cardBadge}
+                        style={cardColor ? { 
+                          background: `color-mix(in srgb, ${cardColor} 15%, transparent)`,
+                          color: cardColor,
+                          border: `1px solid color-mix(in srgb, ${cardColor} 30%, transparent)`
+                        } : {}}
                       >
                         {cardLabel ?? scan.card_id}
                       </span>

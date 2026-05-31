@@ -62,6 +62,7 @@ interface CardName {
   card_id: string
   name: string
   redirect_url: string | null
+  color: string | null
 }
 
 export default async function NfcAnalyticsPage({ searchParams }: Props) {
@@ -104,7 +105,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
 
   const [scansRes, namesRes] = await Promise.all([
     query,
-    supabase.from('nfc_card_names').select('card_id, name, redirect_url').order('card_id'),
+    supabase.from('nfc_card_names').select('card_id, name, redirect_url, color').order('card_id'),
   ])
 
   const scans: NfcScan[] = scansRes.data ?? []
@@ -112,8 +113,10 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
   const error = scansRes.error
   
   const nameByCardRecord: Record<string, string> = {}
+  const colorByCardRecord: Record<string, string> = {}
   names.forEach(n => {
     nameByCardRecord[n.card_id] = n.name
+    if (n.color) colorByCardRecord[n.card_id] = n.color
   })
 
   const totalScans = scans.length
@@ -201,7 +204,7 @@ export default async function NfcAnalyticsPage({ searchParams }: Props) {
           Error cargando datos: {error.message}
         </div>
       ) : (
-        <NfcScanTable scans={scans} nameByCard={nameByCardRecord} pin={pin ?? ''} />
+        <NfcScanTable scans={scans} nameByCard={nameByCardRecord} colorByCard={colorByCardRecord} pin={pin ?? ''} />
       )}
 
       {/* Floating Logo Filter (Client Component) */}
