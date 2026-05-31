@@ -68,6 +68,7 @@ function parseUserAgent(ua: string | null): { device: string; browser: string; s
 
 export function NfcScanTable({ scans, nameByCard, pin }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [isDeleting, setIsDeleting] = useState(false)
 
   const toggleSelectAll = () => {
@@ -78,7 +79,8 @@ export function NfcScanTable({ scans, nameByCard, pin }: Props) {
     }
   }
 
-  const toggleSelect = (id: string) => {
+  const toggleSelect = (id: string, e?: React.ChangeEvent<HTMLInputElement>) => {
+    e?.stopPropagation()
     const newSet = new Set(selectedIds)
     if (newSet.has(id)) {
       newSet.delete(id)
@@ -86,6 +88,16 @@ export function NfcScanTable({ scans, nameByCard, pin }: Props) {
       newSet.add(id)
     }
     setSelectedIds(newSet)
+  }
+
+  const toggleExpand = (id: string) => {
+    const newSet = new Set(expandedIds)
+    if (newSet.has(id)) {
+      newSet.delete(id)
+    } else {
+      newSet.add(id)
+    }
+    setExpandedIds(newSet)
   }
 
   const handleDelete = async () => {
@@ -163,15 +175,6 @@ export function NfcScanTable({ scans, nameByCard, pin }: Props) {
               />
             </th>
             <th className={s.th}>
-              Fecha
-              <InfoTooltip
-                title="Fecha y hora del escaneo"
-                body="Convertida a la hora local de tu navegador automáticamente. Pasá el mouse sobre el valor para ver la hora UTC original (la que está guardada en la base)."
-                example="Si escanean a las 20:15 hora Argentina y vos abrís el dashboard desde Madrid, ves '01:15' (hora Madrid)."
-                align="left"
-              />
-            </th>
-            <th className={s.th}>
               Tarjeta
               <InfoTooltip
                 title="ID Físico de la Tarjeta"
@@ -181,6 +184,15 @@ export function NfcScanTable({ scans, nameByCard, pin }: Props) {
               />
             </th>
             <th className={s.th}>
+              Fecha
+              <InfoTooltip
+                title="Fecha y hora del escaneo"
+                body="Convertida a la hora local de tu navegador automáticamente. Pasá el mouse sobre el valor para ver la hora UTC original (la que está guardada en la base)."
+                example="Si escanean a las 20:15 hora Argentina y vos abrís el dashboard desde Madrid, ves '01:15' (hora Madrid)."
+                align="left"
+              />
+            </th>
+            <th className={`${s.th} ${s.hideMobileCollapse}`}>
               Ubicación
               <InfoTooltip
                 title="Ubicación aproximada por IP"
@@ -189,7 +201,7 @@ export function NfcScanTable({ scans, nameByCard, pin }: Props) {
                 align="left"
               />
             </th>
-            <th className={`${s.th} ${s.hideMobile}`}>
+            <th className={`${s.th} ${s.hideMobileCollapse}`}>
               Idioma
               <InfoTooltip
                 title="Idioma del navegador"
@@ -198,7 +210,7 @@ export function NfcScanTable({ scans, nameByCard, pin }: Props) {
                 align="left"
               />
             </th>
-            <th className={`${s.th} ${s.hideMobile}`}>
+            <th className={`${s.th} ${s.hideMobileCollapse}`}>
               Dispositivo
               <InfoTooltip
                 title="Tipo de dispositivo y navegador"
@@ -207,7 +219,7 @@ export function NfcScanTable({ scans, nameByCard, pin }: Props) {
                 align="left"
               />
             </th>
-            <th className={s.th}>
+            <th className={`${s.th} ${s.hideMobileCollapse}`}>
               Resumen
               <InfoTooltip
                 title="Resumen técnico"
@@ -238,29 +250,45 @@ export function NfcScanTable({ scans, nameByCard, pin }: Props) {
 
             const cardLabel = nameByCard[scan.card_id]
             const isSelected = selectedIds.has(scan.id)
+            const isExpanded = expandedIds.has(scan.id)
 
             return (
-              <tr key={scan.id} className={s.row} style={isSelected ? { background: 'rgba(244,78,28,0.05)' } : {}}>
-                <td className={s.td} style={{ textAlign: 'center' }}>
+              <tr 
+                key={scan.id} 
+                className={`${s.row} ${!isExpanded ? s.collapsed : ''}`} 
+                style={isSelected ? { background: 'rgba(244,78,28,0.05)' } : {}}
+                onClick={() => toggleExpand(scan.id)}
+              >
+                <td className={`${s.td} ${s.tdCheckbox}`} style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                   <input
                     type="checkbox"
                     checked={isSelected}
-                    onChange={() => toggleSelect(scan.id)}
+                    onChange={(e) => toggleSelect(scan.id, e)}
                     style={{ cursor: 'pointer' }}
                   />
                 </td>
-                <td data-label="Fecha" style={{ whiteSpace: 'nowrap' }} className={s.td}>
+                <td data-label="Tarjeta" className={`${s.td} ${s.tdAlwaysVisible}`}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <span
+                        title={cardLabel ? `Código físico: ${scan.card_id}` : undefined}
+                        className={s.cardBadge}
+                      >
+                        {cardLabel ?? scan.card_id}
+                      </span>
+                      <span className={s.mobileSummaryText}>
+                        <NfcLocalTime iso={scan.created_at} />
+                      </span>
+                    </div>
+                    <span className={s.expandIcon} style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0)' }}>
+                      ▼
+                    </span>
+                  </div>
+                </td>
+                <td data-label="Fecha" style={{ whiteSpace: 'nowrap' }} className={`${s.td} ${s.hideMobileCollapse}`}>
                   <NfcLocalTime iso={scan.created_at} />
                 </td>
-                <td data-label="Tarjeta" className={s.td}>
-                  <span
-                    title={cardLabel ? `Código físico: ${scan.card_id}` : undefined}
-                    className={s.cardBadge}
-                  >
-                    {cardLabel ?? scan.card_id}
-                  </span>
-                </td>
-                <td data-label="Ubicación" className={s.td}>
+                <td data-label="Ubicación" className={`${s.td} ${s.hideMobileCollapse}`}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                     <span>{locationLabel}</span>
                     {mapsUrl && (
@@ -275,14 +303,15 @@ export function NfcScanTable({ scans, nameByCard, pin }: Props) {
                           marginLeft: '0.5rem',
                           fontSize: '0.85rem',
                         }}
+                        onClick={e => e.stopPropagation()}
                       >
                         📍
                       </a>
                     )}
                   </div>
                 </td>
-                <td data-label="Idioma" className={`${s.td} ${s.hideMobile}`}>{scan.browser_language || '—'}</td>
-                <td data-label="Dispositivo" className={`${s.td} ${s.hideMobile}`} title={scan.device_cookie_id || ''}>
+                <td data-label="Idioma" className={`${s.td} ${s.hideMobileCollapse} ${s.hideMobileDesktop}`}>{scan.browser_language || '—'}</td>
+                <td data-label="Dispositivo" className={`${s.td} ${s.hideMobileCollapse} ${s.hideMobileDesktop}`} title={scan.device_cookie_id || ''}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                     <span style={{ display: 'block', fontWeight: 600 }}>
                       {device} · {browser}
@@ -290,7 +319,7 @@ export function NfcScanTable({ scans, nameByCard, pin }: Props) {
                     <code style={{ opacity: 0.55, fontSize: '0.7rem' }}>{deviceShort}</code>
                   </div>
                 </td>
-                <td data-label="Resumen" className={s.td} title={ua || undefined}>
+                <td data-label="Resumen" className={`${s.td} ${s.hideMobileCollapse}`} title={ua || undefined}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                     <span style={{ display: 'block', fontWeight: 600 }}>{summary}</span>
                     <span style={{ display: 'block', opacity: 0.5, fontSize: '0.68rem', marginTop: '0.15rem' }}>
