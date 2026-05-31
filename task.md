@@ -129,6 +129,12 @@ tmux send-keys -t GONOVI_LANDING:0.2 "" C-m
 ## 📜 Cambios recientes (chronicle 22-may → 30-may)
 
 ### 30-may
+- **Auditoría de seguridad + hardening de `/api/signal`** (Claude, commit `d53052e`):
+  - **Hallazgo crítico cerrado**: `/api/signal` estaba sin auth. Cualquier POST anónimo podía abrir/cerrar trades en `algotrend_trades`, **ejecutar órdenes a BingX** (riesgo MAX si pasa a REAL), spam push + Telegram. Fix: agregado a `SENSITIVE_ROUTES` en `proxy.ts` → ahora 401 sin admin cookie o Bearer CRON_SECRET. Dashboard.tsx sigue funcionando con cookie.
+  - **Hardening `/api/links/track`**: movido a `ANALYTICS_ROUTES` para usar preset 120/min (antes default 60/min). Validado: 120 OK + 10 × 429 en stress test.
+  - Falso positivo aclarado: `/api/backfill` ya estaba protegido por el proxy (estaba en `SENSITIVE_ROUTES`); mi grep buscó dentro del handler y se perdió el gate edge.
+  - **Auditoría completa**: 12/12 tablas con RLS ✓, maintenance wall robusto ✓, debug endpoints bloqueados en prod ✓, rate-limit por IP ✓, CSP + HSTS + X-Frame-Options ✓, NEXT_PUBLIC_* safe-by-design ✓, IP hashing con NFC_HASH_SALT ✓, auth dual en push/send ✓.
+  - **Warnings restantes (no críticos, postergados)**: `/api/telegram/notify` GET expone token vía query, `/api/push/subscribe` DELETE sin auth.
 - **Migración email Resend → `alerts@gonovi.app`** (Claude):
   - Cloudflare API: 3 DNS records insertados en `gonovi.app` (DKIM TXT en `resend._domainkey`, SPF TXT y MX en `send`)
   - Resend domain creado, DKIM verificado al instante; SPF (MX+TXT) en pending — esperando re-chequeo de Resend (DNS público OK desde 1.1.1.1 y 8.8.8.8)
