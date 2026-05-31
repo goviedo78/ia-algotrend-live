@@ -757,6 +757,57 @@
   display: none;
 }
 
+.routeLoading {
+  position: fixed;
+  left: 50%;
+  bottom: max(4.15rem, calc(env(safe-area-inset-bottom) + 4.15rem));
+  z-index: 55;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.52rem;
+  max-width: calc(100vw - 2rem);
+  border: 1px solid rgba(244, 78, 28, 0.28);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(244, 78, 28, 0.22), transparent 62%),
+    rgba(7, 11, 24, 0.86);
+  box-shadow:
+    inset 0 1px 0 rgba(240, 236, 228, 0.12),
+    0 18px 44px rgba(0, 0, 0, 0.34),
+    0 0 24px rgba(244, 78, 28, 0.12);
+  color: var(--official-cream);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  padding: 0.68rem 0.92rem;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  pointer-events: none;
+}
+
+.routeLoadingPulse {
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 999px;
+  background: var(--official-pulse);
+  box-shadow: 0 0 16px rgba(244, 78, 28, 0.72);
+  animation: routeLoadingPulse 900ms ease-in-out infinite alternate;
+}
+
+@keyframes routeLoadingPulse {
+  from {
+    opacity: 0.48;
+    transform: scale(0.72);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* Mobile / touch: arrancan colapsados (3 círculos centrados).
    El doble-tap del componente expande sólo el botón con data-expanded="true". */
 
@@ -815,6 +866,7 @@
   z-index: 1;
   display: flex;
   min-width: 0;
+  width: 100%;
   flex: 1;
   flex-direction: column;
   justify-content: space-between;
@@ -825,6 +877,12 @@
   font: inherit;
   padding: 0;
   text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.heroCardButton > * {
+  pointer-events: none;
 }
 
 .heroCardDetails {
@@ -896,6 +954,7 @@
   background: linear-gradient(90deg, transparent, var(--official-pulse));
   opacity: 0.5;
   transition: opacity 180ms var(--gon-ease-out, ease-out), width 180ms var(--gon-ease-out, ease-out);
+  pointer-events: none;
 }
 
 .heroNavCard:hover {
@@ -1268,8 +1327,8 @@
     background:
       linear-gradient(135deg, rgba(240, 236, 228, 0.08), rgba(240, 236, 228, 0.02)),
       rgba(16, 13, 15, 0.52);
-    backdrop-filter: blur(34px) saturate(1.25);
-    -webkit-backdrop-filter: blur(34px) saturate(1.25);
+    backdrop-filter: blur(16px) saturate(1.12);
+    -webkit-backdrop-filter: blur(16px) saturate(1.12);
   }
 
   .topnav,
@@ -1314,6 +1373,7 @@
       linear-gradient(90deg, rgba(244, 78, 28, 0.085), rgba(10, 25, 63, 0.07) 52%, transparent 82%);
     box-shadow: 0 18px 52px rgba(244, 78, 28, 0.035);
     opacity: 0.18;
+    animation: none;
   }
 
   .materiaBackdrop {
@@ -1445,24 +1505,47 @@
        liquid glass crudo. Los inset shadows blancos siguen dando el
        highlight glossy estilo Apple, pero la base es oscura. */
     background:
-      radial-gradient(circle at 14% 0%, rgba(244, 78, 28, 0.12), transparent 58%),
-      rgba(7, 11, 24, 0.55);
-    border: 1px solid rgba(240, 236, 228, 0.12);
-    border-radius: 1.55rem;
+      linear-gradient(135deg, rgba(240, 236, 228, 0.11), rgba(240, 236, 228, 0.035) 34%, rgba(5, 10, 24, 0.7)),
+      radial-gradient(circle at 14% 0%, rgba(244, 78, 28, 0.16), transparent 58%),
+      rgba(7, 11, 24, 0.48);
+    border: 1px solid rgba(240, 236, 228, 0.18);
+    border-radius: 1.62rem;
     box-shadow:
-      inset 1px 1px 0 0 rgba(255, 255, 255, 0.18),
-      inset -1px -1px 0 1px rgba(255, 255, 255, 0.08),
+      inset 1px 1px 0 0 rgba(255, 255, 255, 0.24),
+      inset -1px -1px 0 1px rgba(255, 255, 255, 0.1),
+      inset 0 -18px 38px rgba(4, 8, 18, 0.22),
       0 18px 44px rgba(0, 0, 0, 0.34);
     transform-origin: 0 50%;
-    backdrop-filter: blur(18px) saturate(1.6);
-    -webkit-backdrop-filter: blur(18px) saturate(1.6);
+    backdrop-filter: blur(15px) saturate(1.45);
+    -webkit-backdrop-filter: blur(15px) saturate(1.45);
     isolation: isolate;
-    will-change: transform, opacity;
+    contain: layout paint style;
+    transform: translate3d(-0.45rem, 0, 0) rotateY(6deg) scale(0.96);
     transition:
+      transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 220ms ease,
       min-height 280ms cubic-bezier(0.16, 1, 0.3, 1),
       border-color 220ms ease,
       box-shadow 220ms ease,
       background 220ms ease;
+  }
+
+  .heroNavCard[data-card-index="0"],
+  .heroNavCard[data-card-index="3"] {
+    transform: translate3d(-1.08rem, 0, 0) rotateY(10deg) scale(0.92);
+    opacity: 0.78;
+  }
+
+  .heroNavCard[data-card-index="1"],
+  .heroNavCard[data-card-index="4"] {
+    transform: translate3d(-0.72rem, 0, 0) rotateY(8deg) scale(0.94);
+    opacity: 0.86;
+  }
+
+  .heroNavCard[data-card-index="2"],
+  .heroNavCard[data-card-index="5"] {
+    transform: translate3d(-0.28rem, 0, 0) rotateY(4deg) scale(0.98);
+    opacity: 0.94;
   }
 
   /* Capa interna que aplica el SVG filter de distorsión líquida
@@ -1473,17 +1556,32 @@
     inset: 0;
     z-index: -1;
     border-radius: inherit;
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
-    filter: url(#gonovi-liquid-glass);
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.16), transparent 28%),
+      radial-gradient(circle at 84% 14%, rgba(244, 78, 28, 0.12), transparent 42%),
+      radial-gradient(circle at 18% 96%, rgba(240, 236, 228, 0.08), transparent 52%);
+    opacity: 0.86;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      inset 0 0 24px rgba(255, 255, 255, 0.025);
     pointer-events: none;
   }
 
-  .heroNavCard[data-active="true"] {
+  .heroNavCard::after {
     background:
-      radial-gradient(circle at 14% 0%, rgba(244, 78, 28, 0.18), transparent 58%),
+      linear-gradient(90deg, transparent, rgba(244, 78, 28, 0.5) 55%, transparent),
+      linear-gradient(90deg, transparent, rgba(240, 236, 228, 0.22) 48%, transparent);
+    opacity: 0.78;
+  }
+
+  .heroNavCard[data-active="true"] {
+    transform: translate3d(-1.18rem, 0, 0) rotateY(2deg) scale(1.01);
+    opacity: 1;
+    background:
+      linear-gradient(135deg, rgba(240, 236, 228, 0.14), rgba(240, 236, 228, 0.045) 34%, rgba(5, 10, 24, 0.72)),
+      radial-gradient(circle at 14% 0%, rgba(244, 78, 28, 0.22), transparent 58%),
       radial-gradient(circle at 86% 76%, rgba(14, 36, 90, 0.34), transparent 60%),
-      rgba(8, 13, 28, 0.62);
+      rgba(8, 13, 28, 0.56);
     border-color: rgba(244, 78, 28, 0.36);
     box-shadow:
       inset 1px 1px 0 0 rgba(255, 255, 255, 0.22),
@@ -1495,6 +1593,7 @@
   .heroNavCard[data-expanded="true"] {
     /* Expandido proporcional al nuevo tamaño base (+15%). */
     min-height: clamp(10.5rem, 29vh, 12.9rem);
+    transform: translate3d(-1.22rem, 0, 0) rotateY(2deg) scale(1.01);
   }
 
   .quickActions {
@@ -1576,18 +1675,18 @@
     z-index: 40;
     isolation: isolate;
     display: grid;
-    width: min(calc(100vw - 2.25rem), 15.8rem);
-    height: 3rem;
+    width: min(calc(100vw - 1.1rem), 21.75rem);
+    height: 2.82rem;
     grid-template-columns: minmax(0, 1fr) 3.22rem minmax(0, 1fr);
-    align-items: end;
-    gap: 0.12rem;
-    padding: 0.32rem 0.4rem 0.36rem;
+    align-items: center;
+    gap: 0.28rem;
+    padding: 0.28rem 0.42rem 0.3rem;
     transform: translateX(-50%);
     border: 1px solid rgba(240, 236, 228, 0.16);
-    border-radius: 1.45rem 1.45rem 1.08rem 1.08rem;
+    border-radius: 1.18rem;
     background:
-      radial-gradient(circle at 50% -12%, rgba(244, 78, 28, 0.24), transparent 38%),
-      linear-gradient(135deg, rgba(240, 236, 228, 0.12), rgba(240, 236, 228, 0.028) 42%, rgba(8, 13, 29, 0.92)),
+      radial-gradient(circle at 50% -18%, rgba(244, 78, 28, 0.2), transparent 42%),
+      linear-gradient(135deg, rgba(240, 236, 228, 0.13), rgba(240, 236, 228, 0.032) 42%, rgba(8, 13, 29, 0.9)),
       #060a17;
     box-shadow:
       0 -1px 0 rgba(255, 255, 255, 0.08),
@@ -1595,29 +1694,20 @@
       0 0 32px rgba(244, 78, 28, 0.12),
       inset 0 1px 0 rgba(240, 236, 228, 0.1),
       inset 0 -1px 0 rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(28px) saturate(1.34);
-    -webkit-backdrop-filter: blur(28px) saturate(1.34);
+    backdrop-filter: blur(18px) saturate(1.22);
+    -webkit-backdrop-filter: blur(18px) saturate(1.22);
   }
 
   .mobileDock::before {
-    position: absolute;
-    inset: 0.32rem 0.55rem auto;
-    height: 1rem;
-    content: "";
-    pointer-events: none;
-    background:
-      radial-gradient(circle at 50% 100%, transparent 0 1.78rem, rgba(240, 236, 228, 0.34) 1.82rem 1.88rem, transparent 1.94rem),
-      linear-gradient(90deg, transparent 0 6%, rgba(240, 236, 228, 0.28) 18%, transparent 41%, transparent 59%, rgba(240, 236, 228, 0.28) 82%, transparent 94%);
-    opacity: 0.72;
-    filter: drop-shadow(0 0 8px rgba(244, 78, 28, 0.14));
+    display: none;
   }
 
   .mobileDock::after {
     position: absolute;
     left: 50%;
-    top: -0.12rem;
-    width: 4.08rem;
-    height: 2.28rem;
+    top: -0.08rem;
+    width: 3.92rem;
+    height: 2.05rem;
     content: "";
     pointer-events: none;
     transform: translateX(-50%);
@@ -1632,8 +1722,9 @@
     z-index: 1;
     display: grid;
     min-width: 0;
-    min-height: 2.28rem;
-    place-items: center;
+    min-height: 2.12rem;
+    align-content: center;
+    justify-items: center;
     gap: 0.16rem;
     border: 0;
     border-radius: 1.05rem;
@@ -1645,6 +1736,7 @@
     font-weight: 900;
     letter-spacing: 0.12em;
     text-decoration: none;
+    text-align: center;
     text-transform: uppercase;
     transition:
       color 180ms var(--gon-ease-out, ease-out),
@@ -1656,11 +1748,11 @@
 
   .mobileDockAction::before {
     position: absolute;
-    inset: 0.12rem 0.08rem;
+    inset: 0.12rem 0.16rem;
     z-index: -1;
     content: "";
     border: 1px solid rgba(240, 236, 228, 0.075);
-    border-radius: 0.9rem;
+    border-radius: 0.82rem;
     background:
       linear-gradient(135deg, rgba(240, 236, 228, 0.08), rgba(240, 236, 228, 0.018) 45%, rgba(4, 8, 18, 0.68)),
       #070b18;
@@ -1701,9 +1793,9 @@
     width: 3.32rem;
     height: 3.32rem;
     min-height: 3.32rem;
-    align-self: start;
+    align-self: center;
     justify-self: center;
-    margin-top: -0.88rem;
+    margin-top: -0.68rem;
     border: 1px solid rgba(240, 236, 228, 0.32);
     border-radius: 999px;
     background:
@@ -1731,6 +1823,7 @@
     display: grid;
     width: 1.05rem;
     height: 1.05rem;
+    margin-inline: auto;
     place-items: center;
   }
 

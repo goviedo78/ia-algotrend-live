@@ -15,7 +15,9 @@ export default function PracticaLobby() {
   return (
     <main className={s.shell}>
       <div className={s.noise} />
-      
+      <div className={s.shardOne} aria-hidden="true" />
+      <div className={s.shardTwo} aria-hidden="true" />
+      <div className={s.shardThree} aria-hidden="true" />
       <header className={s.header}>
         <Link href="/official" className={s.backLink}>← Volver a GONOVI</Link>
         <div className={s.headerCenter}>

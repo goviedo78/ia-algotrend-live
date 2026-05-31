@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, type CSSProperties } from 'react'
 import {
   HEADER as DEFAULT_HEADER,
   LINKS as DEFAULT_LINKS,
@@ -34,6 +34,33 @@ const MateriaLogo = dynamic(
   }
 )
 
+function getPreviewMeta(link: LinkItem) {
+  const href = link.href || '#'
+  const label = (() => {
+    try {
+      if (href.startsWith('mailto:')) return 'Contacto directo'
+      if (href.startsWith('#')) return 'GONOVI'
+      return new URL(href).hostname.replace(/^www\./, '')
+    } catch {
+      return 'GONOVI'
+    }
+  })()
+
+  const title = link.title
+  const description = link.description ?? (
+    title.toLowerCase().includes('youtube') ? 'Videos, análisis y contenido principal del canal.' :
+    title.toLowerCase().includes('instagram') ? 'Historias, updates rápidos y contenido detrás de escena.' :
+    title.toLowerCase().includes('tiktok') ? 'Clips cortos, ideas rápidas y momentos destacados.' :
+    title.toLowerCase().includes('app') ? 'Hub principal con demos, indicadores y herramientas.' :
+    title.toLowerCase().includes('sponsor') || title.toLowerCase().includes('comercial') ? 'Contacto para marcas, colaboraciones y sponsors.' :
+    title.toLowerCase().includes('herramientas') ? 'Acceso rápido a recursos, apps y productos del ecosistema.' :
+    'Recurso oficial del ecosistema GONOVI.'
+  )
+
+  const eyebrow = link.external ? 'Vista previa externa' : 'Vista previa'
+  return { description, eyebrow, label, title }
+}
+
 export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
   const HEADER = config?.header ?? DEFAULT_HEADER
   const LINKS = config?.links ?? DEFAULT_LINKS
@@ -41,8 +68,10 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
   const COPYRIGHT = config?.copyright ?? DEFAULT_COPYRIGHT
   const SPONSOR = config?.sponsor ?? DEFAULT_SPONSOR
   const CUSTOM_ICONS = config?.customIcons ?? []
+  const visibleLinks = useMemo(() => LINKS.filter(link => !link.hidden), [LINKS])
 
   const [sheet, setSheet] = useState<{ link: LinkItem; index: number } | null>(null)
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null)
 
   const [phase, setPhase] = useState<'intro' | 'content'>('intro')
   const [fps, setFps] = useState(60)
@@ -173,12 +202,12 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
           {HEADER.subtitle && <p className={styles.subtitle}>{HEADER.subtitle}</p>}
         </header>
 
-        <ul className={`${styles.list} ${sheet ? styles.listBlurred : ''}`}>
-          {LINKS.filter(link => !link.hidden).map((link, index) => {
+        <ul className={`${styles.list} ${sheet ? styles.listBlurred : ''}`} onMouseLeave={() => setPreviewIndex(null)}>
+          {visibleLinks.map((link, index) => {
             // Color de marca dinámico vía CSS variable.
             // Stagger entry de las pills usa nth-child en CSS (más robusto que --i).
             const customStyle = link.color
-              ? ({ '--brand-color': link.color } as React.CSSProperties)
+              ? ({ '--brand-color': link.color } as CSSProperties)
               : undefined
 
             return (
@@ -188,6 +217,8 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
                   className={styles.linkBtn}
                   style={customStyle}
                   onClick={() => setSheet({ link, index })}
+                  onFocus={() => setPreviewIndex(index)}
+                  onMouseEnter={() => setPreviewIndex(index)}
                   aria-label={link.badge ? `${link.title} (${link.badge})` : link.title}
                   aria-haspopup="dialog"
                 >
@@ -203,6 +234,41 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
             )
           })}
         </ul>
+
+        <div className={styles.previewRail} aria-hidden="true">
+          {visibleLinks.length ? (() => {
+            const link = visibleLinks[previewIndex ?? 0]
+            const preview = getPreviewMeta(link)
+            const customStyle = link.color
+              ? ({ '--brand-color': link.color } as CSSProperties)
+              : undefined
+
+            return (
+              <div className={styles.previewCard} key={link.title} style={customStyle}>
+                <div className={styles.previewChrome}>
+                  <span />
+                  <span />
+                  <span />
+                  <strong>{preview.label}</strong>
+                </div>
+                <div className={styles.previewBody}>
+                  <div className={styles.previewIcon}>
+                    {link.icon && <IconDisplay name={link.icon} customIcons={CUSTOM_ICONS} />}
+                  </div>
+                  <div className={styles.previewCopy}>
+                    <span>{preview.eyebrow}</span>
+                    <h2>{preview.title}</h2>
+                    <p>{preview.description}</p>
+                  </div>
+                </div>
+                <div className={styles.previewFooter}>
+                  <span>{link.external ? 'Abre en nueva pestaña' : 'Abre dentro de GONOVI'}</span>
+                  <b>Click para abrir</b>
+                </div>
+              </div>
+            )
+          })() : null}
+        </div>
 
         <p className={styles.ecosystem}>{ECOSYSTEM_LABEL}</p>
         <p className={styles.footer}>{COPYRIGHT}</p>

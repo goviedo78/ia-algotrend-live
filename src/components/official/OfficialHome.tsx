@@ -70,9 +70,32 @@ const hubCards = [
     title: 'Obtener Script',
     summary: 'Pine completo',
     text: 'Código fuente Pine Script completo, entrega inmediata.',
-    href: '/official/checkout',
+    href: '/official/store',
     side: 'right' as const, external: false,
   },
+]
+
+const priorityPrefetchRoutes = [
+  '/official/estrategias',
+  '/official/practica',
+  '/official/store',
+  '/links',
+]
+
+const secondaryPrefetchRoutes = [
+  '/official/montecarlo',
+  '/official/lab',
+  '/official/backtesting',
+  '/official/academia',
+  '/official/videos',
+  '/official/checkout',
+  '/official/soporte',
+  '/official/instalacion',
+  '/official/docs',
+  '/official/community',
+  '/official/dashboard',
+  '/account',
+  '/auth',
 ]
 
 const HubCard = memo(function HubCard({
@@ -82,6 +105,8 @@ const HubCard = memo(function HubCard({
   cardIndex,
   copyIndex,
   onExpand,
+  onRoutePrepare,
+  onRouteStart,
 }: {
   active: boolean
   card: typeof hubCards[number]
@@ -89,22 +114,42 @@ const HubCard = memo(function HubCard({
   cardIndex: number
   copyIndex: number
   onExpand: (cardIndex: number) => void
+  onRoutePrepare: (href: string, external: boolean) => void
+  onRouteStart: (title: string, href: string, external: boolean) => void
 }) {
   const handleOpen = useCallback(() => {
     track({ event_type: 'hub_card_click', card_id: card.num, card_title: card.title, path: '/official' })
   }, [card.num, card.title])
 
+  const prepareRoute = useCallback(() => {
+    onRoutePrepare(card.href, card.external)
+  }, [card.external, card.href, onRoutePrepare])
+
+  const startRoute = useCallback(() => {
+    handleOpen()
+    onRouteStart(card.title, card.href, card.external)
+  }, [card.external, card.href, card.title, handleOpen, onRouteStart])
+
   const handleExpand = useCallback(() => {
+    prepareRoute()
     onExpand(cardIndex)
-  }, [cardIndex, onExpand])
+  }, [cardIndex, onExpand, prepareRoute])
+
+  const handleCardAction = useCallback(() => {
+    if (expanded) {
+      startRoute()
+      return
+    }
+    handleExpand()
+  }, [expanded, handleExpand, startRoute])
 
   const openLabel = card.external ? 'Abrir demo →' : 'Abrir sección →'
   const openCta = card.external ? (
-    <a className={styles.heroCardOpen} href={card.href} rel="noreferrer" target="_blank" onClick={handleOpen}>
+    <a className={styles.heroCardOpen} href={card.href} rel="noreferrer" target="_blank" onClick={(event) => { event.preventDefault(); event.stopPropagation(); startRoute() }}>
       {openLabel}
     </a>
   ) : (
-    <Link className={styles.heroCardOpen} href={card.href} onClick={handleOpen}>
+    <Link className={styles.heroCardOpen} href={card.href} onClick={(event) => { event.preventDefault(); event.stopPropagation(); startRoute() }} onMouseEnter={prepareRoute} onTouchStart={prepareRoute}>
       {openLabel}
     </Link>
   )
@@ -116,12 +161,27 @@ const HubCard = memo(function HubCard({
       data-card-index={cardIndex}
       data-copy-index={copyIndex}
       data-expanded={expanded ? 'true' : undefined}
+      onClick={(event) => {
+        if ((event.target as HTMLElement).closest('a')) return
+        handleCardAction()
+      }}
+      onFocus={prepareRoute}
+      onPointerEnter={prepareRoute}
+      onTouchStart={prepareRoute}
       style={{ '--card-i': cardIndex } as CSSProperties}
     >
-      <button className={styles.heroCardButton} onClick={handleExpand} type="button">
-      <span>{card.num} · {card.label}</span>
-      <strong>{card.title}</strong>
-      <p>{card.summary}</p>
+      <button
+        aria-expanded={expanded}
+        className={styles.heroCardButton}
+        onClick={(event) => {
+          event.stopPropagation()
+          handleCardAction()
+        }}
+        type="button"
+      >
+        <span>{card.num} · {card.label}</span>
+        <strong>{card.title}</strong>
+        <p>{card.summary}</p>
       </button>
       <div className={styles.heroCardDetails} aria-hidden={!expanded}>
         <p>{card.text}</p>
@@ -148,32 +208,42 @@ export default function OfficialHome() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [activeCardIndex, setActiveCardIndex] = useState(0)
   const [expandedCardIndex, setExpandedCardIndex] = useState<number | null>(null)
+  const [routeLoadingLabel, setRouteLoadingLabel] = useState<string | null>(null)
   // En touch devices: primer tap expande el botón (preview del label), segundo tap confirma.
   const [confirmingAction, setConfirmingAction] = useState<'install' | 'notify' | 'share' | null>(null)
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    // ── Truco de caché: durante el splash (~4.4s) prefetcheamos TODAS las
-    // subpáginas del hub para que cualquier navegación posterior sea
-    // instantánea. Next.js cachea el RSC payload + bundle JS por ruta.
-    const subpages = [
-      '/official/estrategias',
-      '/official/montecarlo',
-      '/official/lab',
-      '/official/backtesting',
-      '/official/academia',
-      '/official/videos',
-      '/official/checkout',
-      '/official/soporte',
-      '/official/instalacion',
-      '/official/store',
-      '/official/community',
-      '/official/dashboard',
-      '/account',
-      '/auth',
-    ]
-    subpages.forEach((path) => router.prefetch(path))
+    // Prefetch escalonado: cache amplio sin trabar el primer render mobile.
+    const mobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+    const timers: number[] = []
+    const schedulePrefetch = (routes: string[], delay: number, batchSize: number) => {
+      routes.forEach((path, index) => {
+        timers.push(window.setTimeout(() => router.prefetch(path), delay + Math.floor(index / batchSize) * 550))
+      })
+    }
 
+    schedulePrefetch(priorityPrefetchRoutes, mobile ? 1300 : 450, mobile ? 1 : 2)
+    schedulePrefetch(secondaryPrefetchRoutes, mobile ? 3600 : 1200, mobile ? 2 : 4)
+
+    return () => timers.forEach((id) => window.clearTimeout(id))
+
+  }, [router])
+
+  const prepareRoute = useCallback((href: string, external: boolean) => {
+    if (external || !href.startsWith('/')) return
+    router.prefetch(href)
+  }, [router])
+
+  const startRoute = useCallback((title: string, href: string, external: boolean) => {
+    setRouteLoadingLabel(title)
+    if (external) {
+      window.open(href, '_blank', 'noopener,noreferrer')
+      window.setTimeout(() => setRouteLoadingLabel(null), 900)
+      return
+    }
+    router.prefetch(href)
+    router.push(href)
   }, [router])
 
   // Quick-action: Ejecuta la acción inmediatamente y expande el botón
@@ -216,16 +286,6 @@ export default function OfficialHome() {
   const CARDS_LENGTH = hubCards.length
   const COPIES = 3
   const MIDDLE_COPY = 1
-  // El bend se escala dinámicamente como % del semi-alto del carrusel
-  // dentro de applyBend (BEND_RATIO * H). En el ejemplo OGL el bend se
-  // mide en unidades de world-space (viewport ≈ 10u); acá trabajamos en
-  // píxeles, así que normalizamos al alto real para que la curva tenga
-  // siempre la misma intensidad visual sin importar el viewport.
-  // Bend reducido a 0.25: con el padding-left del cardsStage en 26vw,
-  // el buffer disponible para el desplazamiento es ~101px, justo igual
-  // al max arcX para que las cards lejanas no salgan del viewport.
-  const BEND_RATIO = 0.25
-
   const [isMobileCarousel, setIsMobileCarousel] = useState(false)
 
   useEffect(() => {
@@ -283,31 +343,13 @@ export default function OfficialHome() {
       return
     }
 
-    const H = carousel.clientHeight / 2
-    const bend = H * BEND_RATIO
-    const R = (H * H + bend * bend) / (2 * bend)
-    const center = carousel.scrollTop + H
-
-    cards.forEach((card) => {
-      const cardCenter = card.offsetTop + card.offsetHeight / 2
-      const dy = cardCenter - center
-      const absDy = Math.min(Math.abs(dy), H)
-      const arcX = R - Math.sqrt(R * R - absDy * absDy)
-      const angle = Math.asin(absDy / R) * (180 / Math.PI)
-      const norm = absDy / H
-
-      const translateX = -arcX
-      const rotateY = angle * 0.55
-      const translateZ = -arcX * 0.35
-      const scale = 1 - norm * 0.14
-      const opacity = 1 - norm * 0.45
-
-      const isActive = card.dataset.active === 'true'
-      const translateY = isActive ? -card.offsetHeight * 0.05 : 0
-
-      card.style.transform = `translate3d(${translateX}px, ${translateY}px, ${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`
-      card.style.opacity = String(opacity)
+    // Mobile usa una curva CSS estática. Evitamos recalcular sqrt/asin y
+    // escribir transform/opacity sobre 18 cards durante cada scroll frame.
+    cards.forEach((c) => {
+      c.style.transform = ''
+      c.style.opacity = ''
     })
+    return
   }, [isMobileCarousel])
 
   // Actualiza activeCardIndex en función de la card más cercana al
@@ -427,7 +469,7 @@ export default function OfficialHome() {
     if (bendFrameRef.current) cancelAnimationFrame(bendFrameRef.current)
     bendFrameRef.current = requestAnimationFrame(() => {
       bendFrameRef.current = null
-      applyBend()
+      if (!isMobileCarousel) applyBend()
       syncActiveCard()
     })
     if (!isMobileCarousel) return
@@ -609,6 +651,7 @@ export default function OfficialHome() {
   useEffect(() => {
     setMenuOpen(false)
     setUserMenuOpen(false)
+    setRouteLoadingLabel(null)
   }, [pathname])
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -880,6 +923,13 @@ export default function OfficialHome() {
             </Link>
           </nav>
 
+          {routeLoadingLabel && (
+            <div className={styles.routeLoading} aria-live="polite" role="status">
+              <span className={styles.routeLoadingPulse} aria-hidden="true" />
+              Cargando {routeLoadingLabel}
+            </div>
+          )}
+
           <div className={styles.cardsStage} onScroll={handleCarouselScroll} ref={carouselRef}>
             <nav className={styles.appGrid} aria-label="Herramientas GONOVI">
               {renderItems.map((item) => {
@@ -903,6 +953,8 @@ export default function OfficialHome() {
                     copyIndex={item.copyIndex}
                     expanded={item.cardIndex === expandedCardIndex}
                     onExpand={handleCardExpand}
+                    onRoutePrepare={prepareRoute}
+                    onRouteStart={startRoute}
                   />
                 )
               })}
