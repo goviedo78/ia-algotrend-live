@@ -2,24 +2,49 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-// Simple webhook: browser sends chat_id after user messages the bot
-export async function POST(req: NextRequest) {
-  const { chatId } = await req.json() as { chatId: string }
-  // In production store this in DB; for now just echo back
-  return NextResponse.json({ ok: true, chatId })
+// Endpoint de debug para descubrir chat_ids del bot al inicializar Telegram.
+// Solo Gonzalo lo usa manualmente desde consola con `curl -H "Authorization: Bearer $CRON_SECRET"`.
+//
+// Cambios de seguridad (auditoría 30-may):
+// - GET ya NO acepta `?token=` en query (terminaba en logs de Vercel/Cloudflare).
+//   Usa SOLO `process.env.TELEGRAM_BOT_TOKEN`.
+// - GET ahora requiere `Authorization: Bearer ${CRON_SECRET}` porque la respuesta
+//   incluye mensajes del bot (datos sensibles).
+// - Se eliminó el handler POST: era un echo zombie sin uso.
+
+function isAuthorized(req: NextRequest): boolean {
+  const cronSecret = process.env.CRON_SECRET?.replace(/\\n/g, '').trim()
+  if (!cronSecret) return false
+  const authHeader = req.headers.get('authorization')?.trim()
+  return authHeader === `Bearer ${cronSecret}`
 }
 
-// GET /api/telegram/notify?token=BOT_TOKEN — returns updates to find chat_id
 export async function GET(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get('token') ?? process.env.TELEGRAM_BOT_TOKEN
-  if (!token) return NextResponse.json({ error: 'no token' }, { status: 400 })
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-  const res  = await fetch(`https://api.telegram.org/bot${token}/getUpdates?limit=5`)
-  const data = await res.json() as { ok: boolean; result: Array<{ message?: { chat: { id: number }; text: string } }> }
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim()
+  if (!token) {
+    return NextResponse.json({ error: 'TELEGRAM_BOT_TOKEN no configurado' }, { status: 503 })
+  }
 
-  const updates = (data.result ?? [])
-    .filter(u => u.message)
-    .map(u => ({ chatId: u.message!.chat.id, text: u.message!.text }))
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getUpdates?limit=5`, {
+      signal: AbortSignal.timeout(8000),
+    })
+    const data = (await res.json()) as {
+      ok: boolean
+      result: Array<{ message?: { chat: { id: number }; text: string } }>
+    }
 
-  return NextResponse.json({ ok: true, updates })
+    const updates = (data.result ?? [])
+      .filter((u) => u.message)
+      .map((u) => ({ chatId: u.message!.chat.id, text: u.message!.text }))
+
+    return NextResponse.json({ ok: true, updates })
+  } catch (err) {
+    console.error('[telegram/notify]', err)
+    return NextResponse.json({ error: 'Telegram API failed' }, { status: 502 })
+  }
 }
