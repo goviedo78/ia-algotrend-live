@@ -20,6 +20,33 @@ function useIsMobile() {
   return useSyncExternalStore(subscribeMobile, getMobileSnap, getServerMobileSnap)
 }
 
+// Dispositivos low-end donde el bloom de Three.js (la pasada de post-
+// processing más costosa, ~3-5 ms/frame en Android medio-bajo) tira el
+// frame rate. Criterios:
+//  - prefers-reduced-motion: el usuario pidió menos animación (sistema)
+//  - hardwareConcurrency <= 4: CPUs con pocos cores (Android baratos)
+//  - deviceMemory <= 4 GB: dispositivos con poca RAM (no expuesto en iOS)
+// iPhones y Androids decentes mantienen el bloom premium intacto.
+type NavigatorWithDeviceMemory = Navigator & { deviceMemory?: number }
+const subscribeLowEnd = (cb: () => void) => {
+  if (typeof window === 'undefined') return () => {}
+  const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+  mq.addEventListener('change', cb)
+  return () => mq.removeEventListener('change', cb)
+}
+const getLowEndSnap = () => {
+  if (typeof window === 'undefined') return false
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true
+  const nav = navigator as NavigatorWithDeviceMemory
+  if (typeof nav.hardwareConcurrency === 'number' && nav.hardwareConcurrency <= 4) return true
+  if (typeof nav.deviceMemory === 'number' && nav.deviceMemory <= 4) return true
+  return false
+}
+const getServerLowEndSnap = () => false
+function useIsLowEnd() {
+  return useSyncExternalStore(subscribeLowEnd, getLowEndSnap, getServerLowEndSnap)
+}
+
 const MateriaLogo = dynamic(
   () => import('@/components/brand/MateriaLogo').then((mod) => mod.MateriaLogo),
   {
@@ -44,6 +71,7 @@ export function MateriaLoadingScreen({
   const [phase, setPhase] = useState<'intro' | 'content'>('intro')
   const [fps, setFps] = useState(60)
   const isMobile = useIsMobile()
+  const isLowEnd = useIsLowEnd()
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>
@@ -99,7 +127,11 @@ export function MateriaLoadingScreen({
              la sensación "materia viva" reaccionando al touch del user
              (como en /links). gyroscope queda OFF porque pide permiso
              en iOS y es el listener más costoso. */
-          bloomIntensity={isMobile ? 0.12 : 0.25}
+          /* Bloom = post-processing más caro de Three.js (3-5 ms/frame en
+             Android medio-bajo). Apagado SOLO en dispositivos low-end
+             (reduced-motion / ≤4 cores / ≤4GB RAM). iPhones modernos y
+             Androids decentes mantienen el bloom premium. */
+          bloomIntensity={isLowEnd ? 0 : (isMobile ? 0.12 : 0.25)}
           cameraDistance={phase === 'intro' ? 1400 : (isMobile ? 3200 : 2600)}
           className={styles.materiaLogo}
           cursorTilt
