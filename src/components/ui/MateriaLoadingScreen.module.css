@@ -273,12 +273,30 @@
     width: 100vw;
     height: 100vh;
     opacity: 1;
-    transform: translateX(-30vw) scale(1.05);
-    transform-origin: 25% 50%;
+    /* Solo translateY animado por scroll del carrusel (single CSS var).
+       SIN scale, SIN rotate — eso era lo que se veía "tilado".
+       Cuando estás arriba (card 01): translateY negativo → el logo sube
+       a llenar el espacio del banner top.
+       Cuando estás abajo (card 06): translateY positivo → el logo baja
+       a llenar el espacio del banner bottom.
+       Transición larga (600ms ease-out) para que el movimiento se sienta
+       suave, no responde a cada microscroll. */
+    --gonovi-logo-shift: 0;
+    transform:
+      translateX(-30vw)
+      translateY(calc(var(--gonovi-logo-shift) * 1px))
+      scale(1.05);
+    transform-origin: 22% 50%;
     pointer-events: none;
-    /* Logo mucho más sólido: zona negra extendida (15-82%) y fade
-       más corto/tardío para mantener el 3D claramente visible. */
-    mask-image: linear-gradient(to right, transparent 0%, black 15%, black 82%, rgba(0, 0, 0, 0.6) 90%, transparent 98%);
-    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%, black 82%, rgba(0, 0, 0, 0.6) 90%, transparent 98%);
+    transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+    mask-image: linear-gradient(to right, transparent 0%, black 18%, black 90%, rgba(0, 0, 0, 0.55) 95%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 18%, black 90%, rgba(0, 0, 0, 0.55) 95%, transparent 100%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-phase="content"][data-logo-placement="left"] .materiaWrapper {
+      transition: none !important;
+      --gonovi-logo-shift: 0 !important;
+    }
   }
 }

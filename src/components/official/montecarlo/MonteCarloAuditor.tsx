@@ -1300,7 +1300,6 @@ export default function MonteCarloAuditor() {
           <div className={shellStyles.brand}>
             <span className={shellStyles.brandDot} aria-hidden="true" />
             GONOVI
-            <span className={shellStyles.brandVersion}>INICIO</span>
           </div>
           <nav className={shellStyles.topnav} aria-label="Navegación principal">
             <Link href="/official" className={pathname === '/official' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official' ? 'page' : undefined}>Inicio</Link>

@@ -757,44 +757,55 @@
   display: none;
 }
 
+/* Overlay full-screen de carga: aparece al INSTANTE cuando el user
+   tapea una card. Cubre toda la pantalla con un velo oscuro + spinner
+   + texto. Garantiza feedback inmediato aunque la página destino
+   tarde en cargar. pointer-events: none → no bloquea taps subsiguientes
+   (el navigate ya está en curso). */
 .routeLoading {
   position: fixed;
-  left: 50%;
-  bottom: max(4.15rem, calc(env(safe-area-inset-bottom) + 4.15rem));
-  z-index: 55;
-  display: inline-flex;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.52rem;
-  max-width: calc(100vw - 2rem);
-  border: 1px solid rgba(244, 78, 28, 0.28);
-  border-radius: 999px;
+  justify-content: center;
+  gap: 1rem;
   background:
-    radial-gradient(circle at 12% 0%, rgba(244, 78, 28, 0.22), transparent 62%),
-    rgba(7, 11, 24, 0.86);
-  box-shadow:
-    inset 0 1px 0 rgba(240, 236, 228, 0.12),
-    0 18px 44px rgba(0, 0, 0, 0.34),
-    0 0 24px rgba(244, 78, 28, 0.12);
+    radial-gradient(circle at 50% 40%, rgba(244, 78, 28, 0.18), transparent 60%),
+    rgba(7, 11, 24, 0.78);
   color: var(--official-cream);
   font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
-  font-size: 0.62rem;
+  font-size: 0.78rem;
   font-weight: 900;
-  letter-spacing: 0.12em;
-  padding: 0.68rem 0.92rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  transform: translateX(-50%);
-  backdrop-filter: blur(16px) saturate(1.2);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  text-align: center;
+  padding: 1.5rem;
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
   pointer-events: none;
+  animation: routeLoadingFadeIn 80ms ease-out;
+}
+
+@keyframes routeLoadingFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .routeLoadingPulse {
-  width: 0.48rem;
-  height: 0.48rem;
+  width: 2.4rem;
+  height: 2.4rem;
   border-radius: 999px;
-  background: var(--official-pulse);
-  box-shadow: 0 0 16px rgba(244, 78, 28, 0.72);
-  animation: routeLoadingPulse 900ms ease-in-out infinite alternate;
+  border: 3px solid rgba(244, 78, 28, 0.18);
+  border-top-color: var(--official-pulse);
+  background: transparent;
+  box-shadow: 0 0 24px rgba(244, 78, 28, 0.32);
+  animation: routeLoadingSpin 800ms linear infinite;
+}
+
+@keyframes routeLoadingSpin {
+  to { transform: rotate(360deg); }
 }
 
 @keyframes routeLoadingPulse {
@@ -1123,8 +1134,9 @@
       inset 0 1px 0 rgba(240, 236, 228, 0.1),
       inset 0 -1px 0 rgba(13, 17, 34, 0.42),
       0 20px 50px rgba(0, 0, 0, 0.28);
-    backdrop-filter: blur(36px) saturate(1.35) brightness(0.88);
-    -webkit-backdrop-filter: blur(36px) saturate(1.35) brightness(0.88);
+    /* blur reducido 36→14px en mobile: cada blur GPU iOS cuesta ~3ms */
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
     isolation: isolate;
   }
 
@@ -1279,15 +1291,91 @@
   }
 }
 
+/* Por DEFAULT los banners están ocultos. Solo se muestran en el
+   carrusel mobile (@media max-width 767px) — en desktop la grid de
+   cards renderiza sin ellos para no romper el layout. */
+.carouselBannerTop,
+.carouselBannerBottom {
+  display: none;
+}
+
+/* ── Banners de extremo del carrusel (mobile) ───────────────────
+   Aprovechan el espacio del padding-block (22vh top, 38vh bottom).
+   Estilo deliberadamente distinto a las cards: sin frame, sin border,
+   sin glow, tipografía suelta — para que se lean como "señalética"
+   del recorrido, no como cards más. Aparición sutil con fade + slide
+   vía IntersectionObserver → data-visible="true". */
+@media (max-width: 767px) {
+  .carouselBannerTop,
+  .carouselBannerBottom {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+    padding: 0.8rem 0.5rem 1.2rem;
+    color: rgba(240, 236, 228, 0.78);
+    pointer-events: none;
+    user-select: none;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 7rem;
+    /* Estado por defecto: oculto/sutil. Se activa con data-visible. */
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 480ms ease, transform 480ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .carouselBannerTop[data-visible="true"],
+  .carouselBannerBottom[data-visible="true"] {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .carouselBannerBottom {
+    padding-bottom: 2rem;
+  }
+
+  .carouselBannerEyebrow {
+    color: rgba(244, 78, 28, 0.72);
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    font-size: 0.55rem;
+    font-weight: 900;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+
+  .carouselBannerTitle {
+    color: var(--official-cream);
+    font-size: clamp(1.25rem, 5.4vw, 1.65rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.5);
+  }
+
+  .carouselBannerSubtitle {
+    color: rgba(240, 236, 228, 0.6);
+    font-family: var(--font-inter), system-ui, sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.005em;
+    line-height: 1.4;
+    max-width: 18rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .carouselBannerTop,
+    .carouselBannerBottom {
+      transition: none !important;
+    }
+  }
+}
+
 @media (max-width: 767px) {
   .shell {
-    height: 100dvh;
+    /* Sin alturas fijas ni overflow:hidden — esa clase la reusan
+       /official/estrategias, /official/montecarlo, etc., y bloquear
+       el scroll vertical acá rompe esas páginas. La home controla su
+       layout interno con .appFrame (height fija + overflow propio). */
     min-height: 100dvh;
-    /* overflow-x visible para permitir que las cards del carrusel se
-       desplacen hacia el logo sin recortarse. overflow-y hidden para
-       que el dock fijo y el layout vertical no scrollee. */
-    overflow-x: visible;
-    overflow-y: hidden;
     place-items: stretch;
     padding: 0.52rem;
     /* Mobile: background semi-transparente para que el logo 3D del
@@ -1306,17 +1394,20 @@
   }
 
   .appFrame {
-    height: calc(100dvh - 1.04rem);
+    /* En mobile la clase base NO impone altura ni overflow porque
+       otras páginas (estrategias, montecarlo, etc.) reusan esta clase
+       y necesitan scroll natural. La home aplica además .appFrameHome
+       para activar el contenedor con scroll interno del carrusel. */
     min-height: 0;
     grid-template-rows: auto minmax(0, 1fr);
     gap: 0.48rem;
-    /* overflow-y: hidden para que el scroll interno del carrusel
-       funcione; overflow-x: visible para que las cards arriba/abajo
-       puedan moverse hacia la izquierda (bend que abraza al logo)
-       sin que se corten. */
+    padding-bottom: 0;
+  }
+
+  .appFrameHome {
+    height: calc(100dvh - 1.04rem);
     overflow-x: visible;
     overflow-y: hidden;
-    padding-bottom: 0;
   }
 
   .topbar {
@@ -1495,11 +1586,14 @@
     aspect-ratio: auto;
     /* Cards 15% más grandes en alto. */
     min-height: clamp(7.8rem, 21vh, 10rem);
+    margin-bottom: 0.7rem;
     padding: 0.85rem;
-    scroll-snap-align: center;
-    /* "normal" en lugar de "always" → scroll más fluido y suave entre
-       cards, sin frenones bruscos en cada una. */
-    scroll-snap-stop: normal;
+    /* touch-action manipulation: elimina el delay de 300ms de iOS y
+       evita que el browser interprete el tap como gesto de zoom.
+       pointer-events auto explícito por si algún ancestor tiene none. */
+    touch-action: manipulation;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
     /* Mismo color/tono que la versión desktop (dark con tinte naranja
        sutil en la esquina superior), no el blanco translúcido del
        liquid glass crudo. Los inset shadows blancos siguen dando el
@@ -1516,43 +1610,42 @@
       inset 0 -18px 38px rgba(4, 8, 18, 0.22),
       0 18px 44px rgba(0, 0, 0, 0.34);
     transform-origin: 0 50%;
-    backdrop-filter: blur(15px) saturate(1.45);
-    -webkit-backdrop-filter: blur(15px) saturate(1.45);
+    /* blur reducido 15→8px en mobile: cada blur GPU iOS cuesta ~3ms, y
+       las 6 cards apiladas le pegan al frame budget. */
+    backdrop-filter: blur(8px) saturate(1.2);
+    -webkit-backdrop-filter: blur(8px) saturate(1.2);
     isolation: isolate;
+    /* content-visibility: auto + contain-intrinsic-size → cards fuera del
+       viewport no se renderizan (skip layout/paint). Performance win
+       grande con 6 cards apiladas en scroll. */
+    content-visibility: auto;
+    contain-intrinsic-size: auto 10rem;
     contain: layout paint style;
-    /* Sin transform estático — applyBend() en JS escribe transform inline
-       dinámico para cada card según su distancia al centro del carrusel. */
     display: flex;
     flex-direction: column;
     gap: 0.18rem;
     text-decoration: none;
     color: inherit;
+    /* Estado por defecto (no activa): reducida + translúcida + sombra
+       más difusa para sensación de "atrás". SOLO 2D (sin translateZ)
+       para no romper hit-test del tap. */
+    transform: scale(0.94);
+    transform-origin: center center;
+    opacity: 0.66;
     transition:
-      transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
-      opacity 220ms ease,
+      transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 240ms ease,
       min-height 280ms cubic-bezier(0.16, 1, 0.3, 1),
       border-color 220ms ease,
       box-shadow 220ms ease,
       background 220ms ease;
   }
 
-  .heroNavCard[data-card-index="0"],
-  .heroNavCard[data-card-index="3"] {
-    transform: translate3d(-1.08rem, 0, 0) rotateY(10deg) scale(0.92);
-    opacity: 0.78;
-  }
-
-  .heroNavCard[data-card-index="1"],
-  .heroNavCard[data-card-index="4"] {
-    transform: translate3d(-0.72rem, 0, 0) rotateY(8deg) scale(0.94);
-    opacity: 0.86;
-  }
-
-  .heroNavCard[data-card-index="2"],
-  .heroNavCard[data-card-index="5"] {
-    transform: translate3d(-0.28rem, 0, 0) rotateY(4deg) scale(0.98);
-    opacity: 0.94;
-  }
+  /* Sin transforms 3D por card. rotateY rompe el hit-testing del tap
+     en mobile (el browser proyecta la card en 3D pero el touch-hit
+     usa el rect original, causando que el centro caiga sobre el padre
+     en vez de la card). En Fase 6 agregamos una animación sutil con
+     scale + opacity (sin rotateY ni perspective) que no rompe taps. */
 
   /* Capa interna que aplica el SVG filter de distorsión líquida
      (definido en OfficialHome como `#gonovi-liquid-glass`). */
@@ -1581,7 +1674,9 @@
   }
 
   .heroNavCard[data-active="true"] {
-    transform: translate3d(-1.18rem, 0, 0) rotateY(2deg) scale(1.01);
+    /* Activa: scale al 100% + opacidad total + sombra concentrada para
+       sensación de "al frente". SOLO scale 2D — tap-safe. */
+    transform: scale(1.025);
     opacity: 1;
     background:
       linear-gradient(135deg, rgba(240, 236, 228, 0.14), rgba(240, 236, 228, 0.045) 34%, rgba(5, 10, 24, 0.72)),
@@ -1596,10 +1691,63 @@
       0 0 32px rgba(244, 78, 28, 0.2);
   }
 
+  /* Glow ambient en card activa: respira lento (8s) en opacity.
+     Solo se anima opacity (GPU-cheap, sin layout/paint). El glow es un
+     ::after extra que solo aparece en la activa. */
+  .heroNavCard[data-active="true"]::after {
+    background:
+      radial-gradient(circle at 50% 100%, rgba(244, 78, 28, 0.32), transparent 65%),
+      linear-gradient(90deg, transparent, rgba(244, 78, 28, 0.5) 55%, transparent),
+      linear-gradient(90deg, transparent, rgba(240, 236, 228, 0.22) 48%, transparent);
+    opacity: 1;
+    animation: cardGlowBreathe 7s ease-in-out infinite;
+  }
+
+  @keyframes cardGlowBreathe {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
+  }
+
+  /* Shimmer diagonal en card activa: una banda de luz que cruza cada
+     9s. Solo `background-position` se anima (GPU-cheap, sin reflow). */
+  .heroNavCard[data-active="true"]::before {
+    background:
+      linear-gradient(110deg, transparent 38%, rgba(255, 255, 255, 0.085) 50%, transparent 62%),
+      linear-gradient(145deg, rgba(255, 255, 255, 0.16), transparent 28%),
+      radial-gradient(circle at 84% 14%, rgba(244, 78, 28, 0.12), transparent 42%),
+      radial-gradient(circle at 18% 96%, rgba(240, 236, 228, 0.08), transparent 52%);
+    background-size: 240% 100%, 100% 100%, 100% 100%, 100% 100%;
+    background-position: -120% 0, 0 0, 0 0, 0 0;
+    animation: cardShimmer 9s ease-in-out infinite;
+  }
+
+  @keyframes cardShimmer {
+    0%, 100% { background-position: -120% 0, 0 0, 0 0, 0 0; }
+    50%      { background-position:  220% 0, 0 0, 0 0, 0 0; }
+  }
+
+  /* Feedback táctil al tap: la card se hunde un toque. Microanimación
+     que confirma al usuario que el tap se registró. */
+  .heroNavCard:active {
+    transform: scale(0.985);
+    transition: transform 90ms ease-out;
+  }
+
+  /* Respetar prefers-reduced-motion: sin shimmer ni breathing. */
+  @media (prefers-reduced-motion: reduce) {
+    .heroNavCard,
+    .heroNavCard::before,
+    .heroNavCard::after,
+    .heroNavCard[data-active="true"]::before,
+    .heroNavCard[data-active="true"]::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
   .heroNavCard[data-expanded="true"] {
     /* Expandido proporcional al nuevo tamaño base (+15%). */
     min-height: clamp(10.5rem, 29vh, 12.9rem);
-    transform: translate3d(-1.22rem, 0, 0) rotateY(2deg) scale(1.01);
   }
 
   .quickActions {
@@ -1612,31 +1760,37 @@
     right: 0.05rem;
     bottom: 4.35rem;
     z-index: 8;
-    /* Ancho extendido para alojar el bend negativo (cards arriba/abajo
-       que se mueven hacia el logo). Padding-left grande crea el "buffer"
-       para que el desplazamiento -arcX no llegue al borde del viewport. */
+    /* Carrusel anclado al lado derecho con padding-left para dejar
+       espacio al logo 3D del fondo. Cards arrancan desde arriba —
+       sin padding-top exagerado que dejaba la card 01 fuera del área
+       tocable. */
     width: calc(100% - 0.1rem);
     max-width: none;
     height: auto;
     margin: 0;
-    overflow-x: visible;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
-    /* padding-block grande (32vh) para que la PRIMERA y ÚLTIMA card
-       puedan llegar al CENTRO del carrusel con scroll-snap. Sin esto,
-       la 01 y la 06 nunca se centran. padding-left 26vw es el buffer
-       para el bend negativo de las cards lejanas. */
-    padding: 32vh 0.55rem 32vh 26vw;
-    /* perspective ya no es necesaria sin rotateY/translateZ 3D. */
-    scroll-padding-block: 32vh 32vh;
-    scroll-snap-type: y mandatory;
+    /* Padding asimétrico: top más chico (22vh) para que el banner +
+       card 01 queden visualmente arriba del viewport, no en el medio.
+       Bottom más generoso (38vh) para que la card 06 y su banner
+       puedan llegar al "active point" (40% desde top). El syncActiveCard
+       usa 40% de altura como punto activo, no 50%. */
+    padding: 22vh 0.4rem 38vh 32vw;
+    /* SIN perspective / SIN transform 3D. Cualquier matrix3d en los
+       hijos rompe el hit-test del tap en iOS (incluso scale + translateZ
+       sin rotación). La "profundidad" la simulamos con box-shadow +
+       scale 2D + opacity. */
+    /* Sin scroll-snap-type mandatory: con snap activo iOS bloquea la
+       primera card en el límite superior del padding y los taps en
+       ella se interpretan como "ajustar snap" en vez de click. */
     scrollbar-width: none;
-    transform-style: preserve-3d;
-    /* Máscara vertical más amplia (20-80) para que las cards en los
-       extremos del scroll SIEMPRE se vean fundidas, NUNCA cortadas
-       abruptamente, sin importar el viewport del mobile. */
-    mask-image: linear-gradient(to bottom, transparent 0%, black 22%, black 78%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 22%, black 78%, transparent 100%);
+    /* Fade vertical sutil en los extremos para que las cards entren y
+       salgan suaves, sin recortes abruptos. Más estrecho que antes
+       (10/90 vs 22/78) porque ahora no hay padding gigante. */
+    mask-image: linear-gradient(to bottom, transparent 0%, black 6%, black 94%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 6%, black 94%, transparent 100%);
+    -webkit-overflow-scrolling: touch;
   }
 
   .cardsStage::-webkit-scrollbar {

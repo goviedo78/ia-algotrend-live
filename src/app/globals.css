@@ -36,6 +36,13 @@
   box-sizing: border-box;
 }
 
+html, body {
+  /* touch-action manipulation global: elimina el 300ms tap delay de
+     iOS Safari y previene que el browser cancele clicks sintetizados
+     de touch events. CRÍTICO para que <a>/<Link> sean tappeables. */
+  touch-action: manipulation;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

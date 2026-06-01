@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link, { useLinkStatus } from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import styles from './official-home.module.css'
@@ -33,6 +33,7 @@ const hubCards = [
     summary: 'Señales live',
     text: 'Librería de señales AlgoTrend en tiempo real.',
     href: 'https://algotrend.gonovi.app',
+    cta: 'Abrir demo',
     side: 'left' as const, external: true,
   },
   {
@@ -41,6 +42,7 @@ const hubCards = [
     summary: 'WR mensual',
     text: 'Rendimiento mensual de BTC 1H, Oro 15M y Oro 30M.',
     href: '/official/estrategias',
+    cta: 'Ganancias / Pérdidas',
     side: 'right' as const, external: false,
   },
   {
@@ -49,6 +51,7 @@ const hubCards = [
     summary: 'Lab interactivo',
     text: 'Trading Lab, Backtesting vela a vela y retos interactivos.',
     href: '/official/practica',
+    cta: 'Mejorá tu análisis',
     side: 'left' as const, external: false,
   },
   {
@@ -57,6 +60,7 @@ const hubCards = [
     summary: 'Riesgo extremo',
     text: 'Stress test, drawdown extremo y probabilidad de ruina.',
     href: '/official/montecarlo',
+    cta: 'Análisis de datos',
     side: 'right' as const, external: false,
   },
   {
@@ -65,6 +69,7 @@ const hubCards = [
     summary: 'YouTube + setups',
     text: 'Análisis, setups y masterclasses en YouTube.',
     href: '/official/videos',
+    cta: 'Videos',
     side: 'left' as const, external: false,
   },
   {
@@ -73,6 +78,7 @@ const hubCards = [
     summary: 'Pine completo',
     text: 'Código fuente Pine Script completo, entrega inmediata.',
     href: '/official/store',
+    cta: 'Descargar',
     side: 'right' as const, external: false,
   },
 ]
@@ -121,11 +127,6 @@ const HubCard = memo(function HubCard({
     track({ event_type: 'hub_card_click', card_id: card.num, card_title: card.title, path: '/official' })
   }, [card.num, card.title])
 
-  const startRoute = useCallback(() => {
-    handleOpen()
-    onRouteStart(card.title, card.href, card.external)
-  }, [card.external, card.href, card.title, handleOpen, onRouteStart])
-
   const prepareRoute = useCallback(() => {
     onRoutePrepare(card.href, card.external)
   }, [card.external, card.href, onRoutePrepare])
@@ -151,11 +152,13 @@ const HubCard = memo(function HubCard({
       <p className={styles.heroCardSummary}>{card.summary}</p>
       <p className={styles.heroCardText}>{card.text}</p>
       <span className={styles.heroCardOpen}>
-        {card.external ? 'Abrir demo →' : 'Abrir sección →'}
+        {card.cta ? `${card.cta} →` : (card.external ? 'Abrir demo →' : 'Abrir sección →')}
       </span>
     </>
   )
 
+  // External: <a> nativo con target="_blank". onClick solo trackea, sin
+  // preventDefault: el browser hace la navegación.
   if (card.external) {
     return (
       <a
@@ -170,18 +173,32 @@ const HubCard = memo(function HubCard({
     )
   }
 
+  // Interno: <Link> + LinkPendingIndicator. El indicator usa
+  // useLinkStatus() de Next 16 internamente y avisa al padre cuando
+  // está navegando. NO tocamos onClick para no romper el flow del Link.
   return (
-    <Link
-      {...commonProps}
-      href={card.href}
-      onClick={(event) => {
-        event.preventDefault()
-        startRoute()
-      }}
-    >
+    <Link {...commonProps} href={card.href}>
+      <LinkPendingIndicator title={card.title} onPendingChange={onRouteStart} />
       {inner}
     </Link>
   )
+})
+
+// Componente sentinel — debe vivir adentro del <Link> de Next 16 para
+// que useLinkStatus() detecte el estado "pending" de esa navegación
+// específica. Notifica al padre via callback estable.
+const LinkPendingIndicator = memo(function LinkPendingIndicator({
+  title,
+  onPendingChange,
+}: {
+  title: string
+  onPendingChange: (title: string, href: string, external: boolean) => void
+}) {
+  const { pending } = useLinkStatus()
+  useEffect(() => {
+    if (pending) onPendingChange(title, '', false)
+  }, [pending, title, onPendingChange])
+  return null
 })
 
 export default function OfficialHome() {
@@ -189,6 +206,8 @@ export default function OfficialHome() {
   const router = useRouter()
   const userMenuRef = useRef<HTMLDivElement>(null)
   const carouselRef = useRef<HTMLDivElement>(null)
+  const topBannerRef = useRef<HTMLDivElement>(null)
+  const bottomBannerRef = useRef<HTMLDivElement>(null)
   const [user, setUser] = useState<{ id: string; email: string } | null | undefined>(undefined)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [btcChange, setBtcChange] = useState<{ pct: string; up: boolean } | null>(null)
@@ -227,16 +246,17 @@ export default function OfficialHome() {
     router.prefetch(href)
   }, [router])
 
-  const startRoute = useCallback((title: string, href: string, external: boolean) => {
+  // startRoute SOLO muestra el loading label. La navegación la hace el
+  // <Link>/<a> nativo del HubCard. Esto garantiza que el tap nunca
+  // quede muerto: aunque este handler falle, el browser igual navega.
+  const startRoute = useCallback((title: string, _href: string, external: boolean) => {
     setRouteLoadingLabel(title)
+    // External: el target="_blank" del <a> abre la nueva tab; ocultamos
+    // el loading rápido porque la página actual no cambia.
     if (external) {
-      window.open(href, '_blank', 'noopener,noreferrer')
       window.setTimeout(() => setRouteLoadingLabel(null), 900)
-      return
     }
-    router.prefetch(href)
-    router.push(href)
-  }, [router])
+  }, [])
 
   // Quick-action: Ejecuta la acción inmediatamente y expande el botón
   // para dar feedback visual al usuario en móviles. Auto-cierra a los 3s.
@@ -271,13 +291,10 @@ export default function OfficialHome() {
     if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
   }, [])
 
-  // ── Carrusel mobile (bend matemático, SIN loop infinito) ─────────
-  // El loop con reset de scrollTop interfería con los taps en las
-  // cards (el scrollTop se modifica mientras el browser procesa el
-  // pointer event, cancelando el click). Render fijo: una sola copia
-  // de las 6 cards, scroll natural del browser. Bend dinámico tipo
-  // OGL CircularGallery se mantiene en mobile.
-  const BEND_RATIO = 0.25
+  // ── Carrusel mobile RECTO ────────────────────────────────────────
+  // Sin loop infinito. Sin bend matemático. Cards apiladas verticales
+  // con scroll natural del browser. Base limpia para iterar la
+  // animación desde acá.
   const [isMobileCarousel, setIsMobileCarousel] = useState(false)
 
   useEffect(() => {
@@ -301,60 +318,25 @@ export default function OfficialHome() {
 
   const bendFrameRef = useRef<number | null>(null)
 
-  // Bend LIVIANO en 2D: solo translateX + scale + opacity. Sin rotateY/
-  // perspective/translateZ — eso es lo que rompía el hit-testing del tap
-  // en iOS Safari mientras el carrusel scrolleaba. La curva sigue siendo
-  // visible porque el translateX se calcula con la misma fórmula de arco,
-  // solo que el "encajar al logo" ahora es por desplazamiento puro.
-  const applyBend = useCallback(() => {
-    const carousel = carouselRef.current
-    if (!carousel) return
-    const cards = carousel.querySelectorAll<HTMLElement>('[data-card-index]')
-    if (!cards.length) return
 
-    if (!isMobileCarousel) {
-      cards.forEach((c) => {
-        c.style.transform = ''
-        c.style.opacity = ''
-      })
-      return
-    }
-
-    const H = carousel.clientHeight / 2
-    const bend = H * BEND_RATIO
-    const R = (H * H + bend * bend) / (2 * bend)
-    const center = carousel.scrollTop + H
-
-    cards.forEach((card) => {
-      const cardCenter = card.offsetTop + card.offsetHeight / 2
-      const dy = cardCenter - center
-      const absDy = Math.min(Math.abs(dy), H)
-      const arcX = R - Math.sqrt(R * R - absDy * absDy)
-      const norm = absDy / H
-
-      const translateX = -arcX // desplaza a la izquierda abrazando el logo
-      const scale = 1 - norm * 0.14
-      const opacity = 1 - norm * 0.42
-
-      const isActive = card.dataset.active === 'true'
-      const translateY = isActive ? -card.offsetHeight * 0.05 : 0
-
-      // translate3d + scale solamente: 2D real, no afecta hit-test.
-      card.style.transform = `translate3d(${translateX}px, ${translateY}px, 0) scale(${scale})`
-      card.style.opacity = String(opacity)
-    })
-  }, [isMobileCarousel])
+  // Punto "activo" del carrusel: 40% desde el top del cardsStage (no
+  // el centro 50%). Esto hace que la card activa se vea visualmente
+  // arriba del medio del viewport, dejando más respiro abajo y menos
+  // espacio vacío arriba.
+  const ACTIVE_POINT_RATIO = 0.4
 
   const syncActiveCard = useCallback(() => {
     const carousel = carouselRef.current
     if (!carousel) return
-    const center = carousel.scrollTop + carousel.clientHeight / 2
+    const carouselRect = carousel.getBoundingClientRect()
+    const activeY = carouselRect.top + carouselRect.height * ACTIVE_POINT_RATIO
     let nearestCardIndex = 0
     let nearest = Number.POSITIVE_INFINITY
     carousel.querySelectorAll<HTMLElement>('[data-card-index]').forEach((node) => {
       const cardIndex = Number(node.dataset.cardIndex)
-      const cardCenter = node.offsetTop + node.offsetHeight / 2
-      const distance = Math.abs(cardCenter - center)
+      const rect = node.getBoundingClientRect()
+      const cardCenter = rect.top + rect.height / 2
+      const distance = Math.abs(cardCenter - activeY)
       if (distance < nearest) {
         nearest = distance
         nearestCardIndex = cardIndex
@@ -363,34 +345,94 @@ export default function OfficialHome() {
     setActiveCardIndex((current) => (current === nearestCardIndex ? current : nearestCardIndex))
   }, [])
 
-  // Aplicar bend al montar y cuando cambia el viewport / orientación.
-  useEffect(() => {
-    applyBend()
-    syncActiveCard()
-  }, [isMobileCarousel, applyBend, syncActiveCard])
+  // El logo se mueve VERTICALMENTE según el scroll del carrusel para
+  // llenar los espacios vacíos (banner top vacío arriba o banner bottom
+  // vacío abajo). SOLO translateY (sin scale ni rotate). La transición
+  // CSS de 600ms suaviza los cambios → no se siente "tilado".
+  // Rango: -16vh (cuando estás en card 01) → +16vh (cuando estás en
+  // card 06). En el medio del scroll → 0 (posición base).
+  const updateLogoMotion = useCallback(() => {
+    const carousel = carouselRef.current
+    if (!carousel) return
+    const { scrollTop, scrollHeight, clientHeight } = carousel
+    const maxScroll = Math.max(1, scrollHeight - clientHeight)
+    const progress = Math.min(1, Math.max(0, scrollTop / maxScroll)) // 0..1
+    const signed = progress * 2 - 1 // -1..1
+    const shiftVh = signed * 24 // ±24vh — más drama para que el logo llene visualmente los huecos
+    const shiftPx = (shiftVh / 100) * window.innerHeight
+    document.documentElement.style.setProperty('--gonovi-logo-shift', shiftPx.toFixed(1))
+  }, [])
 
+  // Scroll inicial: centra la card 01 al montar (mobile). Padding-block
+  // 42vh del cardsStage permite que la 01 y la 06 lleguen al centro.
+  // Encadenamos scroll → rAF → sync para que el activeCardIndex se
+  // calcule DESPUÉS de que el browser aplicó el scrollTop.
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    const onResize = () => applyBend()
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [applyBend])
+    const carousel = carouselRef.current
+    if (!carousel) {
+      syncActiveCard()
+      return
+    }
+    if (!isMobileCarousel) {
+      syncActiveCard()
+      return
+    }
+    const first = carousel.querySelector<HTMLElement>('[data-card-index="0"]')
+    if (first) {
+      // Scroll para que el centro de la card 01 coincida con el
+      // ACTIVE_POINT_RATIO (40% desde top), no con el centro.
+      const carouselRect = carousel.getBoundingClientRect()
+      const cardRect = first.getBoundingClientRect()
+      const currentCardCenterFromCarouselTop = (cardRect.top - carouselRect.top) + cardRect.height / 2
+      const targetCenterFromCarouselTop = carouselRect.height * ACTIVE_POINT_RATIO
+      const delta = currentCardCenterFromCarouselTop - targetCenterFromCarouselTop
+      carousel.scrollTop = Math.max(0, carousel.scrollTop + delta)
+    }
+    // Esperar 2 frames para que el browser termine de aplicar el scroll
+    // antes de leer la posición y decidir activeCardIndex.
+    const raf1 = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        syncActiveCard()
+        updateLogoMotion()
+      })
+    })
+    return () => cancelAnimationFrame(raf1)
+  }, [syncActiveCard, isMobileCarousel, updateLogoMotion])
 
   useEffect(() => () => {
     if (bendFrameRef.current) cancelAnimationFrame(bendFrameRef.current)
   }, [])
 
-  // Handler simple: cancela rAF previo y agenda uno nuevo. Single-flight,
-  // no acumula frames, no toca scrollTop (no hay reset que rompa los
-  // taps). Bend + sync por frame para visual fluido.
+  // Aparición sutil de los banners: IntersectionObserver dentro del
+  // viewport del cardsStage. Cuando el banner está al menos 30% visible
+  // setea data-visible="true" → CSS hace fade-in con opacity + translateY.
+  // No depende de scroll handler (más barato + más limpio).
+  useEffect(() => {
+    if (!isMobileCarousel) return
+    const carousel = carouselRef.current
+    if (!carousel) return
+    const banners = [topBannerRef.current, bottomBannerRef.current].filter(Boolean) as HTMLElement[]
+    if (!banners.length) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          ;(entry.target as HTMLElement).dataset.visible = entry.isIntersecting ? 'true' : 'false'
+        })
+      },
+      { root: carousel, threshold: 0.3 }
+    )
+    banners.forEach((b) => observer.observe(b))
+    return () => observer.disconnect()
+  }, [isMobileCarousel])
+
   const handleCarouselScroll = useCallback(() => {
     if (bendFrameRef.current) cancelAnimationFrame(bendFrameRef.current)
     bendFrameRef.current = requestAnimationFrame(() => {
       bendFrameRef.current = null
-      applyBend()
       syncActiveCard()
+      updateLogoMotion()
     })
-  }, [applyBend, syncActiveCard])
+  }, [syncActiveCard, updateLogoMotion])
 
 
   const handleInstall = useCallback(async () => {
@@ -628,12 +670,11 @@ export default function OfficialHome() {
       <div className={styles.shardTwo} aria-hidden="true" />
       <div className={styles.shardThree} aria-hidden="true" />
 
-      <section className={styles.appFrame} aria-label="GONOVI Inicio">
+      <section className={`${styles.appFrame} ${styles.appFrameHome}`} aria-label="GONOVI Inicio">
         <header className={styles.topbar}>
           <div className={styles.brand}>
             <span className={styles.brandDot} aria-hidden="true" />
             GONOVI
-            <span className={styles.brandVersion}>INICIO</span>
           </div>
           <nav className={styles.topnav} aria-label="Navegación principal">
             <Link href="/official" className={pathname === '/official' ? styles.topnavActive : ''} aria-current={pathname === '/official' ? 'page' : undefined}>Inicio</Link>
@@ -829,6 +870,15 @@ export default function OfficialHome() {
 
           <div className={styles.cardsStage} onScroll={handleCarouselScroll} ref={carouselRef}>
             <nav className={styles.appGrid} aria-label="Herramientas GONOVI">
+              {/* Banner top: aparece sutilmente cuando intersecta el
+                  viewport (IntersectionObserver → data-visible). Texto
+                  alineado con la versión web de /links. */}
+              <div className={styles.carouselBannerTop} aria-hidden="true" ref={topBannerRef}>
+                <span className={styles.carouselBannerEyebrow}>GONOVI · OFICIAL</span>
+                <strong className={styles.carouselBannerTitle}>Canales y recursos</strong>
+                <span className={styles.carouselBannerSubtitle}>Todo lo importante en una sola página.</span>
+              </div>
+
               {renderItems.map((item) => (
                 <HubCard
                   key={item.card.title}
@@ -842,6 +892,15 @@ export default function OfficialHome() {
                   onRouteStart={startRoute}
                 />
               ))}
+
+              {/* Banner bottom: cierra el recorrido con la misma
+                  estética sutil. Aparece via IntersectionObserver
+                  cuando entra al viewport. */}
+              <div className={styles.carouselBannerBottom} aria-hidden="true" ref={bottomBannerRef}>
+                <span className={styles.carouselBannerEyebrow}>GONOVI · 2026</span>
+                <strong className={styles.carouselBannerTitle}>Recorrido completo</strong>
+                <span className={styles.carouselBannerSubtitle}>Volvé arriba cuando quieras seguir explorando.</span>
+              </div>
             </nav>
           </div>
         </section>
