@@ -329,26 +329,49 @@ export default function OfficialHome() {
   // arriba del medio del viewport, dejando más respiro abajo y menos
   // espacio vacío arriba.
   const ACTIVE_POINT_RATIO = 0.4
+  const cardsMetricsRef = useRef<{ index: number; centerY: number }[]>([])
+
+  const measureCards = useCallback(() => {
+    const carousel = carouselRef.current
+    if (!carousel) return
+    const metrics: { index: number; centerY: number }[] = []
+    // offsetTop es relativo al offsetParent. Si offsetParent es el container, perfecto.
+    carousel.querySelectorAll<HTMLElement>('[data-card-index]').forEach((node) => {
+      metrics.push({
+        index: Number(node.dataset.cardIndex),
+        centerY: node.offsetTop + node.offsetHeight / 2
+      })
+    })
+    cardsMetricsRef.current = metrics
+  }, [])
+
+  useEffect(() => {
+    if (!isMobileCarousel) return
+    measureCards()
+    window.addEventListener('resize', measureCards, { passive: true })
+    return () => window.removeEventListener('resize', measureCards)
+  }, [measureCards, isMobileCarousel])
 
   const syncActiveCard = useCallback(() => {
     const carousel = carouselRef.current
-    if (!carousel) return
-    const carouselRect = carousel.getBoundingClientRect()
-    const activeY = carouselRect.top + carouselRect.height * ACTIVE_POINT_RATIO
+    if (!carousel || cardsMetricsRef.current.length === 0) return
+
+    const activeY = carousel.scrollTop + carousel.clientHeight * ACTIVE_POINT_RATIO
     let nearestCardIndex = 0
     let nearest = Number.POSITIVE_INFINITY
-    carousel.querySelectorAll<HTMLElement>('[data-card-index]').forEach((node) => {
-      const cardIndex = Number(node.dataset.cardIndex)
-      const rect = node.getBoundingClientRect()
-      const cardCenter = rect.top + rect.height / 2
-      const distance = Math.abs(cardCenter - activeY)
+
+    cardsMetricsRef.current.forEach(({ index, centerY }) => {
+      const distance = Math.abs(centerY - activeY)
       if (distance < nearest) {
         nearest = distance
-        nearestCardIndex = cardIndex
+        nearestCardIndex = index
       }
     })
+
     setActiveCardIndex((current) => (current === nearestCardIndex ? current : nearestCardIndex))
   }, [])
+
+  const logoWrapperRef = useRef<HTMLElement | null>(null)
 
   // Mobile: el logo conserva su posición inicial exacta. El drift se
   // calcula desde el scroll inicial real del carrusel y converge hacia
@@ -367,6 +390,9 @@ export default function OfficialHome() {
         height: window.innerHeight,
       }
     }
+    if (!logoWrapperRef.current) {
+      logoWrapperRef.current = document.querySelector<HTMLElement>('[data-logo-placement="left"] [class*="materiaWrapper"]')
+    }
     const baseScroll = logoBaseScrollRef.current
     const stableViewport = logoViewportRef.current
     const delta = scrollTop - baseScroll
@@ -379,9 +405,11 @@ export default function OfficialHome() {
     const shiftX = stableViewport.width * 0.17 * eased
     const verticalFactor = direction < 0 ? 0.2 : 0.075
     const shiftY = stableViewport.height * verticalFactor * eased * direction
-    const wrapper = document.querySelector<HTMLElement>('[data-logo-placement="left"] [class*="materiaWrapper"]')
-    wrapper?.style.setProperty('--gonovi-logo-shift-x', shiftX.toFixed(1))
-    wrapper?.style.setProperty('--gonovi-logo-shift-y', shiftY.toFixed(1))
+    const wrapper = logoWrapperRef.current
+    if (wrapper) {
+      wrapper.style.setProperty('--gonovi-logo-shift-x', shiftX.toFixed(1))
+      wrapper.style.setProperty('--gonovi-logo-shift-y', shiftY.toFixed(1))
+    }
   }, [])
 
   // Scroll inicial: centra la card 01 al montar (mobile). Padding-block
@@ -705,16 +733,6 @@ export default function OfficialHome() {
   return (
     <MateriaLoadingScreen badgeText="GONOVI . INICIO" logoPlacement="left" waitDuration={2500}>
     <main className={styles.shell}>
-      {/* SVG filter usado por .heroNavCard::before para el efecto liquid
-          glass tipo Apple — refracción + distorsión líquida sobre el
-          contenido detrás. Inline para no requerir asset externo. */}
-      <svg aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}>
-        <filter id="gonovi-liquid-glass" x="0%" y="0%" width="100%" height="100%" filterUnits="objectBoundingBox">
-          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.018" numOctaves="2" seed="17" result="turbulence" />
-          <feGaussianBlur in="turbulence" stdDeviation="2" result="softMap" />
-          <feDisplacementMap in="SourceGraphic" in2="softMap" scale="38" xChannelSelector="R" yChannelSelector="G" />
-        </filter>
-      </svg>
       <div className={styles.noise} />
       <div className={styles.shardOne} aria-hidden="true" />
       <div className={styles.shardTwo} aria-hidden="true" />
