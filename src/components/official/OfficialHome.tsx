@@ -209,6 +209,7 @@ export default function OfficialHome() {
   const carouselRef = useRef<HTMLDivElement>(null)
   const topBannerRef = useRef<HTMLDivElement>(null)
   const bottomBannerRef = useRef<HTMLDivElement>(null)
+  const logoBaseScrollRef = useRef<number | null>(null)
   const logoViewportRef = useRef<{ width: number; height: number } | null>(null)
   const lastCarouselScrollRef = useRef<number | null>(null)
   const [user, setUser] = useState<{ id: string; email: string } | null | undefined>(undefined)
@@ -372,54 +373,53 @@ export default function OfficialHome() {
 
   const logoWrapperRef = useRef<HTMLElement | null>(null)
 
-  // Mobile: shift del logo en función del scroll. Función ÚNICA y
-  // continua (sin if-else por dirección) — eso evita el salto que
-  // ocurría al cruzar el punto base, donde el factor saltaba de 0.2
-  // a 0.075 instantáneamente.
+  // Mobile: shift del logo en función del scroll RELATIVO al baseline
+  // (scrollTop inicial real del carrusel). El movimiento es asimétrico
+  // intencional: scrolleando hacia ARRIBA el logo viaja más en Y para
+  // llenar el espacio del banner; hacia ABAJO viaja menos. La X siempre
+  // se desplaza hacia la derecha (sale del centro de la composición).
   //
-  // Fórmula:
-  //   progress = scrollTop / maxScroll        (0..1, linear)
-  //   signed   = progress * 2 - 1             (-1..1, simétrico)
-  //   shiftY   = -bias·H + signed·k·H         (curva lineal continua)
-  //
-  // En el TOP (card 01, signed=-1): shiftY = -(bias+k)·H  → logo arriba
-  // En el CENTRO (signed=0):        shiftY = -bias·H      → logo ligeramente arriba
-  // En el BOTTOM (card 06, signed=+1): shiftY = (k-bias)·H → logo abajo (asimétrico)
-  //
-  // Como bias > k positivo y k > 0, el rango es asimétrico (más viaje
-  // hacia arriba que hacia abajo) PERO la función es C∞ continua → no
-  // hay saltos en ningún punto del scroll.
+  // CRÍTICO: el viewport se cachea UNA SOLA VEZ (logoViewportRef). Si
+  // se leyera window.innerHeight cada scroll frame, en iOS Safari el
+  // logo "saltaría" de tamaño cuando la barra del navegador se oculta/
+  // aparece (porque innerHeight cambia y el shift se recalcula con
+  // valores nuevos). Cacheando el viewport, el shift queda estable.
   const updateLogoMotion = useCallback(() => {
     const carousel = carouselRef.current
     if (!carousel) return
     const { scrollTop, scrollHeight, clientHeight } = carousel
     const maxScroll = Math.max(1, scrollHeight - clientHeight)
 
-    // Cache one-time del viewport y del wrapper para evitar layout queries
-    // en cada scroll frame.
+    if (logoBaseScrollRef.current === null) {
+      logoBaseScrollRef.current = scrollTop
+    }
     if (logoViewportRef.current === null) {
-      logoViewportRef.current = { width: window.innerWidth, height: window.innerHeight }
+      logoViewportRef.current = {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      }
     }
     if (!logoWrapperRef.current) {
       logoWrapperRef.current = document.querySelector<HTMLElement>('[data-logo-placement="left"] [class*="materiaWrapper"]')
     }
+    const baseScroll = logoBaseScrollRef.current
     const stableViewport = logoViewportRef.current
     const wrapper = logoWrapperRef.current
     if (!wrapper) return
 
-    const progress = Math.min(1, Math.max(0, scrollTop / maxScroll))
-    const signed = progress * 2 - 1 // -1..1, simétrico
+    const delta = scrollTop - baseScroll
+    const direction = delta === 0 ? 0 : Math.sign(delta)
+    const available = direction < 0
+      ? Math.max(1, baseScroll)
+      : Math.max(1, maxScroll - baseScroll)
+    const progress = Math.min(1, Math.abs(delta) / available)
+    const eased = 1 - Math.pow(1 - progress, 2)
 
-    // Y: linear con bias hacia arriba. Sin direction branching.
-    //  - bias 0.06H  → logo siempre algo arriba del centro
-    //  - k    0.14H  → amplitud total del viaje (de -0.20H a +0.08H)
-    const shiftY = (-0.06 + signed * 0.14) * stableViewport.height
-
-    // X: monotónico con |signed|. Cuando estás cerca del centro, el
-    // logo queda en su posición base; cuando te alejás (a la card 01
-    // o a la 06), se desplaza hacia la izquierda para "abrir" más la
-    // composición. Función continua (|x|·k).
-    const shiftX = Math.abs(signed) * 0.05 * stableViewport.width
+    // X: siempre hacia la derecha al alejarse del baseline.
+    const shiftX = stableViewport.width * 0.17 * eased
+    // Y: asimétrico. Subiendo viaja más (0.20H), bajando menos (0.075H).
+    const verticalFactor = direction < 0 ? 0.2 : 0.075
+    const shiftY = stableViewport.height * verticalFactor * eased * direction
 
     wrapper.style.setProperty('--gonovi-logo-shift-x', shiftX.toFixed(1))
     wrapper.style.setProperty('--gonovi-logo-shift-y', shiftY.toFixed(1))
@@ -454,6 +454,9 @@ export default function OfficialHome() {
     // antes de leer la posición y decidir activeCardIndex.
     const raf1 = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
+        // Baseline del scroll para el cálculo del logo motion. Se setea
+        // DESPUÉS del scroll inicial automático para que ese sea el "cero".
+        logoBaseScrollRef.current = carousel.scrollTop
         lastCarouselScrollRef.current = carousel.scrollTop
         setIsCarouselAtTop(carousel.scrollTop <= 4)
         syncActiveCard()
