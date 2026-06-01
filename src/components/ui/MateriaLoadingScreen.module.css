@@ -286,15 +286,15 @@
     top: 0;
     left: 0;
     z-index: 1;
-    width: 100vw;
-    height: 100svh;
+    width: var(--gonovi-mobile-logo-width, 100vw);
+    height: var(--gonovi-mobile-logo-height, 100svh);
     opacity: 1;
     /* Posición base calibrada para el hub mobile. El scroll del carrusel
        solo agrega un drift suave hacia el hueco superior, sin cambiar
        escala ni rotación. */
     transform:
       translate3d(
-        calc(-30vw + (var(--gonovi-logo-shift-x, 0) * 1px)),
+        calc(var(--gonovi-logo-base-x, -30vw) + (var(--gonovi-logo-shift-x, 0) * 1px)),
         calc(var(--gonovi-logo-shift-y, 0) * 1px),
         0
       )
@@ -304,7 +304,10 @@
     filter: saturate(0.94) brightness(0.9);
     contain: layout paint style;
     will-change: transform;
-    transition: transform 160ms linear;
+    /* El scroll ya llega por requestAnimationFrame. En iOS Safari una
+       transición CSS encima de un canvas WebGL durante scroll puede
+       interpolar frames con tamaños viejos/nuevos y verse como salto. */
+    transition: none;
     mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.56) 0%, black 12%, black 88%, rgba(0, 0, 0, 0.5) 100%);
     -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.56) 0%, black 12%, black 88%, rgba(0, 0, 0, 0.5) 100%);
   }

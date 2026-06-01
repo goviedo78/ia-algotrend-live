@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import styles from './MateriaLoadingScreen.module.css'
 import { useIsMobile, useIsLowEnd } from '@/lib/use-device'
@@ -27,10 +27,27 @@ export function MateriaLoadingScreen({
   logoPlacement = 'center',
   waitDuration = 2500
 }: Props) {
+  const rootRef = useRef<HTMLDivElement>(null)
   const [phase, setPhase] = useState<'intro' | 'content'>('intro')
   const [fps, setFps] = useState(60)
   const isMobile = useIsMobile()
   const isLowEnd = useIsLowEnd()
+
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root || !isMobile || logoPlacement !== 'left') return
+
+    // iOS Safari changes viewport units while its browser chrome hides/shows.
+    // Lock the WebGL wrapper box once so R3F does not resize the canvas while
+    // the user scrolls the vertical cards. This does not alter logo graphics.
+    const viewport = window.visualViewport
+    const width = Math.round(viewport?.width ?? window.innerWidth)
+    const height = Math.round(viewport?.height ?? window.innerHeight)
+
+    root.style.setProperty('--gonovi-mobile-logo-width', `${width}px`)
+    root.style.setProperty('--gonovi-mobile-logo-height', `${height}px`)
+    root.style.setProperty('--gonovi-logo-base-x', `${Math.round(width * -0.3)}px`)
+  }, [isMobile, logoPlacement])
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>
@@ -49,7 +66,7 @@ export function MateriaLoadingScreen({
   }, [phase, waitDuration])
 
   return (
-    <div className={styles.root} data-logo-placement={logoPlacement} data-phase={phase}>
+    <div ref={rootRef} className={styles.root} data-logo-placement={logoPlacement} data-phase={phase}>
       <div className={styles.introOverlay} aria-hidden="true" />
       
       <div className={styles.hud} aria-hidden="true">
