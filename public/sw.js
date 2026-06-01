@@ -1,6 +1,6 @@
-// AlgoTrend Service Worker — push notifications only.
+// GONOVI Service Worker — PWA shell + push notifications.
 // Do not cache Next.js chunks: stale app-client bundles can break local/dev previews.
-const CACHE_NAME = 'algotrend-v2'
+const CACHE_NAME = 'gonovi-pwa-v3'
 const PRECACHE = ['/manifest.json']
 
 self.addEventListener('install', (event) => {
@@ -46,7 +46,7 @@ self.addEventListener('fetch', (event) => {
 
 // Push notification handler
 self.addEventListener('push', (event) => {
-  let data = { title: 'AlgoTrend', body: 'Nueva señal detectada', tag: 'signal' }
+  let data = { title: 'GONOVI', body: 'Nueva actualización disponible', tag: 'gonovi' }
   try {
     if (event.data) data = { ...data, ...event.data.json() }
   } catch {
@@ -59,7 +59,7 @@ self.addEventListener('push', (event) => {
       badge: '/icons/icon-192.png',
       tag: data.tag || 'signal',
       vibrate: [200, 100, 200],
-      data: { url: '/' },
+      data: { url: data.url || '/?dev=materia&source=notification' },
       actions: [{ action: 'open', title: 'Ver panel' }],
     })
   )
@@ -72,7 +72,7 @@ self.addEventListener('notificationclick', (event) => {
       for (const client of clients) {
         if (client.url.includes('/') && 'focus' in client) return client.focus()
       }
-      return self.clients.openWindow('/')
+      return self.clients.openWindow(event.notification.data?.url || '/?dev=materia&source=notification')
     })
   )
 })

@@ -303,6 +303,18 @@
     -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.56) 0%, black 12%, black 88%, rgba(0, 0, 0, 0.5) 100%);
   }
 
+  [data-phase="content"][data-logo-placement="left"] .materiaWrapper::after {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    content: "";
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 28% 45%, transparent 0 22%, rgba(13, 17, 34, 0.12) 44%, rgba(13, 17, 34, 0.28) 72%),
+      linear-gradient(90deg, rgba(13, 17, 34, 0.08), rgba(13, 17, 34, 0.22) 68%, rgba(13, 17, 34, 0.42));
+    mix-blend-mode: multiply;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     [data-phase="content"][data-logo-placement="left"] .materiaWrapper {
       transition: none !important;

@@ -491,7 +491,10 @@ export default function OfficialHome() {
       return
     }
 
-    if (!deferredPrompt) return
+    if (!deferredPrompt) {
+      window.alert('Para instalar GONOVI:\n\n1. Abrí el menú del navegador\n2. Elegí "Instalar app" o "Agregar a pantalla de inicio"\n3. Confirmá la instalación\n\nSi no aparece, recargá la página e intentá de nuevo.')
+      return
+    }
 
     await deferredPrompt.prompt()
     const { outcome } = await deferredPrompt.userChoice
@@ -848,7 +851,7 @@ export default function OfficialHome() {
               className={styles.quickAction}
               data-mobile-label="App"
               data-expanded={(installed || confirmingAction === 'install') ? 'true' : undefined}
-              disabled={installed || (!deferredPrompt && typeof navigator !== 'undefined' && !/iPad|iPhone|iPod/.test(navigator.userAgent))}
+              disabled={installed}
               onClick={() => requestActionConfirm('install', handleInstall)}
               type="button"
             >
