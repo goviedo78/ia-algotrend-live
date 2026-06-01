@@ -321,6 +321,8 @@ export default function OfficialHome() {
   )
 
   const bendFrameRef = useRef<number | null>(null)
+  const activeCardIndexRef = useRef(0)
+  const logoMotionKeyRef = useRef<string | null>(null)
 
 
   // Punto "activo" del carrusel: 40% desde el top del cardsStage (no
@@ -367,15 +369,16 @@ export default function OfficialHome() {
       }
     })
 
+    activeCardIndexRef.current = nearestCardIndex
     setActiveCardIndex((current) => (current === nearestCardIndex ? current : nearestCardIndex))
   }, [])
 
   const logoWrapperRef = useRef<HTMLElement | null>(null)
 
-  // Mobile: shift del logo con una función continua del scroll total.
-  // Evitamos ramas por dirección porque producen saltos visibles cuando
-  // el carrusel cruza el punto medio. La asimetría sigue existiendo:
-  // top=-0.20H, centro=-0.06H, bottom=+0.08H.
+  // Mobile: shift del logo por zona activa, no por cada pixel de scroll.
+  // iOS Safari es sensible a WebGL + scroll + transform continuo. Así el
+  // logo conserva movimiento, pero solo cambia destino al llegar a card
+  // 01, al bloque medio o a card 06.
   //
   // CRÍTICO: el viewport se cachea UNA SOLA VEZ (logoViewportRef). Si
   // se leyera window.innerHeight cada scroll frame, en iOS Safari el
@@ -385,8 +388,6 @@ export default function OfficialHome() {
   const updateLogoMotion = useCallback(() => {
     const carousel = carouselRef.current
     if (!carousel) return
-    const { scrollTop, scrollHeight, clientHeight } = carousel
-    const maxScroll = Math.max(1, scrollHeight - clientHeight)
 
     if (logoViewportRef.current === null) {
       logoViewportRef.current = {
@@ -401,14 +402,22 @@ export default function OfficialHome() {
     const wrapper = logoWrapperRef.current
     if (!wrapper) return
 
-    const progress = Math.min(1, Math.max(0, scrollTop / maxScroll))
-    const signed = progress * 2 - 1
-    const lateral = 1 - Math.pow(1 - Math.abs(signed), 2)
+    const lastCardIndex = Math.max(0, hubCards.length - 1)
+    const index = activeCardIndexRef.current
+    const zone = index <= 0 ? 'top' : index >= lastCardIndex ? 'bottom' : 'middle'
 
-    // X: sale hacia la derecha en ambos extremos y vuelve al centro a mitad.
-    const shiftX = stableViewport.width * 0.17 * lateral
-    // Y: línea continua. Sin if por dirección = sin salto matemático.
-    const shiftY = stableViewport.height * (-0.06 + signed * 0.14)
+    if (logoMotionKeyRef.current === zone) return
+    logoMotionKeyRef.current = zone
+
+    const positions = {
+      top: { x: 0.17, y: -0.2 },
+      middle: { x: 0.04, y: -0.06 },
+      bottom: { x: 0.17, y: 0.08 },
+    } as const
+
+    const target = positions[zone]
+    const shiftX = stableViewport.width * target.x
+    const shiftY = stableViewport.height * target.y
 
     wrapper.style.setProperty('--gonovi-logo-shift-x', shiftX.toFixed(1))
     wrapper.style.setProperty('--gonovi-logo-shift-y', shiftY.toFixed(1))
