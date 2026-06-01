@@ -323,6 +323,7 @@ export default function OfficialHome() {
   const bendFrameRef = useRef<number | null>(null)
   const activeCardIndexRef = useRef(0)
   const logoMotionKeyRef = useRef<string | null>(null)
+  const logoMotionIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
 
   // Punto "activo" del carrusel: 40% desde el top del cardsStage (no
@@ -376,9 +377,9 @@ export default function OfficialHome() {
   const logoWrapperRef = useRef<HTMLElement | null>(null)
 
   // Mobile: shift del logo por zona activa, no por cada pixel de scroll.
-  // iOS Safari es sensible a WebGL + scroll + transform continuo. Así el
-  // logo conserva movimiento, pero solo cambia destino al llegar a card
-  // 01, al bloque medio o a card 06.
+  // iOS Safari es sensible a WebGL + scroll momentum + transform sobre
+  // canvas fixed. El wrapper del logo solo se mueve cuando el scroll ya
+  // quedó quieto; así conserva movimiento sin resize/jank aleatorio.
   //
   // CRÍTICO: el viewport se cachea UNA SOLA VEZ (logoViewportRef). Si
   // se leyera window.innerHeight cada scroll frame, en iOS Safari el
@@ -423,6 +424,17 @@ export default function OfficialHome() {
     wrapper.style.setProperty('--gonovi-logo-shift-y', shiftY.toFixed(1))
   }, [])
 
+  const scheduleLogoMotion = useCallback((delay = 140) => {
+    if (logoMotionIdleTimerRef.current) {
+      clearTimeout(logoMotionIdleTimerRef.current)
+    }
+
+    logoMotionIdleTimerRef.current = setTimeout(() => {
+      logoMotionIdleTimerRef.current = null
+      updateLogoMotion()
+    }, delay)
+  }, [updateLogoMotion])
+
   // Scroll inicial: centra la card 01 al montar (mobile). Padding-block
   // 42vh del cardsStage permite que la 01 y la 06 lleguen al centro.
   // Encadenamos scroll → rAF → sync para que el activeCardIndex se
@@ -463,6 +475,7 @@ export default function OfficialHome() {
 
   useEffect(() => () => {
     if (bendFrameRef.current) cancelAnimationFrame(bendFrameRef.current)
+    if (logoMotionIdleTimerRef.current) clearTimeout(logoMotionIdleTimerRef.current)
   }, [])
 
   // Aparición sutil de los banners: IntersectionObserver dentro del
@@ -507,9 +520,13 @@ export default function OfficialHome() {
         setIsCarouselAtTop(carousel.scrollTop <= 4)
       }
       syncActiveCard()
-      updateLogoMotion()
+      if (isMobileCarousel) {
+        scheduleLogoMotion()
+      } else {
+        updateLogoMotion()
+      }
     })
-  }, [isMobileCarousel, syncActiveCard, updateLogoMotion])
+  }, [isMobileCarousel, syncActiveCard, scheduleLogoMotion, updateLogoMotion])
 
   const handleDockHome = useCallback(() => {
     const carousel = carouselRef.current
@@ -517,7 +534,8 @@ export default function OfficialHome() {
     setIsCarouselAtTop(true)
     lastCarouselScrollRef.current = 0
     carousel.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [])
+    scheduleLogoMotion(260)
+  }, [scheduleLogoMotion])
 
 
   const handleInstall = useCallback(async () => {

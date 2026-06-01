@@ -114,6 +114,8 @@ export function MateriaLoadingScreen({
           enableZoom={false}
           environmentIntensity={isMobile ? 0.12 : 0.2}
           gyroscope={!isMobile}
+          height="100%"
+          lockResponsiveSize={isMobile}
           globalPointerHeat
           heatColor={[0.98, 0.28, 0.08]}
           heatEmissive={[1, 0.24, 0.02]}

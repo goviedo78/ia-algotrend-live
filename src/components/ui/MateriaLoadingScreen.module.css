@@ -308,22 +308,15 @@
        transform por cada pixel de scroll: solo cambia entre 3 zonas. */
     transition: transform 540ms cubic-bezier(0.16, 1, 0.3, 1);
     /* Sin máscara lateral: en iOS podía quedar una franja clara/recta al
-       bloquear el viewport del canvas. El velo ::after mantiene el logo
-       integrado sin crear un borde visible. */
+       bloquear el viewport del canvas. Tampoco usamos velo interno en
+       ::after porque su rectángulo se mueve con el logo y delata la caja
+       contenedora del WebGL. */
     mask-image: none;
     -webkit-mask-image: none;
   }
 
   [data-phase="content"][data-logo-placement="left"] .materiaWrapper::after {
-    position: absolute;
-    inset: 0;
-    z-index: 3;
-    content: "";
-    pointer-events: none;
-    background:
-      radial-gradient(circle at 28% 45%, transparent 0 22%, rgba(13, 17, 34, 0.12) 44%, rgba(13, 17, 34, 0.28) 72%),
-      linear-gradient(90deg, rgba(13, 17, 34, 0.08), rgba(13, 17, 34, 0.22) 68%, rgba(13, 17, 34, 0.42));
-    mix-blend-mode: multiply;
+    content: none;
   }
 
   @media (prefers-reduced-motion: reduce) {
