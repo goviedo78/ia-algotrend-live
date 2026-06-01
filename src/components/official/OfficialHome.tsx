@@ -211,6 +211,7 @@ export default function OfficialHome() {
   const bottomBannerRef = useRef<HTMLDivElement>(null)
   const logoBaseScrollRef = useRef<number | null>(null)
   const logoViewportRef = useRef<{ width: number; height: number } | null>(null)
+  const lastCarouselScrollRef = useRef<number | null>(null)
   const [user, setUser] = useState<{ id: string; email: string } | null | undefined>(undefined)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [btcChange, setBtcChange] = useState<{ pct: string; up: boolean } | null>(null)
@@ -413,6 +414,7 @@ export default function OfficialHome() {
     const raf1 = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         logoBaseScrollRef.current = carousel.scrollTop
+        lastCarouselScrollRef.current = carousel.scrollTop
         setIsCarouselAtTop(carousel.scrollTop <= 4)
         syncActiveCard()
         updateLogoMotion()
@@ -453,17 +455,29 @@ export default function OfficialHome() {
       bendFrameRef.current = null
       const carousel = carouselRef.current
       if (carousel) {
+        if (isMobileCarousel) {
+          const previous = lastCarouselScrollRef.current ?? carousel.scrollTop
+          const delta = carousel.scrollTop - previous
+          const maxStep = Math.max(48, carousel.clientHeight * 0.16)
+
+          if (Math.abs(delta) > maxStep) {
+            carousel.scrollTop = previous + Math.sign(delta) * maxStep
+          }
+
+          lastCarouselScrollRef.current = carousel.scrollTop
+        }
         setIsCarouselAtTop(carousel.scrollTop <= 4)
       }
       syncActiveCard()
       updateLogoMotion()
     })
-  }, [syncActiveCard, updateLogoMotion])
+  }, [isMobileCarousel, syncActiveCard, updateLogoMotion])
 
   const handleDockHome = useCallback(() => {
     const carousel = carouselRef.current
     if (!carousel) return
     setIsCarouselAtTop(true)
+    lastCarouselScrollRef.current = 0
     carousel.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
 

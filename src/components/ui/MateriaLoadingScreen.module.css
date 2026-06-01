@@ -281,19 +281,24 @@
     left: 0;
     z-index: 1;
     width: 100vw;
-    height: 100vh;
+    height: 100svh;
     opacity: 1;
     /* Posición base calibrada para el hub mobile. El scroll del carrusel
        solo agrega un drift suave hacia el hueco superior, sin cambiar
        escala ni rotación. */
     transform:
-      translateX(calc(-30vw + (var(--gonovi-logo-shift-x, 0) * 1px)))
-      translateY(calc(var(--gonovi-logo-shift-y, 0) * 1px))
+      translate3d(
+        calc(-30vw + (var(--gonovi-logo-shift-x, 0) * 1px)),
+        calc(var(--gonovi-logo-shift-y, 0) * 1px),
+        0
+      )
       scale(1.05);
     transform-origin: 22% 50%;
     pointer-events: none;
     filter: saturate(1.08) brightness(1.08);
-    transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+    contain: layout paint style;
+    will-change: transform;
+    transition: transform 160ms linear;
     mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.42) 0%, black 7%, black 97%, rgba(0, 0, 0, 0.78) 100%);
     -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.42) 0%, black 7%, black 97%, rgba(0, 0, 0, 0.78) 100%);
   }
