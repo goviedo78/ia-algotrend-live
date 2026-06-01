@@ -279,13 +279,13 @@ export default function OfficialHome() {
     if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
   }, [])
 
-  // ── Carrusel mobile (loop seamless + bend matemático) ─────────────
-  // Solo en mobile triplicamos las cards y aplicamos loop infinito +
-  // bend dinámico tipo CircularGallery (OGL). En desktop renderizamos
-  // las 6 cards una sola vez con layout normal, sin loop ni bend.
-  const CARDS_LENGTH = hubCards.length
-  const COPIES = 3
-  const MIDDLE_COPY = 1
+  // ── Carrusel mobile (bend matemático, SIN loop infinito) ─────────
+  // El loop con reset de scrollTop interfería con los taps en las
+  // cards (el scrollTop se modifica mientras el browser procesa el
+  // pointer event, cancelando el click). Render fijo: una sola copia
+  // de las 6 cards, scroll natural del browser. Bend dinámico tipo
+  // OGL CircularGallery se mantiene en mobile.
+  const BEND_RATIO = 0.25
   const [isMobileCarousel, setIsMobileCarousel] = useState(false)
 
   useEffect(() => {
@@ -297,38 +297,20 @@ export default function OfficialHome() {
     return () => mq.removeEventListener('change', apply)
   }, [])
 
-  type RenderCard = { kind: 'card'; card: typeof hubCards[number]; copyIndex: number; cardIndex: number }
-  type RenderDivider = { kind: 'divider'; copyIndex: number }
-  type RenderItem = RenderCard | RenderDivider
+  // Sin loop: una sola copia de cada card. El scroll natural del
+  // carrusel maneja la navegación; no se duplican cards y los taps
+  // siempre llegan al handler sin interferencias.
+  type RenderItem = { card: typeof hubCards[number]; cardIndex: number }
 
-  const renderItems = useMemo<RenderItem[]>(() => {
-    if (!isMobileCarousel) {
-      return hubCards.map((card, cardIndex) => ({ kind: 'card', card, copyIndex: 0, cardIndex }))
-    }
-    const items: RenderItem[] = []
-    for (let c = 0; c < COPIES; c++) {
-      for (let i = 0; i < CARDS_LENGTH; i++) {
-        items.push({ kind: 'card', card: hubCards[i], copyIndex: c, cardIndex: i })
-      }
-      if (c < COPIES - 1) items.push({ kind: 'divider', copyIndex: c })
-    }
-    return items
-  }, [CARDS_LENGTH, isMobileCarousel])
+  const renderItems = useMemo<RenderItem[]>(
+    () => hubCards.map((card, cardIndex) => ({ card, cardIndex })),
+    []
+  )
 
-  // Refs para el loop seamless. Medimos UNA VEZ la altura del ciclo
-  // (loopHeight) y la posición del inicio de la copia del medio para
-  // que el reset trabaje con rangos absolutos de scrollTop, no buscando
-  // la "card más cercana" (que flakea durante el momentum scroll de iOS).
-  const loopHeightRef = useRef(0)
-  const middleCopyStartRef = useRef(0)
-  const isResettingRef = useRef(false)
-  const resetTimeoutRef = useRef<number | null>(null)
   const bendFrameRef = useRef<number | null>(null)
 
-  // Aplica bend dinámico por card. Fórmula de arco circular (OGL
-  // CircularGallery): R = (H² + B²)/(2B); arc = R − √(R² − d²);
-  // angle = ±asin(d/R). d = distancia vertical de la card al centro
-  // del carrusel; desplazamiento/rotación van en X.
+  // Bend matemático tipo OGL CircularGallery (mobile). En desktop limpia
+  // los inline styles para usar el layout grid natural.
   const applyBend = useCallback(() => {
     const carousel = carouselRef.current
     if (!carousel) return
@@ -343,17 +325,33 @@ export default function OfficialHome() {
       return
     }
 
-    // Mobile usa una curva CSS estática. Evitamos recalcular sqrt/asin y
-    // escribir transform/opacity sobre 18 cards durante cada scroll frame.
-    cards.forEach((c) => {
-      c.style.transform = ''
-      c.style.opacity = ''
+    const H = carousel.clientHeight / 2
+    const bend = H * BEND_RATIO
+    const R = (H * H + bend * bend) / (2 * bend)
+    const center = carousel.scrollTop + H
+
+    cards.forEach((card) => {
+      const cardCenter = card.offsetTop + card.offsetHeight / 2
+      const dy = cardCenter - center
+      const absDy = Math.min(Math.abs(dy), H)
+      const arcX = R - Math.sqrt(R * R - absDy * absDy)
+      const angle = Math.asin(absDy / R) * (180 / Math.PI)
+      const norm = absDy / H
+
+      const translateX = -arcX
+      const rotateY = angle * 0.55
+      const translateZ = -arcX * 0.35
+      const scale = 1 - norm * 0.14
+      const opacity = 1 - norm * 0.45
+
+      const isActive = card.dataset.active === 'true'
+      const translateY = isActive ? -card.offsetHeight * 0.05 : 0
+
+      card.style.transform = `translate3d(${translateX}px, ${translateY}px, ${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`
+      card.style.opacity = String(opacity)
     })
-    return
   }, [isMobileCarousel])
 
-  // Actualiza activeCardIndex en función de la card más cercana al
-  // centro visible. Sin lógica de reset acá.
   const syncActiveCard = useCallback(() => {
     const carousel = carouselRef.current
     if (!carousel) return
@@ -372,110 +370,34 @@ export default function OfficialHome() {
     setActiveCardIndex((current) => (current === nearestCardIndex ? current : nearestCardIndex))
   }, [])
 
-  // Mide la altura de un ciclo completo y la posición del middle copy.
-  // Re-medir si cambia el viewport o el contenido del carrusel.
-  const measureLoop = useCallback(() => {
-    const carousel = carouselRef.current
-    if (!carousel || !isMobileCarousel) return
-    const first0 = carousel.querySelector<HTMLElement>('[data-card-index="0"][data-copy-index="0"]')
-    const first1 = carousel.querySelector<HTMLElement>('[data-card-index="0"][data-copy-index="1"]')
-    if (!first0 || !first1) return
-    loopHeightRef.current = first1.offsetTop - first0.offsetTop
-    middleCopyStartRef.current = first1.offsetTop - carousel.clientHeight / 2 + first1.offsetHeight / 2
-  }, [isMobileCarousel])
-
-  // Reset basado en rangos absolutos de scrollTop. Se ejecuta solo
-  // cuando el scroll está QUIETO (debounce 140ms) para no chocar con el
-  // momentum scroll de iOS. Si estamos en copy 0 → saltar 1 loop adelante;
-  // si estamos en copy 2 → saltar 1 loop atrás. Las cards son idénticas
-  // entre copias, así que el jump es visualmente imperceptible.
-  const performReset = useCallback(() => {
-    const carousel = carouselRef.current
-    if (!carousel || !isMobileCarousel) return
-    const loopH = loopHeightRef.current
-    const middleStart = middleCopyStartRef.current
-    if (loopH <= 0) return
-
-    const scroll = carousel.scrollTop
-    const lowerBound = middleStart - loopH * 0.5
-    const upperBound = middleStart + loopH * 1.5
-
-    if (scroll < lowerBound) {
-      isResettingRef.current = true
-      carousel.scrollTop = scroll + loopH
-      // Liberar el flag tras 2 frames para asegurar que el browser ya
-      // procesó el cambio de scrollTop antes de aceptar nuevos events.
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        isResettingRef.current = false
-        applyBend()
-      }))
-    } else if (scroll > upperBound) {
-      isResettingRef.current = true
-      carousel.scrollTop = scroll - loopH
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        isResettingRef.current = false
-        applyBend()
-      }))
-    }
-  }, [isMobileCarousel, applyBend])
-
-  // Scroll inicial: posicionar al primer card del middle copy + medir
-  // la geometría del loop.
+  // Aplicar bend al montar y cuando cambia el viewport / orientación.
   useEffect(() => {
-    const carousel = carouselRef.current
-    if (!carousel) return
-    if (isMobileCarousel) {
-      measureLoop()
-      const first = carousel.querySelector<HTMLElement>(
-        `[data-card-index="0"][data-copy-index="${MIDDLE_COPY}"]`
-      )
-      if (first) {
-        isResettingRef.current = true
-        carousel.scrollTop = first.offsetTop - carousel.clientHeight / 2 + first.offsetHeight / 2
-        requestAnimationFrame(() => {
-          isResettingRef.current = false
-          syncActiveCard()
-          applyBend()
-        })
-        return
-      }
-    }
     applyBend()
     syncActiveCard()
-  }, [isMobileCarousel, applyBend, syncActiveCard, measureLoop])
+  }, [isMobileCarousel, applyBend, syncActiveCard])
 
-  // Re-medir loop al cambiar el viewport (resize / rotación).
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const onResize = () => {
-      measureLoop()
-      applyBend()
-    }
+    const onResize = () => applyBend()
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [measureLoop, applyBend])
+  }, [applyBend])
 
-  // Cleanup de timers/frames al desmontar.
   useEffect(() => () => {
-    if (resetTimeoutRef.current) window.clearTimeout(resetTimeoutRef.current)
     if (bendFrameRef.current) cancelAnimationFrame(bendFrameRef.current)
   }, [])
 
-  // Handler unificado: bend + sync por frame (smooth visual), reset
-  // debounced (sin chocar con momentum). isResettingRef previene que
-  // el scroll event triggered por el propio reset agende otro reset.
+  // Handler simple: cancela rAF previo y agenda uno nuevo. Single-flight,
+  // no acumula frames, no toca scrollTop (no hay reset que rompa los
+  // taps). Bend + sync por frame para visual fluido.
   const handleCarouselScroll = useCallback(() => {
-    if (isResettingRef.current) return
     if (bendFrameRef.current) cancelAnimationFrame(bendFrameRef.current)
     bendFrameRef.current = requestAnimationFrame(() => {
       bendFrameRef.current = null
-      if (!isMobileCarousel) applyBend()
+      applyBend()
       syncActiveCard()
     })
-    if (!isMobileCarousel) return
-    if (resetTimeoutRef.current) window.clearTimeout(resetTimeoutRef.current)
-    resetTimeoutRef.current = window.setTimeout(performReset, 140)
-  }, [applyBend, syncActiveCard, performReset, isMobileCarousel])
+  }, [applyBend, syncActiveCard])
 
   const handleCardExpand = useCallback((cardIndex: number) => {
     setExpandedCardIndex((current) => (current === cardIndex ? null : cardIndex))
@@ -912,9 +834,9 @@ export default function OfficialHome() {
               <span>Inicio</span>
             </Link>
             <Link
-              className={`${styles.mobileDockAction} ${pathname === '/official/store' ? styles.mobileDockActive : ''}`}
-              href="/official/store"
-              aria-current={pathname === '/official/store' ? 'page' : undefined}
+              className={`${styles.mobileDockAction} ${pathname === '/official/apps' ? styles.mobileDockActive : ''}`}
+              href="/official/apps"
+              aria-current={pathname === '/official/apps' ? 'page' : undefined}
             >
               <span className={styles.mobileDockIcon} aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" /></svg>
@@ -932,32 +854,19 @@ export default function OfficialHome() {
 
           <div className={styles.cardsStage} onScroll={handleCarouselScroll} ref={carouselRef}>
             <nav className={styles.appGrid} aria-label="Herramientas GONOVI">
-              {renderItems.map((item) => {
-                if (item.kind === 'divider') {
-                  return (
-                    <div
-                      key={`divider-${item.copyIndex}`}
-                      className={styles.carouselDivider}
-                      aria-hidden="true"
-                    >
-                      <span>Reinicio</span>
-                    </div>
-                  )
-                }
-                return (
-                  <HubCard
-                    key={`${item.card.title}-${item.copyIndex}`}
-                    active={item.cardIndex === activeCardIndex}
-                    card={item.card}
-                    cardIndex={item.cardIndex}
-                    copyIndex={item.copyIndex}
-                    expanded={item.cardIndex === expandedCardIndex}
-                    onExpand={handleCardExpand}
-                    onRoutePrepare={prepareRoute}
-                    onRouteStart={startRoute}
-                  />
-                )
-              })}
+              {renderItems.map((item) => (
+                <HubCard
+                  key={item.card.title}
+                  active={item.cardIndex === activeCardIndex}
+                  card={item.card}
+                  cardIndex={item.cardIndex}
+                  copyIndex={0}
+                  expanded={item.cardIndex === expandedCardIndex}
+                  onExpand={handleCardExpand}
+                  onRoutePrepare={prepareRoute}
+                  onRouteStart={startRoute}
+                />
+              ))}
             </nav>
           </div>
         </section>
