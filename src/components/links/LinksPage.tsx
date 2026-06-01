@@ -15,6 +15,7 @@ import { IconDisplay } from './IconDisplay'
 import { LinkSheet } from './LinkSheet'
 import type { CustomIcon } from '@/lib/links-config'
 import { trackView } from '@/lib/links-tracker'
+import { useIsMobile, useIsLowEnd } from '@/lib/use-device'
 import styles from './LinksPage.module.css'
 
 type LinksConfigShape = {
@@ -87,13 +88,11 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
     trackView()
   }, [])
 
-  const [isMobile, setIsMobile] = useState(false)
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.matchMedia('(max-width: 767px)').matches)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+  // useSyncExternalStore via hook compartido → sin hydration mismatch
+  // ni microflicker al cargar (vs el patrón useState + addEventListener
+  // que arrancaba con isMobile=false hasta el primer effect).
+  const isMobile = useIsMobile()
+  const isLowEnd = useIsLowEnd()
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>
@@ -156,7 +155,9 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
           amplitude={isMobile ? 5 : 8}
           autoRotateIdle
           baseColor={0x120d0a}
-          bloomIntensity={isMobile ? 0.12 : 0.25}
+          /* Bloom apagado en low-end (≤4 cores, ≤4GB RAM, reduced-motion).
+             Consistente con el patrón de la home (MateriaLoadingScreen). */
+          bloomIntensity={isLowEnd ? 0 : (isMobile ? 0.12 : 0.25)}
           cameraDistance={phase === 'intro' ? 1400 : (isMobile ? 3200 : 2600)}
           className={styles.materiaLogo}
           cursorTilt
