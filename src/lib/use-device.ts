@@ -22,31 +22,56 @@ export function useIsMobile() {
   return useSyncExternalStore(subscribeMobile, getMobileSnap, getServerMobileSnap)
 }
 
-// Dispositivos low-end donde el bloom de Three.js (la pasada de post-
-// processing más costosa, ~3-5 ms/frame en Android medio-bajo) tira el
-// frame rate. Criterios:
-//  - prefers-reduced-motion: el usuario pidió menos animación (sistema)
-//  - hardwareConcurrency <= 4: CPUs con pocos cores (Android baratos)
-//  - deviceMemory <= 4 GB: dispositivos con poca RAM (no expuesto en iOS)
-// iPhones y Androids decentes mantienen el bloom premium intacto.
+// Tier de capacidad GPU/CPU. El bloom de Three.js (post-processing más
+// costoso, ~3-5 ms/frame) tira el frame rate en gama media-baja con GPU
+// vieja (ej. P30 Pro con Mali-G76, pasa concurrency=8 / RAM=6 pero la GPU
+// no banca el bloom). Por eso tier !== binario.
+//  - low : prefers-reduced-motion / Androids muy baratos
+//  - mid : Androids medios con GPU vieja (P30 Pro, gama 2019-2021)
+//  - high: iPhones (Apple ofusca specs pero las GPUs banca todo) + Androids
+//          modernos + desktop
+// Apple Safari capa hardwareConcurrency a 6 y oculta deviceMemory, por eso
+// los iPhones caen a 'high' por UA detection directa (no por specs).
+export type DeviceTier = 'low' | 'mid' | 'high'
+
 type NavigatorWithDeviceMemory = Navigator & { deviceMemory?: number }
 
-const subscribeLowEnd = (cb: () => void) => {
+const subscribeDeviceTier = (cb: () => void) => {
   if (typeof window === 'undefined') return () => {}
   const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
   mq.addEventListener('change', cb)
   return () => mq.removeEventListener('change', cb)
 }
-const getLowEndSnap = () => {
-  if (typeof window === 'undefined') return false
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true
-  const nav = navigator as NavigatorWithDeviceMemory
-  if (typeof nav.hardwareConcurrency === 'number' && nav.hardwareConcurrency <= 4) return true
-  if (typeof nav.deviceMemory === 'number' && nav.deviceMemory <= 4) return true
-  return false
-}
-const getServerLowEndSnap = () => false
+const getDeviceTierSnap = (): DeviceTier => {
+  if (typeof window === 'undefined') return 'high'
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 'low'
 
+  const nav = navigator as NavigatorWithDeviceMemory
+  const ua = nav.userAgent || ''
+  const isIOS = /iPad|iPhone|iPod/.test(ua)
+  if (isIOS) return 'high'
+
+  if (typeof nav.deviceMemory === 'number') {
+    if (nav.deviceMemory <= 3) return 'low'
+    if (nav.deviceMemory <= 6) return 'mid'
+    return 'high'
+  }
+
+  if (typeof nav.hardwareConcurrency === 'number') {
+    if (nav.hardwareConcurrency <= 4) return 'low'
+    if (nav.hardwareConcurrency <= 6) return 'mid'
+  }
+
+  return 'high'
+}
+const getServerDeviceTierSnap = (): DeviceTier => 'high'
+
+export function useDeviceTier() {
+  return useSyncExternalStore(subscribeDeviceTier, getDeviceTierSnap, getServerDeviceTierSnap)
+}
+
+// Back-compat: useIsLowEnd retorna true para low Y mid.
+// El bloom se apaga en ambos tiers porque mid (ej. P30 Pro) tampoco lo banca.
 export function useIsLowEnd() {
-  return useSyncExternalStore(subscribeLowEnd, getLowEndSnap, getServerLowEndSnap)
+  return useDeviceTier() !== 'high'
 }
