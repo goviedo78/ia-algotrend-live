@@ -295,12 +295,12 @@
       scale(1.05);
     transform-origin: 22% 50%;
     pointer-events: none;
-    filter: saturate(1.08) brightness(1.08);
+    filter: saturate(0.94) brightness(0.9);
     contain: layout paint style;
     will-change: transform;
     transition: transform 160ms linear;
-    mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.42) 0%, black 7%, black 97%, rgba(0, 0, 0, 0.78) 100%);
-    -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.42) 0%, black 7%, black 97%, rgba(0, 0, 0, 0.78) 100%);
+    mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.56) 0%, black 12%, black 88%, rgba(0, 0, 0, 0.5) 100%);
+    -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.56) 0%, black 12%, black 88%, rgba(0, 0, 0, 0.5) 100%);
   }
 
   @media (prefers-reduced-motion: reduce) {
