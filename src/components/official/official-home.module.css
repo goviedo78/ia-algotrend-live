@@ -1520,7 +1520,13 @@
     -webkit-backdrop-filter: blur(15px) saturate(1.45);
     isolation: isolate;
     contain: layout paint style;
-    transform: translate3d(-0.45rem, 0, 0) rotateY(6deg) scale(0.96);
+    /* Sin transform estático — applyBend() en JS escribe transform inline
+       dinámico para cada card según su distancia al centro del carrusel. */
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    text-decoration: none;
+    color: inherit;
     transition:
       transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
       opacity 220ms ease,
@@ -1616,12 +1622,13 @@
     overflow-x: visible;
     overflow-y: auto;
     overscroll-behavior: contain;
-    /* padding-left 26vw: buffer para el bend negativo. Reducido desde
-       35vw para que las cards sean ~15% más anchas. El BEND_RATIO en
-       OfficialHome se mantiene en 0.25 para no exceder este buffer. */
-    padding: 9.5vh 0.55rem 9vh 26vw;
-    perspective: 920px;
-    scroll-padding-block: 18vh 12vh;
+    /* padding-block grande (32vh) para que la PRIMERA y ÚLTIMA card
+       puedan llegar al CENTRO del carrusel con scroll-snap. Sin esto,
+       la 01 y la 06 nunca se centran. padding-left 26vw es el buffer
+       para el bend negativo de las cards lejanas. */
+    padding: 32vh 0.55rem 32vh 26vw;
+    /* perspective ya no es necesaria sin rotateY/translateZ 3D. */
+    scroll-padding-block: 32vh 32vh;
     scroll-snap-type: y mandatory;
     scrollbar-width: none;
     transform-style: preserve-3d;

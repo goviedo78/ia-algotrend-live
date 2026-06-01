@@ -15,6 +15,8 @@ interface BeforeInstallPromptEvent extends Event {
 
 type NotificationState = 'default' | 'granted' | 'denied' | 'unsupported'
 
+const noop = () => {}
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -101,10 +103,8 @@ const secondaryPrefetchRoutes = [
 const HubCard = memo(function HubCard({
   active,
   card,
-  expanded,
   cardIndex,
   copyIndex,
-  onExpand,
   onRoutePrepare,
   onRouteStart,
 }: {
@@ -121,73 +121,66 @@ const HubCard = memo(function HubCard({
     track({ event_type: 'hub_card_click', card_id: card.num, card_title: card.title, path: '/official' })
   }, [card.num, card.title])
 
-  const prepareRoute = useCallback(() => {
-    onRoutePrepare(card.href, card.external)
-  }, [card.external, card.href, onRoutePrepare])
-
   const startRoute = useCallback(() => {
     handleOpen()
     onRouteStart(card.title, card.href, card.external)
   }, [card.external, card.href, card.title, handleOpen, onRouteStart])
 
-  const handleExpand = useCallback(() => {
-    prepareRoute()
-    onExpand(cardIndex)
-  }, [cardIndex, onExpand, prepareRoute])
+  const prepareRoute = useCallback(() => {
+    onRoutePrepare(card.href, card.external)
+  }, [card.external, card.href, onRoutePrepare])
 
-  const handleCardAction = useCallback(() => {
-    if (expanded) {
-      startRoute()
-      return
-    }
-    handleExpand()
-  }, [expanded, handleExpand, startRoute])
+  // 1 tap = navega directo. Sin expand intermedio: el summary y el text
+  // se muestran siempre. Usamos un <a> envolvente para que el browser
+  // trate la card como link nativo (mejor accesibilidad + no requiere
+  // JS para clickear). El prefetch se dispara on hover/focus.
+  const commonProps = {
+    className: styles.heroNavCard,
+    'data-active': active ? 'true' : undefined,
+    'data-card-index': cardIndex,
+    'data-copy-index': copyIndex,
+    onMouseEnter: prepareRoute,
+    onFocus: prepareRoute,
+    style: { '--card-i': cardIndex } as CSSProperties,
+  }
 
-  const openLabel = card.external ? 'Abrir demo →' : 'Abrir sección →'
-  const openCta = card.external ? (
-    <a className={styles.heroCardOpen} href={card.href} rel="noreferrer" target="_blank" onClick={(event) => { event.preventDefault(); event.stopPropagation(); startRoute() }}>
-      {openLabel}
-    </a>
-  ) : (
-    <Link className={styles.heroCardOpen} href={card.href} onClick={(event) => { event.preventDefault(); event.stopPropagation(); startRoute() }} onMouseEnter={prepareRoute} onTouchStart={prepareRoute}>
-      {openLabel}
-    </Link>
+  const inner = (
+    <>
+      <span className={styles.heroCardEyebrow}>{card.num} · {card.label}</span>
+      <strong className={styles.heroCardTitle}>{card.title}</strong>
+      <p className={styles.heroCardSummary}>{card.summary}</p>
+      <p className={styles.heroCardText}>{card.text}</p>
+      <span className={styles.heroCardOpen}>
+        {card.external ? 'Abrir demo →' : 'Abrir sección →'}
+      </span>
+    </>
   )
 
-  return (
-    <article
-      className={styles.heroNavCard}
-      data-active={active ? 'true' : undefined}
-      data-card-index={cardIndex}
-      data-copy-index={copyIndex}
-      data-expanded={expanded ? 'true' : undefined}
-      onClick={(event) => {
-        if ((event.target as HTMLElement).closest('a')) return
-        handleCardAction()
-      }}
-      onFocus={prepareRoute}
-      onPointerEnter={prepareRoute}
-      onTouchStart={prepareRoute}
-      style={{ '--card-i': cardIndex } as CSSProperties}
-    >
-      <button
-        aria-expanded={expanded}
-        className={styles.heroCardButton}
-        onClick={(event) => {
-          event.stopPropagation()
-          handleCardAction()
-        }}
-        type="button"
+  if (card.external) {
+    return (
+      <a
+        {...commonProps}
+        href={card.href}
+        rel="noreferrer"
+        target="_blank"
+        onClick={handleOpen}
       >
-        <span>{card.num} · {card.label}</span>
-        <strong>{card.title}</strong>
-        <p>{card.summary}</p>
-      </button>
-      <div className={styles.heroCardDetails} aria-hidden={!expanded}>
-        <p>{card.text}</p>
-        {openCta}
-      </div>
-    </article>
+        {inner}
+      </a>
+    )
+  }
+
+  return (
+    <Link
+      {...commonProps}
+      href={card.href}
+      onClick={(event) => {
+        event.preventDefault()
+        startRoute()
+      }}
+    >
+      {inner}
+    </Link>
   )
 })
 
@@ -207,7 +200,6 @@ export default function OfficialHome() {
   const [shareCopied, setShareCopied] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [activeCardIndex, setActiveCardIndex] = useState(0)
-  const [expandedCardIndex, setExpandedCardIndex] = useState<number | null>(null)
   const [routeLoadingLabel, setRouteLoadingLabel] = useState<string | null>(null)
   // En touch devices: primer tap expande el botón (preview del label), segundo tap confirma.
   const [confirmingAction, setConfirmingAction] = useState<'install' | 'notify' | 'share' | null>(null)
@@ -309,8 +301,11 @@ export default function OfficialHome() {
 
   const bendFrameRef = useRef<number | null>(null)
 
-  // Bend matemático tipo OGL CircularGallery (mobile). En desktop limpia
-  // los inline styles para usar el layout grid natural.
+  // Bend LIVIANO en 2D: solo translateX + scale + opacity. Sin rotateY/
+  // perspective/translateZ — eso es lo que rompía el hit-testing del tap
+  // en iOS Safari mientras el carrusel scrolleaba. La curva sigue siendo
+  // visible porque el translateX se calcula con la misma fórmula de arco,
+  // solo que el "encajar al logo" ahora es por desplazamiento puro.
   const applyBend = useCallback(() => {
     const carousel = carouselRef.current
     if (!carousel) return
@@ -335,19 +330,17 @@ export default function OfficialHome() {
       const dy = cardCenter - center
       const absDy = Math.min(Math.abs(dy), H)
       const arcX = R - Math.sqrt(R * R - absDy * absDy)
-      const angle = Math.asin(absDy / R) * (180 / Math.PI)
       const norm = absDy / H
 
-      const translateX = -arcX
-      const rotateY = angle * 0.55
-      const translateZ = -arcX * 0.35
+      const translateX = -arcX // desplaza a la izquierda abrazando el logo
       const scale = 1 - norm * 0.14
-      const opacity = 1 - norm * 0.45
+      const opacity = 1 - norm * 0.42
 
       const isActive = card.dataset.active === 'true'
       const translateY = isActive ? -card.offsetHeight * 0.05 : 0
 
-      card.style.transform = `translate3d(${translateX}px, ${translateY}px, ${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`
+      // translate3d + scale solamente: 2D real, no afecta hit-test.
+      card.style.transform = `translate3d(${translateX}px, ${translateY}px, 0) scale(${scale})`
       card.style.opacity = String(opacity)
     })
   }, [isMobileCarousel])
@@ -399,24 +392,6 @@ export default function OfficialHome() {
     })
   }, [applyBend, syncActiveCard])
 
-  const handleCardExpand = useCallback((cardIndex: number) => {
-    setExpandedCardIndex((current) => (current === cardIndex ? null : cardIndex))
-    setActiveCardIndex(cardIndex)
-    window.requestAnimationFrame(() => {
-      const carousel = carouselRef.current
-      if (!carousel) return
-      const allInstances = carousel.querySelectorAll<HTMLElement>(`[data-card-index="${cardIndex}"]`)
-      if (!allInstances.length) return
-      const center = carousel.scrollTop + carousel.clientHeight / 2
-      let closest = allInstances[0]
-      let minDist = Number.POSITIVE_INFINITY
-      allInstances.forEach((node) => {
-        const dist = Math.abs(node.offsetTop + node.offsetHeight / 2 - center)
-        if (dist < minDist) { minDist = dist; closest = node }
-      })
-      closest.scrollIntoView({ block: 'center', behavior: 'smooth' })
-    })
-  }, [])
 
   const handleInstall = useCallback(async () => {
     if (installed) return
@@ -861,8 +836,8 @@ export default function OfficialHome() {
                   card={item.card}
                   cardIndex={item.cardIndex}
                   copyIndex={0}
-                  expanded={item.cardIndex === expandedCardIndex}
-                  onExpand={handleCardExpand}
+                  expanded={false}
+                  onExpand={noop}
                   onRoutePrepare={prepareRoute}
                   onRouteStart={startRoute}
                 />
