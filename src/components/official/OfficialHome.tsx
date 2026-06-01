@@ -16,6 +16,7 @@ interface BeforeInstallPromptEvent extends Event {
 type NotificationState = 'default' | 'granted' | 'denied' | 'unsupported'
 
 const noop = () => {}
+const OFFICIAL_BETA_VERSION = 'Beta v3.1'
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -208,6 +209,8 @@ export default function OfficialHome() {
   const carouselRef = useRef<HTMLDivElement>(null)
   const topBannerRef = useRef<HTMLDivElement>(null)
   const bottomBannerRef = useRef<HTMLDivElement>(null)
+  const logoBaseScrollRef = useRef<number | null>(null)
+  const logoViewportRef = useRef<{ width: number; height: number } | null>(null)
   const [user, setUser] = useState<{ id: string; email: string } | null | undefined>(undefined)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [btcChange, setBtcChange] = useState<{ pct: string; up: boolean } | null>(null)
@@ -219,6 +222,7 @@ export default function OfficialHome() {
   const [shareCopied, setShareCopied] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [activeCardIndex, setActiveCardIndex] = useState(0)
+  const [isCarouselAtTop, setIsCarouselAtTop] = useState(true)
   const [routeLoadingLabel, setRouteLoadingLabel] = useState<string | null>(null)
   // En touch devices: primer tap expande el botón (preview del label), segundo tap confirma.
   const [confirmingAction, setConfirmingAction] = useState<'install' | 'notify' | 'share' | null>(null)
@@ -345,22 +349,38 @@ export default function OfficialHome() {
     setActiveCardIndex((current) => (current === nearestCardIndex ? current : nearestCardIndex))
   }, [])
 
-  // El logo se mueve VERTICALMENTE según el scroll del carrusel para
-  // llenar los espacios vacíos (banner top vacío arriba o banner bottom
-  // vacío abajo). SOLO translateY (sin scale ni rotate). La transición
-  // CSS de 600ms suaviza los cambios → no se siente "tilado".
-  // Rango: -16vh (cuando estás en card 01) → +16vh (cuando estás en
-  // card 06). En el medio del scroll → 0 (posición base).
+  // Mobile: el logo conserva su posición inicial exacta. El drift se
+  // calcula desde el scroll inicial real del carrusel y converge hacia
+  // el centro visual de la pantalla: más eje X, menos eje Y, sin saltos.
   const updateLogoMotion = useCallback(() => {
     const carousel = carouselRef.current
     if (!carousel) return
     const { scrollTop, scrollHeight, clientHeight } = carousel
     const maxScroll = Math.max(1, scrollHeight - clientHeight)
-    const progress = Math.min(1, Math.max(0, scrollTop / maxScroll)) // 0..1
-    const signed = progress * 2 - 1 // -1..1
-    const shiftVh = signed * 24 // ±24vh — más drama para que el logo llene visualmente los huecos
-    const shiftPx = (shiftVh / 100) * window.innerHeight
-    document.documentElement.style.setProperty('--gonovi-logo-shift', shiftPx.toFixed(1))
+    if (logoBaseScrollRef.current === null) {
+      logoBaseScrollRef.current = scrollTop
+    }
+    if (logoViewportRef.current === null) {
+      logoViewportRef.current = {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      }
+    }
+    const baseScroll = logoBaseScrollRef.current
+    const stableViewport = logoViewportRef.current
+    const delta = scrollTop - baseScroll
+    const direction = delta === 0 ? 0 : Math.sign(delta)
+    const available = direction < 0
+      ? Math.max(1, baseScroll)
+      : Math.max(1, maxScroll - baseScroll)
+    const progress = Math.min(1, Math.abs(delta) / available)
+    const eased = 1 - Math.pow(1 - progress, 2)
+    const shiftX = stableViewport.width * 0.17 * eased
+    const verticalFactor = direction < 0 ? 0.2 : 0.075
+    const shiftY = stableViewport.height * verticalFactor * eased * direction
+    const wrapper = document.querySelector<HTMLElement>('[data-logo-placement="left"] [class*="materiaWrapper"]')
+    wrapper?.style.setProperty('--gonovi-logo-shift-x', shiftX.toFixed(1))
+    wrapper?.style.setProperty('--gonovi-logo-shift-y', shiftY.toFixed(1))
   }, [])
 
   // Scroll inicial: centra la card 01 al montar (mobile). Padding-block
@@ -392,6 +412,8 @@ export default function OfficialHome() {
     // antes de leer la posición y decidir activeCardIndex.
     const raf1 = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
+        logoBaseScrollRef.current = carousel.scrollTop
+        setIsCarouselAtTop(carousel.scrollTop <= 4)
         syncActiveCard()
         updateLogoMotion()
       })
@@ -429,10 +451,21 @@ export default function OfficialHome() {
     if (bendFrameRef.current) cancelAnimationFrame(bendFrameRef.current)
     bendFrameRef.current = requestAnimationFrame(() => {
       bendFrameRef.current = null
+      const carousel = carouselRef.current
+      if (carousel) {
+        setIsCarouselAtTop(carousel.scrollTop <= 4)
+      }
       syncActiveCard()
       updateLogoMotion()
     })
   }, [syncActiveCard, updateLogoMotion])
+
+  const handleDockHome = useCallback(() => {
+    const carousel = carouselRef.current
+    if (!carousel) return
+    setIsCarouselAtTop(true)
+    carousel.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
 
 
   const handleInstall = useCallback(async () => {
@@ -769,6 +802,9 @@ export default function OfficialHome() {
             <span className={styles.geoShapeThree} />
             <span className={styles.geoShapeFour} />
           </div>
+          <span className={styles.betaWatermark} aria-label={`Versión ${OFFICIAL_BETA_VERSION}`}>
+            {OFFICIAL_BETA_VERSION}
+          </span>
 
           <div className={styles.profileCard}>
             <div className={styles.profileMark}>
@@ -839,16 +875,17 @@ export default function OfficialHome() {
               </span>
               <span>Gráfico</span>
             </Link>
-            <Link
-              className={`${styles.mobileDockAction} ${styles.mobileDockPrimary} ${pathname === '/official' ? styles.mobileDockActive : ''}`}
-              href="/official"
-              aria-current={pathname === '/official' ? 'page' : undefined}
+            <button
+              className={`${styles.mobileDockAction} ${styles.mobileDockPrimary} ${isCarouselAtTop ? styles.mobileDockPrimaryIdle : styles.mobileDockActive}`}
+              aria-label="Volver al inicio del carrusel"
+              onClick={handleDockHome}
+              type="button"
             >
               <span className={styles.mobileDockIcon} aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M4 11.5 12 5l8 6.5V20H5v-8.5" /></svg>
               </span>
               <span>Inicio</span>
-            </Link>
+            </button>
             <Link
               className={`${styles.mobileDockAction} ${pathname === '/official/apps' ? styles.mobileDockActive : ''}`}
               href="/official/apps"
