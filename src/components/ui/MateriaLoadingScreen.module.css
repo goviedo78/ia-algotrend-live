@@ -262,7 +262,13 @@
 
 @media (max-width: 767px) {
   [data-phase="content"][data-logo-placement="left"] .contentLayer {
-    z-index: auto;
+    /* En mobile el logo pasa de intro fullscreen a fondo escénico. Si
+       el layer queda en z-index:auto durante el fade, el canvas puede
+       verse un frame "delante" antes de acomodarse detrás de las cards.
+       Fijamos la jerarquía desde el primer frame de content, sin tocar
+       Three.js ni sumar trabajo al navegador. */
+    z-index: 4;
+    transition: opacity 220ms ease-out;
   }
 
   /* El canvas de MateriaLogo (R3F) se dimensiona al wrapper y renderiza

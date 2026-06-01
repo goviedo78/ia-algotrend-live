@@ -209,7 +209,6 @@ export default function OfficialHome() {
   const carouselRef = useRef<HTMLDivElement>(null)
   const topBannerRef = useRef<HTMLDivElement>(null)
   const bottomBannerRef = useRef<HTMLDivElement>(null)
-  const logoBaseScrollRef = useRef<number | null>(null)
   const logoViewportRef = useRef<{ width: number; height: number } | null>(null)
   const lastCarouselScrollRef = useRef<number | null>(null)
   const [user, setUser] = useState<{ id: string; email: string } | null | undefined>(undefined)
@@ -373,11 +372,10 @@ export default function OfficialHome() {
 
   const logoWrapperRef = useRef<HTMLElement | null>(null)
 
-  // Mobile: shift del logo en función del scroll RELATIVO al baseline
-  // (scrollTop inicial real del carrusel). El movimiento es asimétrico
-  // intencional: scrolleando hacia ARRIBA el logo viaja más en Y para
-  // llenar el espacio del banner; hacia ABAJO viaja menos. La X siempre
-  // se desplaza hacia la derecha (sale del centro de la composición).
+  // Mobile: shift del logo con una función continua del scroll total.
+  // Evitamos ramas por dirección porque producen saltos visibles cuando
+  // el carrusel cruza el punto medio. La asimetría sigue existiendo:
+  // top=-0.20H, centro=-0.06H, bottom=+0.08H.
   //
   // CRÍTICO: el viewport se cachea UNA SOLA VEZ (logoViewportRef). Si
   // se leyera window.innerHeight cada scroll frame, en iOS Safari el
@@ -390,9 +388,6 @@ export default function OfficialHome() {
     const { scrollTop, scrollHeight, clientHeight } = carousel
     const maxScroll = Math.max(1, scrollHeight - clientHeight)
 
-    if (logoBaseScrollRef.current === null) {
-      logoBaseScrollRef.current = scrollTop
-    }
     if (logoViewportRef.current === null) {
       logoViewportRef.current = {
         width: window.innerWidth,
@@ -402,24 +397,18 @@ export default function OfficialHome() {
     if (!logoWrapperRef.current) {
       logoWrapperRef.current = document.querySelector<HTMLElement>('[data-logo-placement="left"] [class*="materiaWrapper"]')
     }
-    const baseScroll = logoBaseScrollRef.current
     const stableViewport = logoViewportRef.current
     const wrapper = logoWrapperRef.current
     if (!wrapper) return
 
-    const delta = scrollTop - baseScroll
-    const direction = delta === 0 ? 0 : Math.sign(delta)
-    const available = direction < 0
-      ? Math.max(1, baseScroll)
-      : Math.max(1, maxScroll - baseScroll)
-    const progress = Math.min(1, Math.abs(delta) / available)
-    const eased = 1 - Math.pow(1 - progress, 2)
+    const progress = Math.min(1, Math.max(0, scrollTop / maxScroll))
+    const signed = progress * 2 - 1
+    const lateral = 1 - Math.pow(1 - Math.abs(signed), 2)
 
-    // X: siempre hacia la derecha al alejarse del baseline.
-    const shiftX = stableViewport.width * 0.17 * eased
-    // Y: asimétrico. Subiendo viaja más (0.20H), bajando menos (0.075H).
-    const verticalFactor = direction < 0 ? 0.2 : 0.075
-    const shiftY = stableViewport.height * verticalFactor * eased * direction
+    // X: sale hacia la derecha en ambos extremos y vuelve al centro a mitad.
+    const shiftX = stableViewport.width * 0.17 * lateral
+    // Y: línea continua. Sin if por dirección = sin salto matemático.
+    const shiftY = stableViewport.height * (-0.06 + signed * 0.14)
 
     wrapper.style.setProperty('--gonovi-logo-shift-x', shiftX.toFixed(1))
     wrapper.style.setProperty('--gonovi-logo-shift-y', shiftY.toFixed(1))
@@ -454,9 +443,6 @@ export default function OfficialHome() {
     // antes de leer la posición y decidir activeCardIndex.
     const raf1 = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        // Baseline del scroll para el cálculo del logo motion. Se setea
-        // DESPUÉS del scroll inicial automático para que ese sea el "cero".
-        logoBaseScrollRef.current = carousel.scrollTop
         lastCarouselScrollRef.current = carousel.scrollTop
         setIsCarouselAtTop(carousel.scrollTop <= 4)
         syncActiveCard()
