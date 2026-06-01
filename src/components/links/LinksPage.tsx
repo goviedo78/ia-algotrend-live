@@ -87,6 +87,14 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
     trackView()
   }, [])
 
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.matchMedia('(max-width: 767px)').matches)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>
     if (phase === 'intro') {
@@ -145,21 +153,21 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
       {/* ── 3D Logo Background ── */}
       <div className={styles.materiaWrapper} aria-hidden="true">
         <MateriaLogo
-          amplitude={8}
+          amplitude={isMobile ? 5 : 8}
           autoRotateIdle
           baseColor={0x120d0a}
-          bloomIntensity={0.25}
-          cameraDistance={phase === 'intro' ? 1400 : 2600}
+          bloomIntensity={isMobile ? 0.12 : 0.25}
+          cameraDistance={phase === 'intro' ? 1400 : (isMobile ? 3200 : 2600)}
           className={styles.materiaLogo}
           cursorTilt
           enableZoom={false}
-          environmentIntensity={0.2}
-          gyroscope
+          environmentIntensity={isMobile ? 0.12 : 0.2}
+          gyroscope={!isMobile}
           globalPointerHeat
           heatColor={[0.98, 0.28, 0.08]}
           heatEmissive={[1, 0.24, 0.02]}
-          heatEmissiveStrength={2.2}
-          heatTintStrength={1.2}
+          heatEmissiveStrength={isMobile ? 1.4 : 2.2}
+          heatTintStrength={isMobile ? 0.7 : 1.2}
           material={{ clearcoat: 0.35, clearcoatRoughness: 0.35, reflectivity: 0.1, roughness: 0.55 }}
           preset="brasa"
           svgUrl="/logo-gon-mark-3d.svg"

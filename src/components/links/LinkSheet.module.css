@@ -35,8 +35,8 @@
   max-width: 520px;
   /* Ultra-Premium Solid Smoked Glass (Very dark base for legibility) */
   background: linear-gradient(135deg, rgba(20, 24, 44, 0.90) 0%, rgba(10, 12, 22, 0.85) 100%);
-  backdrop-filter: blur(48px) saturate(150%);
-  -webkit-backdrop-filter: blur(48px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
   
   /* Complex bevels for 3D glass thickness */
   border: 1px solid rgba(255, 255, 255, 0.05);
