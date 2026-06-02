@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { EstrategiasPage } from '@/components/official/estrategias/EstrategiasPage'
 import { getAllTrades, getOpenTrade } from '@/lib/db'
 
@@ -46,5 +47,12 @@ export default async function Page() {
     'gold30_trades': oro30,
   }
 
-  return <EstrategiasPage initialData={initialData} />
+  // /official/estrategias está expuesta al público (allowlist en proxy.ts).
+  // Cookie __gonovi_dev es httpOnly → no falsificable desde el browser.
+  // Cuando isAdmin=false, EstrategiasPage oculta topbar y back link.
+  const expected = process.env.BYPASS_TOKEN
+  const store = await cookies()
+  const isAdmin = Boolean(expected) && store.get('__gonovi_dev')?.value === expected
+
+  return <EstrategiasPage initialData={initialData} isAdmin={isAdmin} />
 }
