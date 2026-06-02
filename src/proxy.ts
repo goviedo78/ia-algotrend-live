@@ -10,9 +10,16 @@ const OFFICIAL_HOSTS = new Set(['gonovi.app', 'www.gonovi.app', 'localhost', '12
 const PUBLIC_GONOVI_HOSTS = new Set(['gonovi.app', 'www.gonovi.app'])
 
 function isMaintenancePath(pathname: string): boolean {
+  // ── Public allowlist (bypasa el muro sin cookie) ───────────────────
+  // Solo /official/montecarlo (y subroutes) está expuesto al público.
+  // Para abrir otra página al público se agrega acá explícito. Cualquier
+  // otra ruta editada por el usuario en el navegador devuelve Próximamente.
+  if (pathname === '/official/montecarlo') return false
+  if (pathname.startsWith('/official/montecarlo/')) return false
+
   // Bloqueamos /official y la raíz en cualquier host si estamos en mantenimiento
   if (pathname.startsWith('/official')) return true
-  if (pathname === '/') return true 
+  if (pathname === '/') return true
   return false
 }
 
