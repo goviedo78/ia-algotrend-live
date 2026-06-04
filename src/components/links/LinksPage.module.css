@@ -715,11 +715,15 @@
   .previewRail {
     position: fixed;
     top: 50%;
-    left: clamp(34rem, 48vw, 44rem);
+    /* Anclar al borde derecho del .container:
+       margin-left 10vw + max-width 440px (27.5rem) + 2rem de gap.
+       Antes usaba clamp(34rem, 48vw, 44rem) que en viewports angostos
+       (~1100-1280px) caía SOBRE la columna de links y la tapaba. */
+    left: calc(10vw + 27.5rem + 2rem);
     z-index: 12;
     display: block;
-    width: min(30vw, 25rem);
-    min-width: 18rem;
+    width: min(28vw, 22rem);
+    min-width: 16rem;
     pointer-events: none;
     transform: translateY(-50%);
   }
@@ -872,15 +876,6 @@
       opacity: 1;
       transform: translate3d(0, 0, 0) scale(1);
     }
-  }
-}
-
-@media (min-width: 1024px) and (max-width: 1180px) {
-  .previewRail {
-    left: auto;
-    right: 2rem;
-    width: 20rem;
-    min-width: 0;
   }
 }
 
