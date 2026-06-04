@@ -442,7 +442,11 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  /* gap = spacing visible deseado (0.85rem) + 1rem para compensar el
+     `margin: -8px` que .linkItem tiene arriba/abajo (suma 16px = 1rem
+     entre dos items adyacentes). Sin esta compensación los cards se
+     solapan ~2.4px y se ven "pegados". */
+  gap: 1.85rem;
   list-style: none;
   padding: 0;
   margin: 0;
