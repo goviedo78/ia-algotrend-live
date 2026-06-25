@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       const existing = await getOpenTrade()
       if (existing) {
         const closed = await closeTrade(existing.id, now, price, 'SIGNAL')
-        await safeExecuteBingxClose(closed)
+        await safeExecuteBingxClose(closed, undefined, 'webhook')
         await notifyClose(closed)
         await sendPush(req, {
           title: `₿⏱ BTC 1H — ⚪ Salida ${directionLabel(closed.direction)}`,
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     const existing = await getOpenTrade()
     if (existing) {
       const closed = await closeTrade(existing.id, now, price, 'SIGNAL')
-      await safeExecuteBingxClose(closed)
+      await safeExecuteBingxClose(closed, undefined, 'webhook')
       await notifyClose(closed)
       await sendPush(req, {
         title: `₿⏱ BTC 1H — ⚪ Salida ${directionLabel(closed.direction)}`,
@@ -104,14 +104,24 @@ export async function POST(req: NextRequest) {
     const stopLoss = sl ?? (signal === 'LONG' ? price * 0.98 : price * 1.02)
     const takeProfit = tp ?? (signal === 'LONG' ? price * 1.03 : price * 0.97)
     const atrPct = await fetchLatestAtrPercent()
-    const trade = await openTrade(signal, signalTime, now, price, stopLoss, takeProfit, atrPct)
+    const trade = await openTrade(
+      signal,
+      signalTime,
+      now,
+      price,
+      stopLoss,
+      takeProfit,
+      atrPct,
+      undefined,
+      { exchangeSource: 'webhook' }
+    )
 
     if (!trade) {
       return NextResponse.json({ ok: true, action: 'signal_already_processed' })
     }
 
     await notifyOpen(trade)
-    await safeExecuteBingxOpen(trade)
+    await safeExecuteBingxOpen(trade, undefined, 'webhook')
 
     const emoji = signal === 'LONG' ? '🟢' : '🔴'
     const dir = signal === 'LONG' ? 'LARGO' : 'CORTO'

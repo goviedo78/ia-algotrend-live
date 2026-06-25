@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { revalidateTag } from 'next/cache'
-import { safeExecuteBingxClose } from '@/lib/bingx'
+import { safeExecuteBingxClose, type BingxExecutionSource } from '@/lib/bingx'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -61,7 +61,8 @@ export async function openTrade(
   stopLoss: number,
   takeProfit: number | null,
   atrPct: number | null,
-  tableName: string = TABLE
+  tableName: string = TABLE,
+  options: { exchangeSource?: BingxExecutionSource; mirrorExchangeClose?: boolean } = {}
 ): Promise<Trade | null> {
   const { data, error } = await supabase
     .from(tableName)
@@ -97,7 +98,9 @@ export async function openTrade(
 
   for (const other of (others ?? []) as Trade[]) {
     await closeTrade(other.id, openTime, openPrice, 'SIGNAL', tableName)
-    await safeExecuteBingxClose(other)
+    if (options.mirrorExchangeClose !== false) {
+      await safeExecuteBingxClose(other, undefined, options.exchangeSource ?? 'cron')
+    }
   }
 
   revalidatePublicTradeSnapshot()

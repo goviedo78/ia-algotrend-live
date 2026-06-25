@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       const firstHit = hitPath(path[0])
       if (firstHit) {
         const closed = await closeTrade(openTrade_.id, time, firstHit.closePrice, firstHit.hit)
-        await safeExecuteBingxClose(closed)
+        await safeExecuteBingxClose(closed, undefined, 'signal')
         await notifyClose(closed)
         await sendPush(req, {
           title: `₿⏱ BTC 1H — ⚪ Salida ${directionLabel(closed.direction)}`,
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
         const secondHit = hitPath(path[1])
         if (secondHit) {
           const closed = await closeTrade(openTrade_.id, time, secondHit.closePrice, secondHit.hit)
-          await safeExecuteBingxClose(closed)
+          await safeExecuteBingxClose(closed, undefined, 'signal')
           await notifyClose(closed)
           await sendPush(req, {
             title: `₿⏱ BTC 1H — ⚪ Salida ${directionLabel(closed.direction)}`,
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
 
           if (closeHit) {
             const closed = await closeTrade(openTrade_.id, time, price, closeHit)
-            await safeExecuteBingxClose(closed)
+            await safeExecuteBingxClose(closed, undefined, 'signal')
             await notifyClose(closed)
             await sendPush(req, {
               title: `₿⏱ BTC 1H — ⚪ Salida ${directionLabel(closed.direction)}`,
@@ -121,13 +121,23 @@ export async function POST(req: NextRequest) {
 
     if (signal === 'LONG' || signal === 'SHORT') {
       const atrPct = await fetchLatestAtrPercent()
-      const trade = await openTrade(signal, time, time, price, stop, tp, atrPct)
+      const trade = await openTrade(
+        signal,
+        time,
+        time,
+        price,
+        stop,
+        tp,
+        atrPct,
+        undefined,
+        { exchangeSource: 'signal', mirrorExchangeClose: false }
+      )
 
       if (trade) {
         const prob = signal === 'LONG' ? (probUp ?? 0) : (probDown ?? 0)
         const probText = (prob * 100).toFixed(1) + '%'
 
-        await safeExecuteBingxOpen(trade)
+        await safeExecuteBingxOpen(trade, undefined, 'signal')
         await notifyOpen(trade)
 
         const emoji = signal === 'LONG' ? '🟢' : '🔴'
