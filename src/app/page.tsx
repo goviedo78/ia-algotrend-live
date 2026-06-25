@@ -1,7 +1,7 @@
 import { headers } from 'next/headers'
 import type { Metadata } from 'next'
 import Dashboard from '@/components/Dashboard'
-import { ComingSoonPage } from '@/components/official/ComingSoonPage'
+import OfficialHome from '@/components/official/OfficialHome'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,11 +21,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
   if (isOfficialRootHost(host)) {
     return {
-      title: 'GONOVI · Próximamente',
-      description: 'El hub personal de GONOVI está siendo preparado. Los productos del ecosistema siguen activos.',
+      metadataBase: new URL('https://gonovi.app'),
+      title: 'GONOVI · Inicio',
+      description: 'Hub personal de GONOVI: indicadores, demos, educación interactiva, resultados en vivo y comunidad de trading.',
+      alternates: {
+        canonical: 'https://gonovi.app',
+      },
       openGraph: {
-        title: 'GONOVI · Próximamente',
-        description: 'Nueva experiencia en camino para el hub personal de GONOVI.',
+        title: 'GONOVI · Inicio',
+        description: 'Indicadores, educación interactiva y ecosistema de trading visual para la comunidad GONOVI.',
         url: 'https://gonovi.app',
         siteName: 'GONOVI',
         images: [{ url: '/og-card.png', width: 1200, height: 630 }],
@@ -33,8 +37,8 @@ export async function generateMetadata(): Promise<Metadata> {
       },
       twitter: {
         card: 'summary_large_image',
-        title: 'GONOVI · Próximamente',
-        description: 'Nueva experiencia en camino para el hub personal de GONOVI.',
+        title: 'GONOVI · Inicio',
+        description: 'Indicadores con Pine Script, Trading Lab, instalación en TradingView y comunidad GONOVI.',
         images: ['/og-card.png'],
       },
     }
@@ -50,7 +54,7 @@ export default async function Home() {
   const host = await getRequestHost()
 
   if (isOfficialRootHost(host)) {
-    return <ComingSoonPage />
+    return <OfficialHome />
   }
 
   return <Dashboard />

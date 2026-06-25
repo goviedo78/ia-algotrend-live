@@ -313,8 +313,8 @@
   box-shadow:
     inset 0 -1px 1px rgba(255, 255, 255, 0.04),
     0 4px 24px -4px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(32px) saturate(120%);
-  -webkit-backdrop-filter: blur(32px) saturate(120%);
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
   display: flex;
   justify-content: center;
   transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
@@ -442,7 +442,11 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  /* gap = spacing visible deseado (0.85rem) + 1rem para compensar el
+     `margin: -8px` que .linkItem tiene arriba/abajo (suma 16px = 1rem
+     entre dos items adyacentes). Sin esta compensación los cards se
+     solapan ~2.4px y se ven "pegados". */
+  gap: 1.85rem;
   list-style: none;
   padding: 0;
   margin: 0;
@@ -527,8 +531,8 @@
     inset 0 1px 2px rgba(255, 255, 255, 0.08),
     inset 0 -1px 2px rgba(0, 0, 0, 0.5),
     0 12px 32px -4px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(32px) saturate(120%);
-  -webkit-backdrop-filter: blur(32px) saturate(120%);
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
   
   color: var(--hub-bone);
   border-radius: 20px;
@@ -644,6 +648,10 @@
   box-shadow: 0 4px 16px color-mix(in srgb, var(--cyan) 30%, transparent);
 }
 
+.previewRail {
+  display: none;
+}
+
 /* ── Ecosystem caption ──────────────────────────────────── */
 .ecosystem {
   font-family: var(--font-mono), ui-monospace, monospace;
@@ -702,6 +710,172 @@
   }
   .subtitle {
     font-size: 1rem;
+  }
+
+  .previewRail {
+    position: fixed;
+    top: 50%;
+    /* Anclar al borde derecho del .container:
+       margin-left 10vw + max-width 440px (27.5rem) + 2rem de gap.
+       Antes usaba clamp(34rem, 48vw, 44rem) que en viewports angostos
+       (~1100-1280px) caía SOBRE la columna de links y la tapaba. */
+    left: calc(10vw + 27.5rem + 2rem);
+    z-index: 12;
+    display: block;
+    width: min(28vw, 22rem);
+    min-width: 16rem;
+    pointer-events: none;
+    transform: translateY(-50%);
+  }
+
+  .previewCard {
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--brand-color, var(--cyan)) 28%, rgba(255, 255, 255, 0.08));
+    border-top-color: color-mix(in srgb, var(--brand-color, var(--cyan)) 48%, rgba(255, 255, 255, 0.16));
+    border-left-color: color-mix(in srgb, var(--brand-color, var(--cyan)) 36%, rgba(255, 255, 255, 0.12));
+    border-radius: 1.65rem;
+    background:
+      radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--brand-color, var(--cyan)) 18%, transparent), transparent 60%),
+      linear-gradient(135deg, rgba(240, 236, 228, 0.12), rgba(240, 236, 228, 0.035) 34%, rgba(7, 11, 24, 0.78)),
+      rgba(8, 12, 26, 0.78);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.46),
+      0 24px 70px rgba(0, 0, 0, 0.38),
+      0 0 44px color-mix(in srgb, var(--brand-color, var(--cyan)) 18%, transparent);
+    backdrop-filter: blur(34px) saturate(135%);
+    -webkit-backdrop-filter: blur(34px) saturate(135%);
+    animation: previewIn 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .previewChrome {
+    display: flex;
+    align-items: center;
+    gap: 0.36rem;
+    min-height: 2.55rem;
+    border-bottom: 1px solid rgba(240, 236, 228, 0.08);
+    padding: 0 1rem;
+    background: rgba(255, 255, 255, 0.028);
+  }
+
+  .previewChrome span {
+    width: 0.52rem;
+    height: 0.52rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--brand-color, var(--cyan)) 72%, var(--hub-bone));
+    opacity: 0.9;
+  }
+
+  .previewChrome span:nth-child(2) {
+    opacity: 0.5;
+  }
+
+  .previewChrome span:nth-child(3) {
+    opacity: 0.28;
+  }
+
+  .previewChrome strong {
+    min-width: 0;
+    margin-left: 0.4rem;
+    overflow: hidden;
+    color: rgba(229, 212, 182, 0.54);
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .previewBody {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 1rem;
+    padding: 1.18rem;
+  }
+
+  .previewIcon {
+    display: grid;
+    width: 3.4rem;
+    height: 3.4rem;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--brand-color, var(--cyan)) 30%, transparent);
+    border-radius: 1.1rem;
+    background:
+      radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--brand-color, var(--cyan)) 26%, transparent), transparent 64%),
+      rgba(255, 255, 255, 0.035);
+    color: var(--brand-color, var(--cyan));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 14px 30px color-mix(in srgb, var(--brand-color, var(--cyan)) 14%, transparent);
+  }
+
+  .previewIcon svg,
+  .previewIcon > span > svg {
+    width: 1.36rem;
+    height: 1.36rem;
+  }
+
+  .previewCopy {
+    min-width: 0;
+  }
+
+  .previewCopy span {
+    display: block;
+    color: color-mix(in srgb, var(--brand-color, var(--cyan)) 78%, var(--hub-bone));
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+  }
+
+  .previewCopy h2 {
+    margin: 0.42rem 0 0;
+    color: var(--hub-bone);
+    font-family: var(--font-display), system-ui, sans-serif;
+    font-size: clamp(1.2rem, 2vw, 1.72rem);
+    letter-spacing: -0.045em;
+    line-height: 0.98;
+  }
+
+  .previewCopy p {
+    margin: 0.68rem 0 0;
+    color: rgba(229, 212, 182, 0.66);
+    font-size: 0.84rem;
+    line-height: 1.45;
+  }
+
+  .previewFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-top: 1px solid rgba(240, 236, 228, 0.075);
+    padding: 0.82rem 1.08rem;
+    color: rgba(229, 212, 182, 0.5);
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .previewFooter b {
+    color: color-mix(in srgb, var(--brand-color, var(--cyan)) 78%, var(--hub-bone));
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  @keyframes previewIn {
+    from {
+      opacity: 0;
+      transform: translate3d(-0.7rem, 0.7rem, 0) scale(0.975);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
   }
 }
 

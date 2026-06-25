@@ -8,7 +8,9 @@ type Product = {
   description: string
   key_features: string[]
   price: string
+  original_price?: string | null
   link: string
+  gumroad_url?: string
   category: string
 }
 
@@ -36,34 +38,52 @@ export function StorePage() {
       </header>
 
       <div className={styles.grid}>
-        {products.map((product) => (
-          <article key={product.id} className={styles.card}>
-            <div className={styles.cardGlow} aria-hidden="true" />
-            <div className={styles.cardContent}>
-              <div className={styles.cardHeader}>
-                <span className={styles.category}>{product.category}</span>
-                <h2 className={styles.cardTitle}>{product.name}</h2>
-                <p className={styles.cardDesc}>{product.description}</p>
+        {products.map((product) => {
+          const isFree = product.price === 'Gratis'
+
+          return (
+            <article key={product.id} className={styles.card}>
+              <div className={styles.cardGlow} aria-hidden="true" />
+              <div className={styles.cardContent}>
+                <div className={styles.cardHeader}>
+                  <span className={styles.category}>{product.category}</span>
+                  <h2 className={styles.cardTitle}>{product.name}</h2>
+                  <p className={styles.cardDesc}>{product.description}</p>
+                </div>
+
+                <ul className={styles.features}>
+                  {product.key_features.map((feature, idx) => (
+                    <li key={idx}>
+                      <CheckIcon />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className={styles.cardFooter}>
+                  <div className={styles.priceGroup}>
+                    {product.original_price && (
+                      <span className={styles.originalPrice}>{product.original_price}</span>
+                    )}
+                    <span className={`${styles.price} ${isFree ? styles.priceFree : ''}`}>
+                      {product.price}
+                    </span>
+                  </div>
+                  <div className={styles.actionGroup}>
+                    <a
+                      href={product.gumroad_url || product.link}
+                      className={styles.buyBtn}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {isFree ? 'Obtener gratis' : 'Adquirir Script'}
+                    </a>
+                  </div>
+                </div>
               </div>
-              
-              <ul className={styles.features}>
-                {product.key_features.map((feature, idx) => (
-                  <li key={idx}>
-                    <CheckIcon />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-              
-              <div className={styles.cardFooter}>
-                <span className={styles.price}>{product.price}</span>
-                <Link href={product.link} className={styles.buyBtn}>
-                  Adquirir Script
-                </Link>
-              </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          )
+        })}
       </div>
     </main>
   )

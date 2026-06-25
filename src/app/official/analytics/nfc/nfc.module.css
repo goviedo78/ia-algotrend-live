@@ -263,7 +263,50 @@
     text-align: center;
   }
 
-  .hideMobile {
+  .hideMobile, .hideMobileDesktop {
+    display: none !important;
+  }
+
+  .row {
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .row.collapsed .hideMobileCollapse {
+    display: none !important;
+  }
+
+  .tdAlwaysVisible {
+    display: flex !important;
+    align-items: center;
+    border-bottom: none !important;
+  }
+
+  .tdAlwaysVisible::before {
+    display: none; /* Hide data-label on the summary row */
+  }
+
+  .mobileSummaryText {
+    display: inline-block;
+    font-size: 0.75rem;
+    color: rgba(229, 212, 182, 0.6);
+    font-weight: 500;
+  }
+
+  .expandIcon {
+    display: inline-block;
+    color: var(--primary);
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+    margin-left: 0.5rem;
+  }
+}
+
+@media (min-width: 640px) {
+  .expandIcon {
+    display: none !important;
+  }
+  .mobileSummaryText {
     display: none !important;
   }
 }

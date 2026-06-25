@@ -10,8 +10,7 @@ export async function GET(
 ) {
   const { id } = await params
 
-  const bypassToken = process.env.BYPASS_TOKEN ?? 'materia'
-  const defaultRedirect = new URL(`/?dev=${bypassToken}`, request.url)
+  const defaultRedirect = new URL('/', request.url)
 
   // 1. Validar id (1-32 chars alfanuméricos)
   if (!/^[a-zA-Z0-9_-]{1,32}$/.test(id)) {

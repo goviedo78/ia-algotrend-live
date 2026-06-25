@@ -11,5 +11,10 @@ echo "==> Desplegando PRODUCCION en Vercel"
 vercel deploy --prod --yes
 
 echo "==> Verificando alias publico"
-curl -fsS https://gonovi.app | grep -q '<title>GONOVI · Próximamente'
-echo "OK: gonovi.app apunta al deployment production y mantiene Proximamente."
+html="$(curl -fsS https://gonovi.app)"
+printf '%s' "$html" | grep -q '<title>GONOVI · Inicio'
+if printf '%s' "$html" | grep -q 'Próximamente'; then
+  echo "ERROR: gonovi.app sigue mostrando Proximamente." >&2
+  exit 1
+fi
+echo "OK: gonovi.app apunta al deployment production y muestra la home publica."

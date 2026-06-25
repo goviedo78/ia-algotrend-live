@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 import MonteCarloAuditor from '@/components/official/montecarlo/MonteCarloAuditor'
 
 export const metadata: Metadata = {
@@ -27,6 +28,14 @@ export const metadata: Metadata = {
   },
 }
 
-export default function MonteCarloPage() {
-  return <MonteCarloAuditor />
+// /official/montecarlo está expuesto al público (allowlist en proxy.ts) pero
+// el resto del hub sigue bloqueado por el muro Próximamente. Para que un
+// visitante público no vea botones que llevan al muro, leemos la cookie
+// __gonovi_dev (httpOnly, seteada por el bypass en proxy.ts) y pasamos isAdmin.
+// El cliente NO puede falsificar esta cookie porque es httpOnly.
+export default async function MonteCarloPage() {
+  const expected = process.env.BYPASS_TOKEN
+  const store = await cookies()
+  const isAdmin = Boolean(expected) && store.get('__gonovi_dev')?.value === expected
+  return <MonteCarloAuditor isAdmin={isAdmin} />
 }

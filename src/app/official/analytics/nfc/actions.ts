@@ -17,6 +17,7 @@ export async function saveCardName(formData: FormData) {
   const cardIdRaw = String(formData.get('card_id') ?? '').trim()
   const nameRaw = String(formData.get('name') ?? '').trim()
   const redirectRaw = String(formData.get('redirect_url') ?? '').trim()
+  const colorRaw = String(formData.get('color') ?? '').trim()
   const pin = String(formData.get('pin') ?? '')
 
   const validPin = process.env.ANALYTICS_PIN ?? process.env.DASHBOARD_PASSWORD
@@ -27,6 +28,7 @@ export async function saveCardName(formData: FormData) {
 
   const name = nameRaw.substring(0, 80)
   const redirectUrl = sanitizeRedirect(redirectRaw)
+  const color = /^#[0-9A-Fa-f]{6}$/.test(colorRaw) ? colorRaw : null
 
   const supabase = createAdminClient()
   await supabase
@@ -36,6 +38,7 @@ export async function saveCardName(formData: FormData) {
         card_id: cardIdRaw,
         name,
         redirect_url: redirectUrl,
+        color,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'card_id' }
@@ -57,3 +60,24 @@ export async function deleteCardName(formData: FormData) {
 
   revalidatePath('/official/analytics/nfc')
 }
+
+export async function deleteScans(scanIds: string[], pin: string) {
+  const validPin = process.env.ANALYTICS_PIN ?? process.env.DASHBOARD_PASSWORD
+  if (!validPin || pin !== validPin) throw new Error('Unauthorized')
+  if (!Array.isArray(scanIds) || scanIds.length === 0) return
+
+  // Limitar cantidad de borrados por request (ej. 1000)
+  const safeIds = scanIds.slice(0, 1000).filter(id => typeof id === 'string' || typeof id === 'number')
+  if (safeIds.length === 0) return
+
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('nfc_analytics').delete().in('id', safeIds)
+  
+  if (error) {
+    console.error('[deleteScans] Supabase error:', error)
+    throw new Error('Database error during deletion')
+  }
+
+  revalidatePath('/official/analytics/nfc')
+}
+

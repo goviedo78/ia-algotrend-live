@@ -160,9 +160,12 @@ interface EstrategiasPageProps {
     gold15_trades: StrategyData
     gold30_trades: StrategyData
   }
+  // Pasado desde el Server Component (page.tsx) leyendo la cookie httpOnly
+  // del bypass. Cuando false oculta topbar+back link (visitante público).
+  isAdmin?: boolean
 }
 
-export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
+export function EstrategiasPage({ initialData, isAdmin = false }: EstrategiasPageProps) {
   const pathname = usePathname()
   const [nyTime, setNyTime] = useState('')
   const [btcChange, setBtcChange] = useState<{ pct: string; up: boolean } | null>(null)
@@ -290,31 +293,32 @@ export function EstrategiasPage({ initialData }: EstrategiasPageProps) {
       <section className={shellStyles.appFrame} aria-label="GONOVI Resultados">
         
         {/* APP SHELL HEADER */}
-        <header className={shellStyles.topbar}>
-          <div className={shellStyles.brand}>
-            <span className={shellStyles.brandDot} aria-hidden="true" />
-            GONOVI
-            <span className={shellStyles.brandVersion}>INICIO</span>
-          </div>
-          <nav className={shellStyles.topnav} aria-label="Navegación principal">
-            <Link href="/official" className={pathname === '/official' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official' ? 'page' : undefined}>Inicio</Link>
-            <Link href="/official/montecarlo" className={pathname === '/official/montecarlo' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/montecarlo' ? 'page' : undefined}>Auditoría</Link>
-            <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Resultados</Link>
-            <Link href="/official/soporte" className={pathname === '/official/soporte' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
-          </nav>
-          <div className={shellStyles.session}>
-            <span className={shellStyles.sessionLive}>
-              <span className={shellStyles.pulse} aria-label="Sesión activa" />
-              Sesión activa
-            </span>
-            <span>NY · {nyTime || '––:––'}</span>
-            <span className={shellStyles.sessionId}>Trader · 0427</span>
-          </div>
-        </header>
+        {isAdmin && (
+          <header className={shellStyles.topbar}>
+            <div className={shellStyles.brand}>
+              <span className={shellStyles.brandDot} aria-hidden="true" />
+              GONOVI
+            </div>
+            <nav className={shellStyles.topnav} aria-label="Navegación principal">
+              <Link href="/official" className={pathname === '/official' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official' ? 'page' : undefined}>Inicio</Link>
+              <Link href="/official/montecarlo" className={pathname === '/official/montecarlo' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/montecarlo' ? 'page' : undefined}>Auditoría</Link>
+              <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Resultados</Link>
+              <Link href="/official/soporte" className={pathname === '/official/soporte' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
+            </nav>
+            <div className={shellStyles.session}>
+              <span className={shellStyles.sessionLive}>
+                <span className={shellStyles.pulse} aria-label="Sesión activa" />
+                Sesión activa
+              </span>
+              <span>NY · {nyTime || '––:––'}</span>
+              <span className={shellStyles.sessionId}>Trader · 0427</span>
+            </div>
+          </header>
+        )}
 
         {/* CONTENT */}
         <div className={styles.container}>
-          <Link href="/official" className={styles.backLink}>← Volver a GONOVI</Link>
+          {isAdmin && <Link href="/official" className={styles.backLink}>← Volver a GONOVI</Link>}
           <div>
             <h1 className={styles.title}>Resultados en vivo</h1>
             <p className={styles.description}>Rendimiento mensual de los indicadores activos de GONOVI. Solo mostramos dirección, operaciones, balance porcentual y estado de la operación abierta.</p>

@@ -15,8 +15,10 @@
       "VWAP",
       "Indicador Supertrend"
     ],
-    "price": "$12.99",
+    "price": "$5+",
+    "original_price": "$50",
     "link": "/official/checkout?product=fusion-x10",
+    "gumroad_url": "https://gonovi.gumroad.com/l/fusionx10es",
     "category": "Indicator"
   },
   {
@@ -30,8 +32,10 @@
       "Estructura FVG Activable",
       "Separadores visuales"
     ],
-    "price": "$12.99",
+    "price": "Gratis",
+    "original_price": null,
     "link": "/official/checkout?product=fusion-x7",
+    "gumroad_url": "https://gonovi.gumroad.com/l/fusionx7",
     "category": "Indicator"
   },
   {
@@ -42,8 +46,10 @@
       "Configuración fija de cantidad de barras",
       "Modo Rango Visible (volumen de lo que ves)"
     ],
-    "price": "$12.99",
+    "price": "Gratis",
+    "original_price": null,
     "link": "/official/checkout?product=volume-profile-pro",
+    "gumroad_url": "https://gonovi.gumroad.com/l/perfil",
     "category": "Indicator"
   },
   {
@@ -56,8 +62,10 @@
       "Filtro de volumen incluido",
       "Adaptable a cualquier sistema"
     ],
-    "price": "$12.99",
+    "price": "Gratis",
+    "original_price": null,
     "link": "/official/checkout?product=atr-cs-pro",
+    "gumroad_url": "https://gonovi.gumroad.com/l/atr",
     "category": "Indicator"
   },
   {
@@ -70,8 +78,10 @@
       "Marca HL/LL de la primera vela (opcional)",
       "Mejora la toma de decisiones con más contexto"
     ],
-    "price": "$12.99",
+    "price": "Gratis",
+    "original_price": null,
     "link": "/official/checkout?product=multigrafico-pro",
+    "gumroad_url": "https://gonovi.gumroad.com/l/grafico",
     "category": "Tool"
   },
   {
@@ -85,8 +95,10 @@
       "Incluye configuración 'El Tanque 30M' para Oro (PF 2.29)",
       "Filtro de ruido con CHOP y PCA"
     ],
-    "price": "$12.99",
+    "price": "$12.90",
+    "original_price": "$129",
     "link": "/official/checkout?product=ia-algotrend-pro",
+    "gumroad_url": "https://gonovi.gumroad.com/l/ia",
     "category": "Indicator (AI)"
   },
   {
@@ -98,8 +110,10 @@
       "Detección de zonas de agotamiento",
       "Organizado en un único panel visual"
     ],
-    "price": "$12.99",
+    "price": "Gratis",
+    "original_price": null,
     "link": "/official/checkout?product=momentum-x3",
+    "gumroad_url": "https://gonovi.gumroad.com/l/momentum",
     "category": "Indicator"
   },
   {
@@ -112,8 +126,10 @@
       "Soporte para sesiones NY y Asia",
       "Información sobre herramientas integrada"
     ],
-    "price": "$12.99",
+    "price": "Gratis",
+    "original_price": null,
     "link": "/official/checkout?product=open-range-breakout",
+    "gumroad_url": "https://gonovi.gumroad.com/l/or",
     "category": "Strategy/Indicator"
   }
 ]

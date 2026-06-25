@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, type CSSProperties } from 'react'
 import {
   HEADER as DEFAULT_HEADER,
   LINKS as DEFAULT_LINKS,
@@ -14,6 +14,8 @@ import {
 import { IconDisplay } from './IconDisplay'
 import { LinkSheet } from './LinkSheet'
 import type { CustomIcon } from '@/lib/links-config'
+import { trackView } from '@/lib/links-tracker'
+import { useIsMobile, useIsLowEnd } from '@/lib/use-device'
 import styles from './LinksPage.module.css'
 
 type LinksConfigShape = {
@@ -33,6 +35,33 @@ const MateriaLogo = dynamic(
   }
 )
 
+function getPreviewMeta(link: LinkItem) {
+  const href = link.href || '#'
+  const label = (() => {
+    try {
+      if (href.startsWith('mailto:')) return 'Contacto directo'
+      if (href.startsWith('#')) return 'GONOVI'
+      return new URL(href).hostname.replace(/^www\./, '')
+    } catch {
+      return 'GONOVI'
+    }
+  })()
+
+  const title = link.title
+  const description = link.description ?? (
+    title.toLowerCase().includes('youtube') ? 'Videos, análisis y contenido principal del canal.' :
+    title.toLowerCase().includes('instagram') ? 'Historias, updates rápidos y contenido detrás de escena.' :
+    title.toLowerCase().includes('tiktok') ? 'Clips cortos, ideas rápidas y momentos destacados.' :
+    title.toLowerCase().includes('app') ? 'Hub principal con demos, indicadores y herramientas.' :
+    title.toLowerCase().includes('sponsor') || title.toLowerCase().includes('comercial') ? 'Contacto para marcas, colaboraciones y sponsors.' :
+    title.toLowerCase().includes('herramientas') ? 'Acceso rápido a recursos, apps y productos del ecosistema.' :
+    'Recurso oficial del ecosistema GONOVI.'
+  )
+
+  const eyebrow = link.external ? 'Vista previa externa' : 'Vista previa'
+  return { description, eyebrow, label, title }
+}
+
 export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
   const HEADER = config?.header ?? DEFAULT_HEADER
   const LINKS = config?.links ?? DEFAULT_LINKS
@@ -40,13 +69,30 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
   const COPYRIGHT = config?.copyright ?? DEFAULT_COPYRIGHT
   const SPONSOR = config?.sponsor ?? DEFAULT_SPONSOR
   const CUSTOM_ICONS = config?.customIcons ?? []
+  const visibleLinks = useMemo(() => LINKS.filter(link => !link.hidden), [LINKS])
 
-  const [sheetLink, setSheetLink] = useState<LinkItem | null>(null)
-  
+  const [sheet, setSheet] = useState<{ link: LinkItem; index: number } | null>(null)
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null)
+
   const [phase, setPhase] = useState<'intro' | 'content'>('intro')
   const [fps, setFps] = useState(60)
-  
+
   const [isScrolled, setIsScrolled] = useState(false)
+
+  // Fire view-tracking una sola vez por mount.
+  // Skip cuando la página se carga dentro del iframe del editor (?preview=...)
+  // para no inflar las métricas con cada save en /official/links.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.location.search.includes('preview=')) return
+    trackView()
+  }, [])
+
+  // useSyncExternalStore via hook compartido → sin hydration mismatch
+  // ni microflicker al cargar (vs el patrón useState + addEventListener
+  // que arrancaba con isMobile=false hasta el primer effect).
+  const isMobile = useIsMobile()
+  const isLowEnd = useIsLowEnd()
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>
@@ -106,21 +152,23 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
       {/* ── 3D Logo Background ── */}
       <div className={styles.materiaWrapper} aria-hidden="true">
         <MateriaLogo
-          amplitude={8}
+          amplitude={isMobile ? 5 : 8}
           autoRotateIdle
           baseColor={0x120d0a}
-          bloomIntensity={0.25}
-          cameraDistance={phase === 'intro' ? 1400 : 2600}
+          /* Bloom apagado en low-end (≤4 cores, ≤4GB RAM, reduced-motion).
+             Consistente con el patrón de la home (MateriaLoadingScreen). */
+          bloomIntensity={isLowEnd ? 0 : (isMobile ? 0.12 : 0.25)}
+          cameraDistance={phase === 'intro' ? 1400 : (isMobile ? 3200 : 2600)}
           className={styles.materiaLogo}
           cursorTilt
           enableZoom={false}
-          environmentIntensity={0.2}
-          gyroscope
+          environmentIntensity={isMobile ? 0.12 : 0.2}
+          gyroscope={!isMobile}
           globalPointerHeat
           heatColor={[0.98, 0.28, 0.08]}
           heatEmissive={[1, 0.24, 0.02]}
-          heatEmissiveStrength={2.2}
-          heatTintStrength={1.2}
+          heatEmissiveStrength={isMobile ? 1.4 : 2.2}
+          heatTintStrength={isMobile ? 0.7 : 1.2}
           material={{ clearcoat: 0.35, clearcoatRoughness: 0.35, reflectivity: 0.1, roughness: 0.55 }}
           preset="brasa"
           svgUrl="/logo-gon-mark-3d.svg"
@@ -132,7 +180,7 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
       <div id="scroll-sentinel" style={{ position: 'absolute', top: 0, height: '1px', width: '100%', pointerEvents: 'none' }} aria-hidden="true" />
       
       {/* ── Top Bar (Sticky Header) ── */}
-      <aside className={`${styles.topBar} ${isScrolled ? styles.scrolled : ''} ${sheetLink ? styles.listBlurred : ''}`} aria-label="Información para patrocinadores">
+      <aside className={`${styles.topBar} ${isScrolled ? styles.scrolled : ''} ${sheet ? styles.listBlurred : ''}`} aria-label="Información para patrocinadores">
         <div className={styles.topBarInner}>
           <div className={styles.topBarTopRow}>
             <div className={styles.topBarBrand}>
@@ -158,17 +206,17 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
       </aside>
 
       <div className={styles.container}>
-        <header className={`${styles.header} ${sheetLink ? styles.listBlurred : ''}`}>
+        <header className={`${styles.header} ${sheet ? styles.listBlurred : ''}`}>
           <h1 className={styles.brand}>{HEADER.brand}</h1>
           {HEADER.subtitle && <p className={styles.subtitle}>{HEADER.subtitle}</p>}
         </header>
 
-        <ul className={`${styles.list} ${sheetLink ? styles.listBlurred : ''}`}>
-          {LINKS.filter(link => !link.hidden).map((link) => {
+        <ul className={`${styles.list} ${sheet ? styles.listBlurred : ''}`} onMouseLeave={() => setPreviewIndex(null)}>
+          {visibleLinks.map((link, index) => {
             // Color de marca dinámico vía CSS variable.
             // Stagger entry de las pills usa nth-child en CSS (más robusto que --i).
             const customStyle = link.color
-              ? ({ '--brand-color': link.color } as React.CSSProperties)
+              ? ({ '--brand-color': link.color } as CSSProperties)
               : undefined
 
             return (
@@ -177,7 +225,9 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
                   type="button"
                   className={styles.linkBtn}
                   style={customStyle}
-                  onClick={() => setSheetLink(link)}
+                  onClick={() => setSheet({ link, index })}
+                  onFocus={() => setPreviewIndex(index)}
+                  onMouseEnter={() => setPreviewIndex(index)}
                   aria-label={link.badge ? `${link.title} (${link.badge})` : link.title}
                   aria-haspopup="dialog"
                 >
@@ -194,14 +244,50 @@ export function LinksPage({ config }: { config?: LinksConfigShape } = {}) {
           })}
         </ul>
 
+        <div className={styles.previewRail} aria-hidden="true">
+          {visibleLinks.length ? (() => {
+            const link = visibleLinks[previewIndex ?? 0]
+            const preview = getPreviewMeta(link)
+            const customStyle = link.color
+              ? ({ '--brand-color': link.color } as CSSProperties)
+              : undefined
+
+            return (
+              <div className={styles.previewCard} key={link.title} style={customStyle}>
+                <div className={styles.previewChrome}>
+                  <span />
+                  <span />
+                  <span />
+                  <strong>{preview.label}</strong>
+                </div>
+                <div className={styles.previewBody}>
+                  <div className={styles.previewIcon}>
+                    {link.icon && <IconDisplay name={link.icon} customIcons={CUSTOM_ICONS} />}
+                  </div>
+                  <div className={styles.previewCopy}>
+                    <span>{preview.eyebrow}</span>
+                    <h2>{preview.title}</h2>
+                    <p>{preview.description}</p>
+                  </div>
+                </div>
+                <div className={styles.previewFooter}>
+                  <span>{link.external ? 'Abre en nueva pestaña' : 'Abre dentro de GONOVI'}</span>
+                  <b>Click para abrir</b>
+                </div>
+              </div>
+            )
+          })() : null}
+        </div>
+
         <p className={styles.ecosystem}>{ECOSYSTEM_LABEL}</p>
         <p className={styles.footer}>{COPYRIGHT}</p>
       </div>
 
       <LinkSheet
-        link={sheetLink}
+        link={sheet?.link ?? null}
+        linkIndex={sheet?.index ?? -1}
         customIcons={CUSTOM_ICONS}
-        onClose={() => setSheetLink(null)}
+        onClose={() => setSheet(null)}
       />
     </main>
   )

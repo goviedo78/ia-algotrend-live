@@ -837,7 +837,14 @@ const PHASE_BADGE: Record<PhaseStatus, string> = {
   danger: 'bg-rose-500/10 text-rose-400',
 }
 
-export default function MonteCarloAuditor() {
+interface MonteCarloAuditorProps {
+  // El Server Component (page.tsx) lee la cookie httpOnly del bypass y nos pasa
+  // si el visitante es admin. Cuando false (visitante público vía allowlist en
+  // proxy.ts) ocultamos topbar y back link para no mostrar caminos al muro.
+  isAdmin?: boolean
+}
+
+export default function MonteCarloAuditor({ isAdmin = false }: MonteCarloAuditorProps) {
   const pathname = usePathname()
   const [loading, setLoading] = useState(false)
   const [strategyName, setStrategyName] = useState('')
@@ -1296,42 +1303,45 @@ export default function MonteCarloAuditor() {
     <main className={shellStyles.shell}>
       <div className={shellStyles.noise} />
       <section className={shellStyles.appFrame} aria-label="Proyecto Montecarlo">
-        <header className={shellStyles.topbar}>
-          <div className={shellStyles.brand}>
-            <span className={shellStyles.brandDot} aria-hidden="true" />
-            GONOVI
-            <span className={shellStyles.brandVersion}>INICIO</span>
-          </div>
-          <nav className={shellStyles.topnav} aria-label="Navegación principal">
-            <Link href="/official" className={pathname === '/official' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official' ? 'page' : undefined}>Inicio</Link>
-            <Link href="/official/montecarlo" className={pathname === '/official/montecarlo' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/montecarlo' ? 'page' : undefined}>Auditoría</Link>
-            <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Resultados</Link>
-            <Link href="/official/soporte" className={pathname === '/official/soporte' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
-          </nav>
-          <div className={shellStyles.session}>
-            <span>Auditoría estocástica · Demo</span>
-          </div>
-        </header>
+        {isAdmin && (
+          <header className={shellStyles.topbar}>
+            <div className={shellStyles.brand}>
+              <span className={shellStyles.brandDot} aria-hidden="true" />
+              GONOVI
+            </div>
+            <nav className={shellStyles.topnav} aria-label="Navegación principal">
+              <Link href="/official" className={pathname === '/official' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official' ? 'page' : undefined}>Inicio</Link>
+              <Link href="/official/montecarlo" className={pathname === '/official/montecarlo' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/montecarlo' ? 'page' : undefined}>Auditoría</Link>
+              <Link href="/official/estrategias" className={pathname === '/official/estrategias' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/estrategias' ? 'page' : undefined}>Resultados</Link>
+              <Link href="/official/soporte" className={pathname === '/official/soporte' ? shellStyles.topnavActive : ''} aria-current={pathname === '/official/soporte' ? 'page' : undefined}>Soporte</Link>
+            </nav>
+            <div className={shellStyles.session}>
+              <span>Auditoría estocástica · Demo</span>
+            </div>
+          </header>
+        )}
 
         <div className="max-w-6xl mx-auto p-6 text-slate-100" style={{ position: 'relative', zIndex: 2 }}>
-          <Link
-            href="/official"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              color: '#f44e1c',
-              fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              textDecoration: 'none',
-              marginBottom: '1.5rem',
-            }}
-          >
-            ← Volver a GONOVI
-          </Link>
+          {isAdmin && (
+            <Link
+              href="/official"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                color: '#f44e1c',
+                fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                textDecoration: 'none',
+                marginBottom: '1.5rem',
+              }}
+            >
+              ← Volver a GONOVI
+            </Link>
+          )}
 
           <div className="text-center mb-8">
             <h1

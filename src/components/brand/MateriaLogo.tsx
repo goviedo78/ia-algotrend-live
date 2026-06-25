@@ -69,6 +69,8 @@ export interface MateriaLogoProps {
   entryAnimation?: boolean
   /** Distancia de cámara en reposo (Z). Default 1500 */
   cameraDistance?: number
+  /** Congela el size usado para cálculo responsive de cámara. Útil en iOS Safari durante scroll. */
+  lockResponsiveSize?: boolean
   /** El logo gira sutilmente siguiendo al cursor. Default true */
   cursorTilt?: boolean
   /** Habilitar zoom con rueda del mouse. Default true */
@@ -841,18 +843,24 @@ function MateriaMesh({
 interface CameraEntryProps {
   enabled: boolean
   restDistance: number
+  lockResponsiveSize: boolean
   doneRef: React.MutableRefObject<boolean>
 }
 
-function CameraEntry({ enabled, restDistance, doneRef }: CameraEntryProps) {
+function CameraEntry({ enabled, restDistance, lockResponsiveSize, doneRef }: CameraEntryProps) {
   const { camera, size } = useThree()
   const startRef = useRef<number | null>(null)
+  const [lockedSize] = useState(() => ({ width: size.width, height: size.height }))
+
+  const cameraSize = lockResponsiveSize && lockedSize.width > 0 && lockedSize.height > 0
+    ? lockedSize
+    : size
 
   // Distancia responsive: en mobile (aspect < 1) calculamos la distancia mínima
   // para que el logo entero entre en el viewport. El prop restDistance actúa
   // como mínimo (no nos acercamos más que eso aunque haya espacio).
   const restPos = useMemo(() => {
-    const aspect = size.width / size.height
+    const aspect = cameraSize.width / cameraSize.height
     const persp = camera as THREE.PerspectiveCamera
     const fovRad = ((persp.fov ?? 35) * Math.PI) / 180
     const targetExtent = 1200 // bbox del logo (~1000) + padding 20%
@@ -862,7 +870,7 @@ function CameraEntry({ enabled, restDistance, doneRef }: CameraEntryProps) {
       ? restDistance
       : targetExtent / (aspect * 2 * Math.tan(fovRad / 2))
     return new THREE.Vector3(0, 0, Math.max(restDistance, minDist))
-  }, [restDistance, size.width, size.height, camera])
+  }, [restDistance, cameraSize.width, cameraSize.height, camera])
 
   // Si el viewport cambia después del entry (rotación de pantalla en mobile),
   // recolocamos la cámara suavemente (snap, en este caso).
@@ -1063,6 +1071,7 @@ export function MateriaLogo({
   amplitude      = 8,
   entryAnimation = true,
   cameraDistance = 1500,
+  lockResponsiveSize = false,
   cursorTilt     = true,
   enableZoom     = true,
   minZoom        = 600,
@@ -1171,6 +1180,7 @@ export function MateriaLogo({
         <CameraEntry
           enabled={entryAnimation}
           restDistance={cameraDistance}
+          lockResponsiveSize={lockResponsiveSize}
           doneRef={entryDoneRef}
         />
         <ZoomControl

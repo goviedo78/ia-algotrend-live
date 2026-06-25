@@ -15,9 +15,9 @@
   overflow-x: hidden;
   padding: clamp(0.75rem, 2vw, 1.5rem);
   background:
-    radial-gradient(circle at 14% 4%, rgba(244, 78, 28, 0.16), transparent 30rem),
-    radial-gradient(circle at 86% 12%, rgba(241, 222, 200, 0.1), transparent 28rem),
-    linear-gradient(180deg, #1c223a 0%, #11162a 42%, #0d1122 100%);
+    radial-gradient(circle at 14% 4%, rgba(244, 78, 28, 0.14), transparent 30rem),
+    radial-gradient(circle at 86% 12%, rgba(201, 168, 122, 0.09), transparent 28rem),
+    linear-gradient(180deg, rgba(28, 34, 58, 0.62) 0%, rgba(17, 22, 42, 0.74) 42%, rgba(13, 17, 34, 0.88) 100%);
   color: var(--official-bone);
 }
 
@@ -95,8 +95,8 @@
     inset 0 1px 1px rgba(255, 255, 255, 0.05),
     inset 1px 0 1px rgba(255, 255, 255, 0.02),
     0 18px 46px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
 }
 
 .topbar {
@@ -327,6 +327,21 @@
   opacity: 0.54;
   transform: rotate(var(--geo-rotate, 0deg));
   animation: geoFloat 13s var(--gon-ease-in-out, ease-in-out) infinite alternate;
+}
+
+.betaWatermark {
+  position: absolute;
+  right: clamp(0.9rem, 2vw, 1.35rem);
+  bottom: clamp(0.9rem, 2vw, 1.35rem);
+  z-index: 8;
+  color: rgba(240, 236, 228, 0.52);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.56rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  pointer-events: none;
+  text-transform: uppercase;
 }
 
 .materiaBackdrop {
@@ -623,7 +638,8 @@
 
 .profileAction:focus-visible,
 .heroNavCard:focus-visible,
-.quickAction:focus-visible {
+.quickAction:focus-visible,
+.mobileDockAction:focus-visible {
   outline: 2px solid rgba(244, 78, 28, 0.68);
   outline-offset: 3px;
 }
@@ -752,6 +768,72 @@
   padding-right: 1.15rem;
 }
 
+.mobileDock {
+  display: none;
+}
+
+/* Overlay full-screen de carga: aparece al INSTANTE cuando el user
+   tapea una card. Cubre toda la pantalla con un velo oscuro + spinner
+   + texto. Garantiza feedback inmediato aunque la página destino
+   tarde en cargar. pointer-events: none → no bloquea taps subsiguientes
+   (el navigate ya está en curso). */
+.routeLoading {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(244, 78, 28, 0.18), transparent 60%),
+    rgba(7, 11, 24, 0.78);
+  color: var(--official-cream);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 1.5rem;
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  pointer-events: none;
+  animation: routeLoadingFadeIn 80ms ease-out;
+}
+
+@keyframes routeLoadingFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.routeLoadingPulse {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  border: 3px solid rgba(244, 78, 28, 0.18);
+  border-top-color: var(--official-pulse);
+  background: transparent;
+  box-shadow: 0 0 24px rgba(244, 78, 28, 0.32);
+  animation: routeLoadingSpin 800ms linear infinite;
+}
+
+@keyframes routeLoadingSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes routeLoadingPulse {
+  from {
+    opacity: 0.48;
+    transform: scale(0.72);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* Mobile / touch: arrancan colapsados (3 círculos centrados).
    El doble-tap del componente expande sólo el botón con data-expanded="true". */
 
@@ -793,7 +875,8 @@
   color: inherit;
   padding: 0.9rem;
   text-decoration: none;
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
   transform-style: preserve-3d;
   transition:
     border-color 180ms var(--gon-ease-out, ease-out),
@@ -802,6 +885,75 @@
     box-shadow 180ms var(--gon-ease-out, ease-out);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+
+.heroCardButton {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 0;
+  width: 100%;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.heroCardButton > * {
+  pointer-events: none;
+}
+
+.heroCardDetails {
+  position: relative;
+  z-index: 1;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-0.35rem);
+  transition:
+    max-height 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 220ms ease,
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.heroNavCard[data-expanded="true"] .heroCardDetails {
+  max-height: 11rem;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.heroCardDetails p {
+  margin-top: 0.8rem;
+  -webkit-line-clamp: unset;
+}
+
+.heroCardOpen {
+  display: inline-flex;
+  width: max-content;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.8rem;
+  border: 1px solid rgba(244, 78, 28, 0.3);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(244, 78, 28, 0.18), transparent 62%),
+    rgba(244, 78, 28, 0.1);
+  color: var(--official-cream);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  padding: 0.58rem 0.75rem;
+  text-decoration: none;
+  text-transform: uppercase;
 }
 
 .heroNavCard::before {
@@ -828,6 +980,7 @@
   background: linear-gradient(90deg, transparent, var(--official-pulse));
   opacity: 0.5;
   transition: opacity 180ms var(--gon-ease-out, ease-out), width 180ms var(--gon-ease-out, ease-out);
+  pointer-events: none;
 }
 
 .heroNavCard:hover {
@@ -996,8 +1149,9 @@
       inset 0 1px 0 rgba(240, 236, 228, 0.1),
       inset 0 -1px 0 rgba(13, 17, 34, 0.42),
       0 20px 50px rgba(0, 0, 0, 0.28);
-    backdrop-filter: blur(36px) saturate(1.35) brightness(0.88);
-    -webkit-backdrop-filter: blur(36px) saturate(1.35) brightness(0.88);
+    /* blur reducido 36→14px en mobile: cada blur GPU iOS cuesta ~3ms */
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
     isolation: isolate;
   }
 
@@ -1017,10 +1171,93 @@
 
   .profileCard {
     grid-template-columns: auto minmax(0, 1fr) auto;
+    min-height: clamp(5.7rem, 11vh, 7.25rem);
+    overflow: hidden;
+    gap: clamp(0.82rem, 1.8vw, 1.35rem);
+    border-radius: 20px;
+    border-color: rgba(240, 236, 228, 0.16);
+    background:
+      linear-gradient(112deg, rgba(240, 236, 228, 0.11), rgba(240, 236, 228, 0.035) 34%, rgba(7, 12, 28, 0.74) 72%),
+      radial-gradient(circle at 82% 18%, rgba(244, 78, 28, 0.18), transparent 19rem),
+      radial-gradient(circle at 16% 90%, rgba(229, 212, 182, 0.08), transparent 18rem),
+      rgba(8, 13, 30, 0.76);
+    padding: clamp(0.72rem, 1.35vw, 0.98rem) clamp(0.9rem, 2.2vw, 1.45rem);
+    box-shadow:
+      inset 0 1px 0 rgba(240, 236, 228, 0.18),
+      inset 0 -1px 0 rgba(8, 13, 30, 0.7),
+      0 22px 64px rgba(0, 0, 0, 0.34);
+    backdrop-filter: blur(16px) saturate(1.36) brightness(1.04);
+    -webkit-backdrop-filter: blur(16px) saturate(1.36) brightness(1.04);
+  }
+
+  .profileCard::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    z-index: 0;
+    border-radius: inherit;
+    background:
+      linear-gradient(96deg, rgba(240, 236, 228, 0.16), transparent 18% 78%, rgba(244, 78, 28, 0.12)),
+      radial-gradient(ellipse at 30% 0%, rgba(255, 255, 255, 0.14), transparent 48%);
+    opacity: 0.42;
+    pointer-events: none;
+  }
+
+  .profileCard::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: clamp(4rem, 13vw, 10rem);
+    z-index: 0;
+    width: clamp(8.5rem, 18vw, 14rem);
+    aspect-ratio: 1;
+    background: url("/logo-gon-mark-3d.svg") center / contain no-repeat;
+    filter:
+      brightness(0) invert(1)
+      drop-shadow(0 0 30px rgba(244, 78, 28, 0.34))
+      drop-shadow(0 18px 42px rgba(0, 0, 0, 0.42));
+    opacity: 0.07;
+    transform: translateY(-50%) rotate(-10deg);
+    pointer-events: none;
+  }
+
+  .profileMark,
+  .profileContent,
+  .profileAction {
+    position: relative;
+    z-index: 1;
+  }
+
+  .profileMark {
+    width: clamp(3.15rem, 4.4vw, 4rem);
+    box-shadow:
+      inset 0 1px 0 rgba(240, 236, 228, 0.14),
+      0 16px 40px rgba(244, 78, 28, 0.14);
+  }
+
+  .profileMark img {
+    width: clamp(2.35rem, 3.7vw, 3.15rem);
+  }
+
+  .profileContent h1 {
+    max-width: 22ch;
+    font-size: clamp(1.18rem, 1.85vw, 1.72rem);
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+
+  .profileContent p {
+    max-width: 34rem;
+    color: rgba(229, 212, 182, 0.76);
+    font-size: clamp(0.78rem, 1.18vw, 0.92rem);
+    margin-top: 0.24rem;
   }
 
   .profileAction {
     margin-top: 0;
+    min-height: 2.36rem;
+    padding: 0.62rem clamp(0.85rem, 1.55vw, 1.08rem);
+    white-space: nowrap;
   }
 
   .appGrid {
@@ -1069,18 +1306,136 @@
   }
 }
 
+/* Por DEFAULT los banners están ocultos. Solo se muestran en el
+   carrusel mobile (@media max-width 767px) — en desktop la grid de
+   cards renderiza sin ellos para no romper el layout. */
+.carouselBannerTop,
+.carouselBannerBottom {
+  display: none;
+}
+
+/* ── Banners de extremo del carrusel (mobile) ───────────────────
+   Aprovechan el espacio del padding-block (22vh top, 38vh bottom).
+   Estilo deliberadamente distinto a las cards: sin frame, sin border,
+   sin glow, tipografía suelta — para que se lean como "señalética"
+   del recorrido, no como cards más. Aparición sutil con fade + slide
+   vía IntersectionObserver → data-visible="true". */
+@media (max-width: 767px) {
+  .carouselBannerTop,
+  .carouselBannerBottom {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+    padding: 0.8rem 0.5rem 1.2rem;
+    color: rgba(240, 236, 228, 0.78);
+    pointer-events: none;
+    user-select: none;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 7rem;
+    /* Estado por defecto: oculto/sutil. Se activa con data-visible. */
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 480ms ease, transform 480ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .carouselBannerTop[data-visible="true"],
+  .carouselBannerBottom[data-visible="true"] {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .carouselBannerBottom {
+    padding-bottom: 2rem;
+  }
+
+  .carouselBannerEyebrow {
+    color: rgba(244, 78, 28, 0.72);
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    font-size: 0.55rem;
+    font-weight: 900;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+
+  .carouselBannerTitle {
+    color: var(--official-cream);
+    font-size: clamp(1.25rem, 5.4vw, 1.65rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.5);
+  }
+
+  .carouselBannerSubtitle {
+    color: rgba(240, 236, 228, 0.6);
+    font-family: var(--font-inter), system-ui, sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.005em;
+    line-height: 1.4;
+    max-width: 18rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .carouselBannerTop,
+    .carouselBannerBottom {
+      transition: none !important;
+    }
+  }
+}
+
 @media (max-width: 767px) {
   .shell {
+    /* Sin alturas fijas ni overflow:hidden — esa clase la reusan
+       /official/estrategias, /official/montecarlo, etc., y bloquear
+       el scroll vertical acá rompe esas páginas. La home controla su
+       layout interno con .appFrame (height fija + overflow propio). */
+    min-height: 100dvh;
     place-items: stretch;
-    padding: 0.65rem;
+    isolation: auto;
+    padding: 0.52rem;
+    /* Mobile: background semi-transparente para que el logo 3D del
+       MateriaLoadingScreen (z-index 1 detrás del contentLayer) se
+       difumine a través del shell. Solo dejamos un velo oscuro para
+       legibilidad. */
+    background:
+      radial-gradient(circle at 8% 18%, rgba(244, 78, 28, 0.08), transparent 17rem),
+      radial-gradient(circle at 100% 0%, rgba(229, 212, 182, 0.035), transparent 18rem),
+      radial-gradient(circle at 62% 58%, rgba(9, 22, 55, 0.22), transparent 20rem),
+      linear-gradient(180deg, rgba(26, 24, 20, 0.32) 0%, rgba(18, 20, 27, 0.5) 36%, rgba(8, 11, 21, 0.76) 100%);
+  }
+
+  .noise {
+    display: none;
   }
 
   .appFrame {
-    min-height: calc(100dvh - 1.3rem);
+    /* En mobile la clase base NO impone altura ni overflow porque
+       otras páginas (estrategias, montecarlo, etc.) reusan esta clase
+       y necesitan scroll natural. La home aplica además .appFrameHome
+       para activar el contenedor con scroll interno del carrusel. */
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.48rem;
+    padding-bottom: 0;
+  }
+
+  .appFrameHome {
+    height: calc(100dvh - 1.04rem);
+    overflow-x: visible;
+    overflow-y: hidden;
   }
 
   .topbar {
     grid-template-columns: 1fr auto;
+    min-height: 2.75rem;
+    border-radius: 1.2rem;
+    padding: 0.38rem 0.5rem 0.38rem 0.78rem;
+    background:
+      linear-gradient(135deg, rgba(240, 236, 228, 0.08), rgba(240, 236, 228, 0.02)),
+      rgba(16, 13, 15, 0.52);
+    backdrop-filter: blur(16px) saturate(1.12);
+    -webkit-backdrop-filter: blur(16px) saturate(1.12);
   }
 
   .topnav,
@@ -1094,11 +1449,32 @@
 
   .menuButton {
     display: inline-flex;
+    width: 2.05rem;
+    height: 2.05rem;
+    border-radius: 0.9rem;
   }
 
   .appCanvas {
-    align-content: start;
-    perspective: none;
+    display: block;
+    min-height: 0;
+    /* overflow visible para no recortar las cards del carrusel cuando
+       el bend las desplaza fuera del rectángulo del cardsStage. */
+    overflow: visible;
+    padding: 0.48rem;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    /* Mobile: dejamos el canvas totalmente transparente para que el logo 3D
+       del MateriaLoadingScreen se vea nítido detrás. Las cards del carrusel
+       ya tienen su propio glass por separado. */
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    perspective: 980px;
+  }
+
+  .heroGeometry {
+    display: none;
   }
 
   .materiaBackdrop {
@@ -1163,85 +1539,505 @@
   }
 
   .profileCard {
-    z-index: 4;
-    grid-template-columns: 1fr;
-    min-height: 18.4rem;
-    overflow: hidden;
-    background:
-      linear-gradient(135deg, rgba(240, 236, 228, 0.11), rgba(240, 236, 228, 0.035) 34%, rgba(13, 17, 34, 0.68)),
-      radial-gradient(circle at 58% 42%, rgba(244, 78, 28, 0.12), transparent 15rem),
-      radial-gradient(circle at 10% 0%, rgba(244, 78, 28, 0.09), transparent 22rem),
-      rgba(13, 17, 34, 0.9);
-    border-color: rgba(240, 236, 228, 0.14);
-    box-shadow:
-      inset 0 1px 0 rgba(240, 236, 228, 0.1),
-      inset 0 -1px 0 rgba(13, 17, 34, 0.42),
-      0 20px 50px rgba(0, 0, 0, 0.28);
-    backdrop-filter: blur(28px) saturate(1.28) brightness(0.9);
-    -webkit-backdrop-filter: blur(28px) saturate(1.28) brightness(0.9);
+    display: none;
   }
 
-  .profileMark {
-    width: 4.25rem;
+  .profileCard::before,
+  .profileCard::after {
+    display: none;
   }
 
-  .profileContent h1 {
-    font-size: clamp(1.85rem, 10vw, 2.75rem);
-  }
-
+  .profileMark,
+  .profileContent,
   .profileAction {
-    position: relative;
-    z-index: 2;
-    width: 100%;
-    margin-top: auto;
+    display: none;
   }
 
+  /* Franja "REINICIO" entre copias del loop infinito. Señala que el
+     carrusel acaba de empezar de nuevo. Se queda fuera del scroll-snap
+     para no ser una "parada" propia. */
+  .carouselDivider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    margin: 0.35rem 0.5rem;
+    padding: 0.55rem 0.4rem;
+    color: rgba(244, 78, 28, 0.72);
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    font-size: 0.5rem;
+    font-weight: 900;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    scroll-snap-align: none;
+    pointer-events: none;
+  }
+
+  .carouselDivider::before,
+  .carouselDivider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(244, 78, 28, 0.55), transparent);
+  }
+
+  .carouselDivider span::before {
+    content: '↻ ';
+    margin-right: 0.15rem;
+  }
+
+  /* ── Liquid glass card ──────────────────────────────────────────
+     El transform de bend lo aplica JS dinámicamente desde
+     applyBend() (fórmula de arco tipo OGL CircularGallery). Acá solo
+     el aspecto glass: backdrop-blur, inset highlights blancos estilo
+     Apple Liquid Glass, y el SVG filter de refracción en ::before. */
   .heroNavCard {
+    position: relative;
+    aspect-ratio: auto;
+    /* Cards 15% más grandes en alto. */
+    min-height: clamp(7.8rem, 21vh, 10rem);
+    margin-bottom: 0.7rem;
+    padding: 0.85rem;
+    /* touch-action manipulation: elimina el delay de 300ms de iOS y
+       evita que el browser interprete el tap como gesto de zoom.
+       pointer-events auto explícito por si algún ancestor tiene none. */
+    touch-action: manipulation;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
+    /* Mismo color/tono que la versión desktop (dark con tinte naranja
+       sutil en la esquina superior), no el blanco translúcido del
+       liquid glass crudo. Los inset shadows blancos siguen dando el
+       highlight glossy estilo Apple, pero la base es oscura. */
     background:
-      linear-gradient(135deg, rgba(240, 236, 228, 0.11), rgba(240, 236, 228, 0.035) 34%, rgba(13, 17, 34, 0.68)),
-      radial-gradient(circle at 14% 0%, rgba(244, 78, 28, 0.08), transparent 58%),
-      rgba(13, 17, 34, 0.9);
-    border-color: rgba(240, 236, 228, 0.14);
+      linear-gradient(135deg, rgba(240, 236, 228, 0.11), rgba(240, 236, 228, 0.035) 34%, rgba(5, 10, 24, 0.7)),
+      radial-gradient(circle at 14% 0%, rgba(244, 78, 28, 0.16), transparent 58%),
+      rgba(7, 11, 24, 0.48);
+    border: 1px solid rgba(240, 236, 228, 0.18);
+    border-radius: 1.62rem;
     box-shadow:
-      inset 0 1px 0 rgba(240, 236, 228, 0.1),
-      inset 0 -1px 0 rgba(13, 17, 34, 0.42),
-      0 18px 42px rgba(0, 0, 0, 0.26);
-    padding: 0.82rem;
-    backdrop-filter: blur(28px) saturate(1.28) brightness(0.9);
-    -webkit-backdrop-filter: blur(28px) saturate(1.28) brightness(0.9);
+      inset 1px 1px 0 0 rgba(255, 255, 255, 0.24),
+      inset -1px -1px 0 1px rgba(255, 255, 255, 0.1),
+      inset 0 -18px 38px rgba(4, 8, 18, 0.22),
+      0 18px 44px rgba(0, 0, 0, 0.34);
+    transform-origin: 0 50%;
+    /* blur reducido 15→8px en mobile: cada blur GPU iOS cuesta ~3ms, y
+       las 6 cards apiladas le pegan al frame budget. */
+    backdrop-filter: blur(8px) saturate(1.2);
+    -webkit-backdrop-filter: blur(8px) saturate(1.2);
+    isolation: isolate;
+    /* content-visibility: auto + contain-intrinsic-size → cards fuera del
+       viewport no se renderizan (skip layout/paint). Performance win
+       grande con 6 cards apiladas en scroll. */
+    content-visibility: auto;
+    contain-intrinsic-size: auto 10rem;
+    contain: layout paint style;
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    text-decoration: none;
+    color: inherit;
+    /* Estado por defecto (no activa): reducida + translúcida + sombra
+       más difusa para sensación de "atrás". SOLO 2D (sin translateZ)
+       para no romper hit-test del tap. */
+    transform: scale(0.94);
+    transform-origin: center center;
+    opacity: 0.66;
+    transition:
+      transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 240ms ease,
+      min-height 280ms cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 220ms ease,
+      box-shadow 220ms ease,
+      background 220ms ease;
+  }
+
+  /* Sin transforms 3D por card. rotateY rompe el hit-testing del tap
+     en mobile (el browser proyecta la card en 3D pero el touch-hit
+     usa el rect original, causando que el centro caiga sobre el padre
+     en vez de la card). En Fase 6 agregamos una animación sutil con
+     scale + opacity (sin rotateY ni perspective) que no rompe taps. */
+
+  /* Capa interna que aplica el SVG filter de distorsión líquida
+     (definido en OfficialHome como `#gonovi-liquid-glass`). */
+  .heroNavCard::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.16), transparent 28%),
+      radial-gradient(circle at 84% 14%, rgba(244, 78, 28, 0.12), transparent 42%),
+      radial-gradient(circle at 18% 96%, rgba(240, 236, 228, 0.08), transparent 52%);
+    opacity: 0.86;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      inset 0 0 24px rgba(255, 255, 255, 0.025);
+    pointer-events: none;
+  }
+
+  .heroNavCard::after {
+    background:
+      linear-gradient(90deg, transparent, rgba(244, 78, 28, 0.5) 55%, transparent),
+      linear-gradient(90deg, transparent, rgba(240, 236, 228, 0.22) 48%, transparent);
+    opacity: 0.78;
+  }
+
+  .heroNavCard[data-active="true"] {
+    /* Activa: scale al 100% + opacidad total + sombra concentrada para
+       sensación de "al frente". SOLO scale 2D — tap-safe. */
+    transform: scale(1.025);
+    opacity: 1;
+    background:
+      linear-gradient(135deg, rgba(240, 236, 228, 0.14), rgba(240, 236, 228, 0.045) 34%, rgba(5, 10, 24, 0.72)),
+      radial-gradient(circle at 14% 0%, rgba(244, 78, 28, 0.22), transparent 58%),
+      radial-gradient(circle at 86% 76%, rgba(14, 36, 90, 0.34), transparent 60%),
+      rgba(8, 13, 28, 0.56);
+    border-color: rgba(244, 78, 28, 0.36);
+    box-shadow:
+      inset 1px 1px 0 0 rgba(255, 255, 255, 0.22),
+      inset -1px -1px 0 1px rgba(255, 255, 255, 0.1),
+      0 22px 58px rgba(0, 0, 0, 0.46),
+      0 0 32px rgba(244, 78, 28, 0.2);
+  }
+
+  /* Glow ambient en card activa: respira lento (8s) en opacity.
+     Solo se anima opacity (GPU-cheap, sin layout/paint). El glow es un
+     ::after extra que solo aparece en la activa. */
+  .heroNavCard[data-active="true"]::after {
+    background:
+      radial-gradient(circle at 50% 100%, rgba(244, 78, 28, 0.32), transparent 65%),
+      linear-gradient(90deg, transparent, rgba(244, 78, 28, 0.5) 55%, transparent),
+      linear-gradient(90deg, transparent, rgba(240, 236, 228, 0.22) 48%, transparent);
+    opacity: 1;
+    animation: cardGlowBreathe 7s ease-in-out infinite;
+  }
+
+  @keyframes cardGlowBreathe {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
+  }
+
+  /* Shimmer diagonal en card activa: una banda de luz que cruza cada
+     9s. Solo `background-position` se anima (GPU-cheap, sin reflow). */
+  .heroNavCard[data-active="true"]::before {
+    background:
+      linear-gradient(110deg, transparent 38%, rgba(255, 255, 255, 0.085) 50%, transparent 62%),
+      linear-gradient(145deg, rgba(255, 255, 255, 0.16), transparent 28%),
+      radial-gradient(circle at 84% 14%, rgba(244, 78, 28, 0.12), transparent 42%),
+      radial-gradient(circle at 18% 96%, rgba(240, 236, 228, 0.08), transparent 52%);
+    background-size: 240% 100%, 100% 100%, 100% 100%, 100% 100%;
+    background-position: -120% 0, 0 0, 0 0, 0 0;
+    animation: cardShimmer 9s ease-in-out infinite;
+  }
+
+  @keyframes cardShimmer {
+    0%, 100% { background-position: -120% 0, 0 0, 0 0, 0 0; }
+    50%      { background-position:  220% 0, 0 0, 0 0, 0 0; }
+  }
+
+  /* Feedback táctil al tap: la card se hunde un toque. Microanimación
+     que confirma al usuario que el tap se registró. */
+  .heroNavCard:active {
+    transform: scale(0.985);
+    transition: transform 90ms ease-out;
+  }
+
+  /* Respetar prefers-reduced-motion: sin shimmer ni breathing. */
+  @media (prefers-reduced-motion: reduce) {
+    .heroNavCard,
+    .heroNavCard::before,
+    .heroNavCard::after,
+    .heroNavCard[data-active="true"]::before,
+    .heroNavCard[data-active="true"]::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  .heroNavCard[data-expanded="true"] {
+    /* Expandido proporcional al nuevo tamaño base (+15%). */
+    min-height: clamp(10.5rem, 29vh, 12.9rem);
   }
 
   .quickActions {
-    width: max-content;
-    max-width: 100%;
-    gap: 0.42rem;
-    justify-content: center;
-    margin-top: -0.1rem;
+    display: none;
+  }
+
+  .cardsStage {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.05rem;
+    bottom: 4.35rem;
+    z-index: 8;
+    /* Carrusel anclado al lado derecho con padding-left para dejar
+       espacio al logo 3D del fondo. Cards arrancan desde arriba —
+       sin padding-top exagerado que dejaba la card 01 fuera del área
+       tocable. */
+    width: calc(100% - 0.1rem);
+    max-width: none;
+    height: auto;
+    margin: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Padding asimétrico: top más chico (22vh) para que el banner +
+       card 01 queden visualmente arriba del viewport, no en el medio.
+       Bottom más generoso (38vh) para que la card 06 y su banner
+       puedan llegar al "active point" (40% desde top). El syncActiveCard
+       usa 40% de altura como punto activo, no 50%. */
+    padding: 22vh 0.4rem 38vh 32vw;
+    /* SIN perspective / SIN transform 3D. Cualquier matrix3d en los
+       hijos rompe el hit-test del tap en iOS (incluso scale + translateZ
+       sin rotación). La "profundidad" la simulamos con box-shadow +
+       scale 2D + opacity. */
+    /* Sin scroll-snap-type mandatory: con snap activo iOS bloquea la
+       primera card en el límite superior del padding y los taps en
+       ella se interpretan como "ajustar snap" en vez de click. */
+    scrollbar-width: none;
+    /* Fade vertical sutil en los extremos para que las cards entren y
+       salgan suaves, sin recortes abruptos. Más estrecho que antes
+       (10/90 vs 22/78) porque ahora no hay padding gigante. */
+    mask-image: linear-gradient(to bottom, transparent 0%, black 6%, black 94%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 6%, black 94%, transparent 100%);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cardsStage::-webkit-scrollbar {
+    display: none;
+  }
+
+  .appGrid {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 0.75rem;
+    transform-style: preserve-3d;
+  }
+
+  .heroCardButton {
+    min-height: 4.75rem;
+  }
+
+  .heroNavCard strong {
+    font-size: clamp(0.86rem, 4vw, 1.05rem);
+  }
+
+  .heroNavCard p {
+    font-size: 0.68rem;
+    line-height: 1.26;
+    -webkit-line-clamp: 2;
+  }
+
+  .heroCardDetails p {
+    font-size: 0.76rem;
+    line-height: 1.32;
+  }
+
+  .heroCardOpen {
+    font-size: 0.56rem;
+    padding: 0.52rem 0.68rem;
+  }
+
+  .mobileDock {
+    position: fixed;
+    left: 50%;
+    bottom: max(0.5rem, env(safe-area-inset-bottom));
+    z-index: 40;
+    isolation: isolate;
+    display: grid;
+    width: min(calc(100vw - 1.1rem), 21.75rem);
+    height: 2.82rem;
+    grid-template-columns: minmax(0, 1fr) 3.22rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.28rem;
+    padding: 0.28rem 0.42rem 0.3rem;
+    transform: translateX(-50%);
+    border: 1px solid rgba(240, 236, 228, 0.16);
+    border-radius: 1.18rem;
+    background:
+      radial-gradient(circle at 50% -18%, rgba(244, 78, 28, 0.2), transparent 42%),
+      linear-gradient(135deg, rgba(240, 236, 228, 0.13), rgba(240, 236, 228, 0.032) 42%, rgba(8, 13, 29, 0.9)),
+      #060a17;
+    box-shadow:
+      0 -1px 0 rgba(255, 255, 255, 0.08),
+      0 24px 60px rgba(0, 0, 0, 0.48),
+      0 0 32px rgba(244, 78, 28, 0.12),
+      inset 0 1px 0 rgba(240, 236, 228, 0.1),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(18px) saturate(1.22);
+    -webkit-backdrop-filter: blur(18px) saturate(1.22);
+  }
+
+  .mobileDock::before {
+    display: none;
+  }
+
+  .mobileDock::after {
+    position: absolute;
+    left: 50%;
+    top: -0.08rem;
+    width: 3.92rem;
+    height: 2.05rem;
+    content: "";
+    pointer-events: none;
+    transform: translateX(-50%);
+    border-radius: 0 0 999px 999px;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(13, 17, 34, 0.94) 0 1.62rem, transparent 1.7rem);
+    opacity: 0.96;
+  }
+
+  .mobileDockAction {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    min-width: 0;
+    min-height: 2.12rem;
+    align-content: center;
+    justify-items: center;
+    gap: 0.16rem;
+    border: 0;
+    border-radius: 1.05rem;
+    background: transparent;
+    color: rgba(240, 236, 228, 0.64);
+    cursor: pointer;
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    font-size: 0.45rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-decoration: none;
+    text-align: center;
+    text-transform: uppercase;
+    transition:
+      color 180ms var(--gon-ease-out, ease-out),
+      transform 180ms var(--gon-ease-out, ease-out),
+      opacity 180ms var(--gon-ease-out, ease-out);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .mobileDockAction::before {
+    position: absolute;
+    inset: 0.12rem 0.16rem;
+    z-index: -1;
+    content: "";
+    border: 1px solid rgba(240, 236, 228, 0.075);
+    border-radius: 0.82rem;
+    background:
+      linear-gradient(135deg, rgba(240, 236, 228, 0.08), rgba(240, 236, 228, 0.018) 45%, rgba(4, 8, 18, 0.68)),
+      #070b18;
+    box-shadow:
+      inset 0 1px 0 rgba(240, 236, 228, 0.06),
+      0 10px 22px rgba(0, 0, 0, 0.18);
+    opacity: 0.96;
+    transition:
+      border-color 180ms var(--gon-ease-out, ease-out),
+      opacity 180ms var(--gon-ease-out, ease-out),
+      background 180ms var(--gon-ease-out, ease-out);
+  }
+
+  .mobileDockAction:hover::before,
+  .mobileDockActive::before {
+    border-color: rgba(244, 78, 28, 0.18);
+    background:
+      radial-gradient(circle at 50% 0%, rgba(244, 78, 28, 0.14), transparent 58%),
+      linear-gradient(135deg, rgba(240, 236, 228, 0.1), rgba(240, 236, 228, 0.024) 45%, rgba(4, 8, 18, 0.88)),
+      #070b18;
+    opacity: 0.94;
+  }
+
+  .mobileDockAction:active {
+    transform: translateY(1px) scale(0.96);
+  }
+
+  .mobileDockAction:disabled {
+    cursor: default;
+    opacity: 0.72;
+  }
+
+  .mobileDockActive {
+    color: var(--official-cream);
+  }
+
+  .mobileDockPrimary {
+    width: 3.32rem;
+    height: 3.32rem;
+    min-height: 3.32rem;
+    align-self: center;
+    justify-self: center;
+    margin-top: -0.68rem;
+    border: 1px solid rgba(240, 236, 228, 0.32);
+    border-radius: 999px;
+    background:
+      radial-gradient(circle at 38% 24%, rgba(255, 255, 255, 0.18), transparent 22%),
+      radial-gradient(circle at 50% 100%, rgba(244, 78, 28, 0.32), transparent 64%),
+      linear-gradient(180deg, rgba(16, 21, 39, 0.98), rgba(5, 8, 17, 0.98));
+    color: var(--official-pulse);
+    box-shadow:
+      0 0 0 0.26rem rgba(7, 12, 28, 0.84),
+      0 0 0 0.32rem rgba(240, 236, 228, 0.12),
+      0 14px 30px rgba(0, 0, 0, 0.48),
+      0 0 22px rgba(244, 78, 28, 0.2),
+      inset 0 1px 0 rgba(240, 236, 228, 0.14);
+  }
+
+  .mobileDockPrimaryIdle {
+    border-color: rgba(240, 236, 228, 0.14);
+    background:
+      linear-gradient(135deg, rgba(240, 236, 228, 0.08), rgba(240, 236, 228, 0.018) 45%, rgba(4, 8, 18, 0.82)),
+      #070b18;
+    color: rgba(240, 236, 228, 0.64);
+    box-shadow:
+      0 0 0 0.26rem rgba(7, 12, 28, 0.72),
+      0 0 0 0.32rem rgba(240, 236, 228, 0.055),
+      0 12px 26px rgba(0, 0, 0, 0.42),
+      inset 0 1px 0 rgba(240, 236, 228, 0.08);
+  }
+
+  .betaWatermark {
+    right: 0.88rem;
+    bottom: 3.92rem;
+    z-index: 14;
+    padding: 0.28rem 0.4rem;
     border: 1px solid rgba(240, 236, 228, 0.08);
     border-radius: 999px;
-    padding: 0.38rem;
-    background:
-      radial-gradient(circle at 50% 0%, rgba(244, 78, 28, 0.12), transparent 68%),
-      rgba(8, 14, 32, 0.52);
-    box-shadow:
-      inset 0 1px 0 rgba(240, 236, 228, 0.045),
-      0 16px 36px rgba(0, 0, 0, 0.22);
-    backdrop-filter: blur(18px);
+    background: rgba(6, 10, 22, 0.24);
+    color: rgba(240, 236, 228, 0.46);
+    font-size: 0.46rem;
+    letter-spacing: 0.16em;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .mobileDockPrimary::before {
+    display: none;
+  }
+
+  .mobileDockPrimary:active {
+    transform: translateY(1px) scale(0.94);
+  }
+
+  .mobileDockIcon {
+    display: grid;
+    width: 1.05rem;
+    height: 1.05rem;
+    margin-inline: auto;
+    place-items: center;
+  }
+
+  .mobileDockIcon svg {
+    width: 0.86rem;
+    height: 0.86rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
   }
 
   .bottombar {
-    width: min(100%, 22rem);
-    min-height: calc(3rem + env(safe-area-inset-bottom));
-    justify-self: center;
-    justify-content: center;
-    border-radius: 999px;
-    padding: 0.26rem 1rem env(safe-area-inset-bottom);
-    background:
-      radial-gradient(circle at 50% 0%, rgba(244, 78, 28, 0.09), transparent 66%),
-      rgba(7, 15, 36, 0.72);
-    box-shadow:
-      inset 0 1px 0 rgba(240, 236, 228, 0.055),
-      0 18px 40px rgba(0, 0, 0, 0.28);
+    display: none;
   }
 
   .ticker {

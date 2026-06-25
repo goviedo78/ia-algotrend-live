@@ -1,0 +1,407 @@
+.main {
+  min-height: 100vh;
+  padding: 2rem 1.5rem 5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  color: var(--foreground, #E5D4B6);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(229, 212, 182, 0.12);
+  padding-bottom: 1.25rem;
+}
+
+.headerTitle {
+  font-size: 1.5rem;
+  letter-spacing: 0.04em;
+  margin: 0;
+  font-weight: 700;
+}
+
+.headerSubtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: rgba(229, 212, 182, 0.55);
+  letter-spacing: 0.04em;
+}
+
+.headerControls {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.headerLink {
+  color: #E5D4B6;
+  text-decoration: none;
+  border: 1px solid rgba(79, 85, 112, 0.6);
+  background: rgba(28, 34, 58, 0.4);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  transition: border-color 0.2s ease;
+}
+.headerLink:hover {
+  border-color: rgba(244, 78, 28, 0.5);
+}
+
+.errorBanner {
+  background: rgba(244, 78, 28, 0.1);
+  border: 1px solid rgba(244, 78, 28, 0.4);
+  color: #f44e1c;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+/* ── Stat cards ───────────────────────────────────────── */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.85rem;
+}
+
+.statCard {
+  background: rgba(28, 34, 58, 0.32);
+  border: 1px solid rgba(79, 85, 112, 0.4);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(229, 212, 182, 0.55);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.statValue {
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--foreground, #E5D4B6);
+}
+
+/* ── Bar chart ────────────────────────────────────────── */
+.chartSection {
+  background: rgba(28, 34, 58, 0.28);
+  border: 1px solid rgba(79, 85, 112, 0.35);
+  border-radius: 10px;
+  padding: 1.1rem 1.2rem 1.2rem;
+}
+
+.sectionTitle {
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin: 0 0 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(229, 212, 182, 0.85);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.barChart {
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  gap: 4px;
+  align-items: end;
+  height: 140px;
+  margin-top: 0.4rem;
+}
+
+.barCol {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  height: 100%;
+  cursor: help;
+}
+
+.barStack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+  min-height: 0;
+}
+
+.barViews {
+  background: linear-gradient(180deg, rgba(229, 212, 182, 0.85), rgba(229, 212, 182, 0.5));
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+}
+
+.barClicks {
+  background: linear-gradient(180deg, #f44e1c, #c93a10);
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+}
+
+.barLabel {
+  font-size: 0.62rem;
+  color: rgba(229, 212, 182, 0.4);
+  text-align: center;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  letter-spacing: 0;
+}
+
+.barLegend {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  font-size: 0.72rem;
+  color: rgba(229, 212, 182, 0.6);
+  letter-spacing: 0.05em;
+}
+
+.barDot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+
+.barDotViews { background: rgba(229, 212, 182, 0.75); }
+.barDotClicks { background: #f44e1c; }
+
+/* ── Two-column grid ──────────────────────────────────── */
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 760px) {
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: rgba(28, 34, 58, 0.28);
+  border: 1px solid rgba(79, 85, 112, 0.35);
+  border-radius: 10px;
+  padding: 1.1rem 1.2rem;
+}
+
+/* ── Tables ───────────────────────────────────────────── */
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.dataTable th {
+  text-align: left;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(229, 212, 182, 0.5);
+  border-bottom: 1px solid rgba(229, 212, 182, 0.1);
+  padding: 0.5rem 0.5rem;
+  font-weight: 500;
+}
+
+.dataTable td {
+  padding: 0.55rem 0.5rem;
+  border-bottom: 1px solid rgba(229, 212, 182, 0.05);
+  color: var(--foreground, #E5D4B6);
+  vertical-align: middle;
+}
+
+.dataTable tr:last-child td {
+  border-bottom: none;
+}
+
+.numCell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-weight: 600;
+}
+
+.sourceLabel {
+  font-weight: 500;
+}
+
+.confChip {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.45rem;
+  background: rgba(244, 78, 28, 0.2);
+  border: 1px solid rgba(244, 78, 28, 0.45);
+  color: #f44e1c;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.confChipMuted {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.45rem;
+  background: rgba(229, 212, 182, 0.05);
+  border: 1px solid rgba(229, 212, 182, 0.15);
+  color: rgba(229, 212, 182, 0.45);
+  border-radius: 4px;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.linkTitle {
+  font-weight: 500;
+  color: var(--foreground, #E5D4B6);
+}
+
+.linkHref {
+  display: inline-block;
+  margin-top: 0.15rem;
+  font-size: 0.7rem;
+  color: rgba(229, 212, 182, 0.4);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.empty {
+  color: rgba(229, 212, 182, 0.4);
+  font-size: 0.82rem;
+  margin: 0.5rem 0 0;
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+/* ── UTM Builder ──────────────────────────────────────── */
+.utmBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.utmTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.utmHint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: rgba(229, 212, 182, 0.6);
+  line-height: 1.5;
+}
+
+.utmRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 600px) {
+  .utmRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.utmField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.utmField > span {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(229, 212, 182, 0.5);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.utmInput {
+  background: rgba(20, 26, 48, 0.7);
+  border: 1px solid rgba(79, 85, 112, 0.5);
+  border-radius: 6px;
+  padding: 0.5rem 0.7rem;
+  color: var(--foreground, #E5D4B6);
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+.utmInput:focus {
+  outline: none;
+  border-color: rgba(244, 78, 28, 0.6);
+}
+
+.utmOutput {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  background: rgba(20, 26, 48, 0.7);
+  border: 1px solid rgba(79, 85, 112, 0.45);
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+}
+
+.utmUrl {
+  flex: 1;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.78rem;
+  color: var(--foreground, #E5D4B6);
+  word-break: break-all;
+  background: transparent;
+  align-self: center;
+}
+
+.utmCopy {
+  background: rgba(244, 78, 28, 0.18);
+  border: 1px solid rgba(244, 78, 28, 0.45);
+  color: #ffb38a;
+  border-radius: 5px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+.utmCopy:hover {
+  background: rgba(244, 78, 28, 0.3);
+}
