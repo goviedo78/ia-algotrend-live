@@ -56,3 +56,6 @@ test-bingx-postfix.mjs
 # agent workspace (personal, never ship)
 .claude/briefs/
 .claude/memory/
+
+# isolated feature worktrees
+.worktrees/
