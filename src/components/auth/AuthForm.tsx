@@ -4,7 +4,12 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import styles from './auth.module.css'
 
-export function AuthForm() {
+async function getErrorMessage(response: Response, fallback: string): Promise<string> {
+  const body = await response.json().catch(() => null)
+  return body && typeof body.message === 'string' ? body.message : fallback
+}
+
+export function AuthForm({ nextPath = '/account' }: { nextPath?: string }) {
   const router = useRouter()
   const [step, setStep] = useState<'email' | 'code'>('email')
   const [email, setEmail] = useState('')
@@ -57,16 +62,9 @@ export function AuthForm() {
         setSentAt(Date.now())
         setTimeLeft(60)
       } else {
-        setError('No se pudo enviar. Intentá de nuevo.')
+        setError(await getErrorMessage(res, 'No se pudo enviar. Intentá de nuevo.'))
       }
     } catch {
-      // Allow moving to step code if API is not yet built by Codex (for UI demonstration purposes)
-      // Normally we would set error, but the prompt says:
-      // "Si la API /api/auth/* devuelve 404 (Codex no terminó), capturá igual, la UI debería renderizar el form aunque el submit falle"
-      // Wait, if it fails, it should show error. Let's just show error, but wait, the instructions say:
-      // "Si ok: step='code', Si error: mostrar 'No se pudo enviar...'"
-      // But if we want to show the second step for screenshot, maybe we just advance on 404 for now? 
-      // No, I'll stick to the strict prompt: Si error: mostrar "No se pudo enviar...". I can test the second step by temporarily changing state if needed, or by allowing the UI to advance just for the sake of the screenshot test if the API is a 404. Let's strictly follow the instruction:
       setError('No se pudo enviar. Intentá de nuevo.')
     } finally {
       setLoading(false)
@@ -91,7 +89,8 @@ export function AuthForm() {
         body: JSON.stringify({ email, code }),
       })
       if (res.ok) {
-        router.replace('/account')
+        router.replace(nextPath)
+        router.refresh()
       } else {
         setError('Código incorrecto')
       }
@@ -116,7 +115,7 @@ export function AuthForm() {
         setSentAt(Date.now())
         setTimeLeft(60)
       } else {
-        setError('No se pudo reenviar el código.')
+        setError(await getErrorMessage(res, 'No se pudo reenviar el código.'))
       }
     } catch {
       setError('No se pudo reenviar el código.')

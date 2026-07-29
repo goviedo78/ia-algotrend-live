@@ -160,8 +160,7 @@ interface EstrategiasPageProps {
     gold15_trades: StrategyData
     gold30_trades: StrategyData
   }
-  // Pasado desde el Server Component (page.tsx) leyendo la cookie httpOnly
-  // del bypass. Cuando false oculta topbar+back link (visitante público).
+  // Optional navigation chrome; the public page keeps it hidden by default.
   isAdmin?: boolean
 }
 

@@ -1,12 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { after, NextRequest, NextResponse } from 'next/server'
 import { runAlgoTrend, type AlgoTrendResult, type Candle } from '@/lib/algotrend'
-import { openTrade, closeTrade, getOpenTrade, getAllTrades, updateOpenTradeRisk, getSetting } from '@/lib/db'
+import { openTrade, closeTrade, getOpenTrade, getAllTrades, updateOpenTradeRisk, getSetting, type Trade } from '@/lib/db'
 import { notifyOpen, notifyClose } from '@/lib/telegram'
 import { emailOpen, emailClose } from '@/lib/email'
 import { logEvent } from '@/lib/analytics'
 import { latestAtrPercent } from '@/lib/atr'
 import { sendPushNotification } from '@/lib/push'
-import { safeExecuteBingxClose, safeExecuteBingxOpen } from '@/lib/bingx'
+import {
+  isLegacyBingxEnabled,
+  reconcileLegacyBingxExecutions,
+  safeExecuteBingxClose,
+  safeExecuteBingxOpen,
+} from '@/lib/bingx'
+import { dispatchBrokerSignal } from '@/lib/brokers/signals'
+import { safeProcessBrokerJobsInApp } from '@/lib/brokers/worker'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -54,7 +61,7 @@ async function fetchCandles(): Promise<Candle[]> {
 
   for (let i = 0; i < HISTORY_BATCHES; i++) {
     const reqUrl = nextEnd === null ? url : `${url}&end=${nextEnd}`
-    const resp = await fetch(reqUrl, { next: { revalidate: 55 } }).then(r => r.json()) as { data: { ohlc: BitstampOhlcEntry[] } }
+    const resp = await fetch(reqUrl, { cache: 'no-store' }).then(r => r.json()) as { data: { ohlc: BitstampOhlcEntry[] } }
     const ohlc = resp.data?.ohlc ?? []
     if (ohlc.length === 0) break
     batches.unshift(parse(ohlc))
@@ -99,6 +106,48 @@ function isAuthorizedCronRequest(req: NextRequest) {
 
 function signalFromResult(result: AlgoTrendResult): TradeDirection | null {
   return result.longSig ? 'LONG' : result.shortSig ? 'SHORT' : null
+}
+
+async function queueBrokerPlatformSignal(
+  trade: Trade,
+  action: 'OPEN' | 'CLOSE',
+  signalTime: number,
+  price: number,
+  actions: string[],
+) {
+  try {
+    const result = await dispatchBrokerSignal({
+      externalSignalId: `algotrend-btc-1h-${trade.id}-${action.toLowerCase()}-${signalTime}`,
+      strategyCode: 'ALGOTREND_BTC_1H',
+      symbol: 'BTC-USDT',
+      timeframe: '1h',
+      action,
+      direction: trade.direction,
+      signalTime: new Date(signalTime * 1000).toISOString(),
+      price,
+    })
+    actions.push(`broker_${action.toLowerCase()}_${result.accepted}${result.duplicate ? '_duplicate' : ''}`)
+  } catch (error) {
+    actions.push(`broker_${action.toLowerCase()}_queue_failed`)
+    await logEvent('broker_signal_queue_fail', {
+      tradeId: trade.id,
+      action,
+      error: error instanceof Error ? error.name : 'unknown',
+    })
+  }
+}
+
+async function closeTradeEverywhere(trade: Trade, actions: string[]) {
+  if (isLegacyBingxEnabled()) {
+    await safeExecuteBingxClose(trade, actions, 'cron')
+  }
+  await queueBrokerPlatformSignal(
+    trade,
+    'CLOSE',
+    trade.close_time ?? trade.signal_time,
+    trade.close_price ?? trade.open_price,
+    actions,
+  )
 }
 
 function isSignalStillOpen(signal: TradeDirection, result: AlgoTrendResult, candlesAfterSignal: Candle[]) {
@@ -207,10 +256,26 @@ export async function GET(req: NextRequest) {
     if (!isAuthorizedCronRequest(req)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    after(() => safeProcessBrokerJobsInApp({
+      batchSize: 50,
+      maxBatches: 4,
+      concurrency: 20,
+      timeBudgetMs: 18_000,
+    }).then(() => undefined))
+
+    const actions: string[] = []
+    try {
+      await reconcileLegacyBingxExecutions(actions)
+    } catch (error) {
+      actions.push('bingx_reconcile_failed')
+      await logEvent('bingx_reconcile_fail', {
+        error: error instanceof Error ? error.name : 'unknown',
+      })
+    }
 
     let candles = await fetchCandles()
     if (candles.length === 0) {
-      return NextResponse.json({ ok: true, action: 'no_candles' })
+      return NextResponse.json({ ok: true, action: 'no_candles', actions })
     }
 
     // Strip the current OPEN candle — Bitstamp includes it as the last entry.
@@ -220,17 +285,17 @@ export async function GET(req: NextRequest) {
       candles = candles.slice(0, -1)
     }
     if (candles.length === 0) {
-      return NextResponse.json({ ok: true, action: 'no_closed_candles' })
+      return NextResponse.json({ ok: true, action: 'no_closed_candles', actions })
     }
 
     const results = runAlgoTrend(candles)
     const last = results[results.length - 1]
     if (!last) {
-      return NextResponse.json({ ok: true, action: 'no_results' })
+      return NextResponse.json({ ok: true, action: 'no_results', actions })
     }
 
     const lastCandle = candles[candles.length - 1]
-    const actions: string[] = []
+    let existingTradeClosedThisRun = false
 
     // ── 1. Check if there's an open trade that needs SL/TP management ──
     const existingTrade = await getOpenTrade()
@@ -263,7 +328,7 @@ export async function GET(req: NextRequest) {
       const firstHit = hitPath(path[0])
       if (firstHit) {
         const trade = await closeTrade(existingTrade.id, last.time, firstHit.closePrice, firstHit.hit)
-        await safeExecuteBingxClose(trade, actions, 'cron')
+        await closeTradeEverywhere(trade, actions)
         await notifyClose(trade)
         await sendPushDirect({
           title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
@@ -272,12 +337,13 @@ export async function GET(req: NextRequest) {
         })
         await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
         closed = true
+        existingTradeClosedThisRun = true
         actions.push(`closed_${firstHit.hit}`)
       } else {
         const secondHit = hitPath(path[1])
         if (secondHit) {
           const trade = await closeTrade(existingTrade.id, last.time, secondHit.closePrice, secondHit.hit)
-          await safeExecuteBingxClose(trade, actions, 'cron')
+          await closeTradeEverywhere(trade, actions)
           await notifyClose(trade)
           await sendPushDirect({
             title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
@@ -286,6 +352,7 @@ export async function GET(req: NextRequest) {
           })
           await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
           closed = true
+          existingTradeClosedThisRun = true
           actions.push(`closed_${secondHit.hit}`)
         } else {
           // Trailing stop update
@@ -312,7 +379,7 @@ export async function GET(req: NextRequest) {
 
           if (closeHit) {
             const trade = await closeTrade(existingTrade.id, last.time, price, closeHit)
-            await safeExecuteBingxClose(trade, actions, 'cron')
+            await closeTradeEverywhere(trade, actions)
             await notifyClose(trade)
             await sendPushDirect({
               title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
@@ -321,6 +388,7 @@ export async function GET(req: NextRequest) {
             })
             await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
             closed = true
+            existingTradeClosedThisRun = true
             actions.push(`closed_${closeHit}`)
           } else if (stopLoss !== existingTrade.stop_loss || takeProfit !== existingTrade.take_profit) {
             await updateOpenTradeRisk(existingTrade.id, stopLoss, takeProfit)
@@ -363,43 +431,55 @@ export async function GET(req: NextRequest) {
       }
 
       if (!atrBlocked) {
-      const stop = signal === 'LONG' ? signalResult.longStop : signalResult.shortStop
-      const tp = signal === 'LONG' ? signalResult.longTp : signalResult.shortTp
-      const trade = await openTrade(
-        signal,
-        signalResult.time,
-        signalResult.time,
-        signalResult.close,
-        stop,
-        tp,
-        atrPct !== null ? +atrPct.toFixed(3) : null,
-        undefined,
-        { exchangeSource: 'cron' }
-      )
+        const stop = signal === 'LONG' ? signalResult.longStop : signalResult.shortStop
+        const tp = signal === 'LONG' ? signalResult.longTp : signalResult.shortTp
+        if (existingTrade && !existingTradeClosedThisRun) {
+          const closed = await closeTrade(
+            existingTrade.id,
+            signalResult.time,
+            signalResult.close,
+            'SIGNAL',
+          )
+          await closeTradeEverywhere(closed, actions)
+          existingTradeClosedThisRun = true
+        }
 
-      if (trade) {
-        const prob = signal === 'LONG' ? signalResult.probUp : signalResult.probDown
-        const probText = (prob * 100).toFixed(1) + '%'
+        const trade = await openTrade(
+          signal,
+          signalResult.time,
+          signalResult.time,
+          signalResult.close,
+          stop,
+          tp,
+          atrPct !== null ? +atrPct.toFixed(3) : null,
+        )
 
-        await safeExecuteBingxOpen(trade, actions, 'cron')
-        await notifyOpen(trade)
+        if (trade) {
+          const prob = signal === 'LONG' ? signalResult.probUp : signalResult.probDown
+          const probText = (prob * 100).toFixed(1) + '%'
 
-        const emoji = signal === 'LONG' ? '🟢' : '🔴'
-        const dir = signal === 'LONG' ? 'LARGO' : 'CORTO'
+          if (isLegacyBingxEnabled()) {
+            await safeExecuteBingxOpen(trade, actions, 'cron')
+          }
+          await queueBrokerPlatformSignal(trade, 'OPEN', signalResult.time, signalResult.close, actions)
+          await notifyOpen(trade)
 
-        await sendPushDirect({
-          title: `${emoji} AlgoTrend — ${dir} (${probText})`,
-          body: `Entrada: $${signalResult.close.toLocaleString('es-MX')} (ATR = ${atrPct !== null ? atrPct.toFixed(2) : '—'}%) | Stop: $${stop.toLocaleString('es-MX')} | Objetivo: ${tp ? '$' + tp.toLocaleString('es-MX') : 'Stop móvil'}`,
-          tag: `signal-${signalResult.time}`,
-        })
+          const emoji = signal === 'LONG' ? '🟢' : '🔴'
+          const dir = signal === 'LONG' ? 'LARGO' : 'CORTO'
 
-        await emailOpen(signal, signalResult.close, stop, tp, prob)
+          await sendPushDirect({
+            title: `${emoji} AlgoTrend — ${dir} (${probText})`,
+            body: `Entrada: $${signalResult.close.toLocaleString('es-MX')} (ATR = ${atrPct !== null ? atrPct.toFixed(2) : '—'}%) | Stop: $${stop.toLocaleString('es-MX')} | Objetivo: ${tp ? '$' + tp.toLocaleString('es-MX') : 'Stop móvil'}`,
+            tag: `signal-${signalResult.time}`,
+          })
 
-        actions.push(`opened_${signal}_${actionableSignal.source}`)
-      } else {
-        actions.push('signal_already_processed')
+          await emailOpen(signal, signalResult.close, stop, tp, prob)
+
+          actions.push(`opened_${signal}_${actionableSignal.source}`)
+        } else {
+          actions.push('signal_already_processed')
+        }
       }
-      } // end !atrBlocked
     }
 
     return NextResponse.json({

@@ -838,9 +838,7 @@ const PHASE_BADGE: Record<PhaseStatus, string> = {
 }
 
 interface MonteCarloAuditorProps {
-  // El Server Component (page.tsx) lee la cookie httpOnly del bypass y nos pasa
-  // si el visitante es admin. Cuando false (visitante público vía allowlist en
-  // proxy.ts) ocultamos topbar y back link para no mostrar caminos al muro.
+  // Optional navigation chrome; the public page keeps it hidden by default.
   isAdmin?: boolean
 }
 

@@ -1,0 +1,1 @@
+ALTER TABLE public.nfc_card_names ADD COLUMN IF NOT EXISTS color TEXT;

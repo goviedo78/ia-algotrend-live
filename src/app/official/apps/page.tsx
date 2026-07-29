@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import styles from './apps.module.css'
 
@@ -32,8 +31,6 @@ const apps = [
 ]
 
 export default function AppsPage() {
-  if (process.env.OFFICIAL_ENABLED !== 'true') notFound()
-
   return (
     <main className={styles.shell}>
       <header className={styles.header}>

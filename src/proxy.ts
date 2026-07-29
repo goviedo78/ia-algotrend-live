@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { rateLimiter } from '@/lib/rate-limit'
 import { copySupabaseCookies, refreshSession } from '@/lib/supabase/middleware'
 
-// ── Optional admin bypass cookie ──────────────────────────────────
-const BYPASS_COOKIE = '__gonovi_dev'
-const BYPASS_TOKEN = process.env.BYPASS_TOKEN // Sin default para maxima seguridad
-
 const OFFICIAL_HOSTS = new Set(['gonovi.app', 'www.gonovi.app', 'localhost', '127.0.0.1'])
 
 // ── Route classification ──────────────────────────────────────────
@@ -32,27 +28,9 @@ export async function proxy(req: NextRequest) {
   const rawHost = forwardedHost || req.headers.get('host') || ''
   const host = rawHost.split(':')[0]?.toLowerCase() || ''
 
-  // ── 0. Optional admin bypass cookie ───────────────────────────────
-  if (OFFICIAL_HOSTS.has(host)) {
-    const devParam = req.nextUrl.searchParams.get('dev')
-
-    if (devParam && BYPASS_TOKEN && devParam === BYPASS_TOKEN) {
-      const url = req.nextUrl.clone()
-      url.searchParams.delete('dev')
-      const res = NextResponse.redirect(url)
-      res.cookies.set(BYPASS_COOKIE, BYPASS_TOKEN, {
-        httpOnly: true,
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30, // 30 days
-        path: '/',
-      })
-      return res
-    }
-  }
-
   const supabaseResponse = await refreshSession(req)
 
-  // ── 1. Official home rewrite ──────────────────────────────────────
+  // ── 1. Public GONOVI home rewrite ─────────────────────────────────
   if (
     pathname === '/' &&
     OFFICIAL_HOSTS.has(host)
@@ -119,5 +97,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/official/:path*', '/api/:path*'],
+  matcher: ['/', '/official/:path*', '/cuenta/:path*', '/admin/:path*', '/api/:path*'],
 }

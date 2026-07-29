@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
-import { LinkIcon, type IconName } from '@/components/links/LinkIcon'
+import type { IconName } from '@/components/links/LinkIcon'
 import { IconDisplay } from '@/components/links/IconDisplay'
 import { saveConfigAction } from '@/app/official/links/actions'
 import type { LinksConfig, CustomIcon } from '@/lib/links-config'

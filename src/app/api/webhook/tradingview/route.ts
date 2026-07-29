@@ -44,6 +44,10 @@ async function sendPush(req: NextRequest, payload: { title: string; body: string
 
 export async function POST(req: NextRequest) {
   try {
+    if (process.env.BTC_TRADINGVIEW_WEBHOOK_ENABLED !== 'true') {
+      return NextResponse.json({ error: 'BTC TradingView webhook is disabled' }, { status: 410 })
+    }
+
     const body = await req.json()
     const { signal, price, prob, sl, tp, secret } = body as {
       signal: 'LONG' | 'SHORT' | 'EXIT'
@@ -112,8 +116,6 @@ export async function POST(req: NextRequest) {
       stopLoss,
       takeProfit,
       atrPct,
-      undefined,
-      { exchangeSource: 'webhook' }
     )
 
     if (!trade) {

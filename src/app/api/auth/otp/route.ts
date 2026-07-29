@@ -10,6 +10,24 @@ const otpSchema = z.object({
   _hp: z.string().optional(),
 })
 
+type SupabaseAuthError = {
+  code?: unknown
+  status?: unknown
+}
+
+const RATE_LIMIT_MESSAGE = 'Esperá un minuto antes de pedir otro código.'
+const DELIVERY_ERROR_MESSAGE = 'No se pudo enviar el código. Intentá de nuevo en unos minutos.'
+
+function getAuthErrorDetails(error: unknown): { code?: string; status?: number } {
+  if (!error || typeof error !== 'object') return {}
+
+  const candidate = error as SupabaseAuthError
+  return {
+    code: typeof candidate.code === 'string' ? candidate.code : undefined,
+    status: typeof candidate.status === 'number' ? candidate.status : undefined,
+  }
+}
+
 function getIp(req: NextRequest): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || req.headers.get('x-real-ip')
@@ -32,8 +50,8 @@ export async function POST(req: NextRequest) {
     const { success, resetIn } = rateLimiter.check(getIp(req), 'auth')
     if (!success) {
       return NextResponse.json(
-        { ok: true },
-        { status: 200, headers: { 'Retry-After': String(Math.ceil(resetIn / 1000)) } }
+        { ok: false, error: 'RATE_LIMITED', message: RATE_LIMIT_MESSAGE },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(resetIn / 1000)) } }
       )
     }
 
@@ -44,12 +62,28 @@ export async function POST(req: NextRequest) {
     })
 
     if (error) {
-      console.error('[auth/otp] Supabase OTP error', error)
+      const details = getAuthErrorDetails(error)
+      console.error('[auth/otp] Supabase OTP error', details)
+
+      if (details.status === 429 || details.code === 'over_email_send_rate_limit') {
+        return NextResponse.json(
+          { ok: false, error: 'RATE_LIMITED', message: RATE_LIMIT_MESSAGE },
+          { status: 429, headers: { 'Retry-After': '60' } }
+        )
+      }
+
+      return NextResponse.json(
+        { ok: false, error: 'EMAIL_DELIVERY_FAILED', message: DELIVERY_ERROR_MESSAGE },
+        { status: 503 }
+      )
     }
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    console.error('[auth/otp] Unexpected error', error)
-    return NextResponse.json({ ok: true })
+    console.error('[auth/otp] Unexpected error', error instanceof Error ? error.name : 'UnknownError')
+    return NextResponse.json(
+      { ok: false, error: 'EMAIL_DELIVERY_FAILED', message: DELIVERY_ERROR_MESSAGE },
+      { status: 503 }
+    )
   }
 }

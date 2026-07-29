@@ -1,0 +1,63 @@
+flowchart LR
+  subgraph Z1["1. Señal en GONOVI"]
+    CRON["Cron de gonovi.app"]
+    IND["AlgoTrend BTC 1H<br/>velas cerradas"]
+    TRADE["Registro de operación<br/>apertura o cierre"]
+    CRON --> IND --> TRADE
+  end
+
+  subgraph Z2["2. Control server-side"]
+    SIGNAL["Signal dispatcher<br/>payload canónico"]
+    DEDUPE["Deduplicación<br/>signal + connection"]
+    POLICY["Binding y política<br/>aprobados"]
+    SIGNAL --> DEDUPE
+    POLICY --> DEDUPE
+  end
+
+  subgraph Z3["3. Supabase"]
+    AUTH["Auth + MFA + roles"]
+    META[("Conexiones y riesgo<br/>RLS + grants")]
+    VAULT[("Credenciales cifradas<br/>sin lectura pública")]
+    QUEUE[("Intents + jobs<br/>claim atómico")]
+    AUDIT[("Auditoría, órdenes<br/>fills, fees y PnL")]
+  end
+
+  subgraph Z4["4. Runtime de gonovi.app"]
+    AFTER["Next.js after()<br/>tanda acotada"]
+    PRIVATE["RSA privada<br/>variable server-only"]
+    RISK["Risk engine fail-closed<br/>USD, margen y 1x"]
+    REGISTRY["Broker registry<br/>contrato común"]
+    AFTER --> RISK --> REGISTRY
+    PRIVATE --> AFTER
+  end
+
+  subgraph Z5["5. Brokers"]
+    BINGX["BingX Perpetual<br/>Demo primero"]
+    BINANCE["Binance adapter<br/>futuro"]
+    OTHER["Otros adapters<br/>futuro"]
+  end
+
+  TRADE --> SIGNAL
+  AUTH --> META
+  META --> POLICY
+  VAULT --> AFTER
+  DEDUPE --> QUEUE
+  QUEUE --> AFTER
+  REGISTRY --> BINGX
+  REGISTRY -.-> BINANCE
+  REGISTRY -.-> OTHER
+  BINGX --> AUDIT
+  BINANCE -.-> AUDIT
+  OTHER -.-> AUDIT
+
+  classDef app fill:#dbeafe,stroke:#1d4ed8,color:#172554;
+  classDef data fill:#dcfce7,stroke:#15803d,color:#14532d;
+  classDef crypto fill:#fef3c7,stroke:#b45309,color:#78350f;
+  classDef execution fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d;
+  classDef external fill:#f3e8ff,stroke:#7e22ce,color:#581c87;
+
+  class CRON,IND,TRADE,SIGNAL,DEDUPE,POLICY app;
+  class AUTH,META,VAULT,QUEUE,AUDIT data;
+  class PRIVATE crypto;
+  class AFTER,RISK,REGISTRY execution;
+  class BINGX,BINANCE,OTHER external;

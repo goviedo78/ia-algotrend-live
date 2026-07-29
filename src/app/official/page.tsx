@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import OfficialHome from '@/components/official/OfficialHome'
 
@@ -28,6 +27,5 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default function OfficialPage() {
-  if (process.env.OFFICIAL_ENABLED !== 'true') notFound()
   return <OfficialHome />
 }

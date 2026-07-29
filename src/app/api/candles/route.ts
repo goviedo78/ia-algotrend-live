@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { Candle } from '@/lib/algotrend'
 
-export const revalidate = 60
-
 const PAIR = 'btcusd'
 const STEP = 3600
 const HISTORY_BATCHES = 5
@@ -34,7 +32,7 @@ async function getFreshCandles() {
 
   for (let i = 0; i < HISTORY_BATCHES; i++) {
     const reqUrl = nextEnd === null ? baseUrl : `${baseUrl}&end=${nextEnd}`
-    const resp = await fetch(reqUrl, { next: { revalidate: 55 } }).then((res) => res.json()) as { data: { ohlc: BitstampOhlcEntry[] } }
+    const resp = await fetch(reqUrl, { cache: 'no-store' }).then((res) => res.json()) as { data: { ohlc: BitstampOhlcEntry[] } }
     const ohlc = resp.data?.ohlc ?? []
     if (ohlc.length === 0) break
 
@@ -57,7 +55,7 @@ export async function GET() {
 
     return NextResponse.json({ code: 0, data }, {
       headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+        'Cache-Control': 'no-store',
       },
     })
   } catch (err) {

@@ -1,9 +1,9 @@
 {
-  "id": "/?dev=materia",
+  "id": "/",
   "name": "GONOVI · Hub Oficial",
   "short_name": "GONOVI",
   "description": "Hub oficial de GONOVI: indicadores, Trading Lab, auditoría Montecarlo, educación y comunidad.",
-  "start_url": "/?dev=materia&source=pwa",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],

@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation'
 import { MercadosPage } from '@/components/official/mercados/MercadosPage'
 
 export const metadata = {
@@ -9,8 +8,5 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 export default function Page() {
-  if (process.env.OFFICIAL_ENABLED !== 'true') {
-    notFound()
-  }
   return <MercadosPage />
 }

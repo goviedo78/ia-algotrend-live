@@ -1,5 +1,3 @@
-import { notFound } from 'next/navigation'
-import { cookies } from 'next/headers'
 import { EstrategiasPage } from '@/components/official/estrategias/EstrategiasPage'
 import { getAllTrades, getOpenTrade } from '@/lib/db'
 
@@ -28,10 +26,6 @@ async function safeFetch(tableName: string) {
 }
 
 export default async function Page() {
-  if (process.env.OFFICIAL_ENABLED !== 'true') {
-    notFound()
-  }
-
   // Las 3 estrategias se fetchean en PARALELO (6 queries SQL en simultáneo
   // en vez de 6 secuenciales). Latencia total ≈ la query más lenta, no la
   // suma. Antes: ~600-900ms. Ahora: ~150-250ms.
@@ -47,12 +41,5 @@ export default async function Page() {
     'gold30_trades': oro30,
   }
 
-  // /official/estrategias está expuesta al público (allowlist en proxy.ts).
-  // Cookie __gonovi_dev es httpOnly → no falsificable desde el browser.
-  // Cuando isAdmin=false, EstrategiasPage oculta topbar y back link.
-  const expected = process.env.BYPASS_TOKEN
-  const store = await cookies()
-  const isAdmin = Boolean(expected) && store.get('__gonovi_dev')?.value === expected
-
-  return <EstrategiasPage initialData={initialData} isAdmin={isAdmin} />
+  return <EstrategiasPage initialData={initialData} />
 }

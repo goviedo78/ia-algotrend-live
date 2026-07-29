@@ -1,0 +1,160 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { BingxAdapter, buildBingxQuery, signBingxQuery } from '../../src/lib/brokers/adapters/bingx'
+
+test('BingX query is encoded, sorted and signed deterministically', () => {
+  const query = buildBingxQuery({ timestamp: 2, symbol: 'BTC-USDT', recvWindow: 10_000 })
+  assert.equal(query, 'recvWindow=10000&symbol=BTC-USDT&timestamp=2')
+  assert.equal(signBingxQuery('secret', query), '212def1a2aebfc2c6f0ef1b31af6b2b3d4fdc4481673dce71d09104803118e42')
+})
+
+test('one-way close uses fixed demo host, actual quantity and reduceOnly', async () => {
+  const requestedUrls: string[] = []
+  const fetchImpl: typeof fetch = async (input) => {
+    requestedUrls.push(String(input))
+    if (String(input).includes('/positionSide/dual')) {
+      return Response.json({ code: 0, data: { dualSidePosition: false } })
+    }
+    return Response.json({ code: 0, data: { order: { orderId: '1', status: 'NEW', clientOrderID: 'client-1' } } })
+  }
+  const adapter = new BingxAdapter({
+    credentials: { apiKey: 'key', secretKey: 'secret' }, environment: 'DEMO', fetchImpl, now: () => 2,
+  })
+  const result = await adapter.placeMarketOrder({
+    symbol: 'BTC-USDT', direction: 'LONG', side: 'SELL', quantity: 0.0002,
+    reduceOnly: true, clientOrderId: 'client-1',
+  })
+  const orderUrl = requestedUrls.at(-1) ?? ''
+  assert.match(orderUrl, /^https:\/\/open-api-vst\.bingx\.com\/openApi\/swap\/v2\/trade\/order\?/)
+  assert.match(orderUrl, /reduceOnly=true/)
+  assert.match(orderUrl, /positionSide=BOTH/)
+  assert.match(orderUrl, /clientOrderId=client-1/)
+  assert.match(orderUrl, /quantity=0.0002/)
+  assert.equal(result.clientOrderId, 'client-1')
+})
+
+test('hedge close omits unsupported reduceOnly and keeps position side', async () => {
+  const requestedUrls: string[] = []
+  const fetchImpl: typeof fetch = async (input) => {
+    requestedUrls.push(String(input))
+    if (String(input).includes('/positionSide/dual')) {
+      return Response.json({ code: 0, data: { dualSidePosition: true } })
+    }
+    return Response.json({ code: 0, data: { orderID: '90071992547409930', status: 'NEW', clientOrderId: 'client-2' } })
+  }
+  const adapter = new BingxAdapter({ credentials: { apiKey: 'key', secretKey: 'secret' }, environment: 'DEMO', fetchImpl, now: () => 2 })
+  const result = await adapter.placeMarketOrder({ symbol: 'BTC-USDT', direction: 'SHORT', side: 'BUY', quantity: 0.0002, reduceOnly: true, clientOrderId: 'client-2' })
+  const orderUrl = requestedUrls.at(-1) ?? ''
+  assert.doesNotMatch(orderUrl, /reduceOnly=/)
+  assert.match(orderUrl, /positionSide=SHORT/)
+  assert.equal(result.brokerOrderId, '90071992547409930')
+})
+
+test('position mode accepts BingX string booleans', async () => {
+  const requestedUrls: string[] = []
+  const fetchImpl: typeof fetch = async (input) => {
+    requestedUrls.push(String(input))
+    if (String(input).includes('/positionSide/dual')) {
+      return Response.json({ code: 0, data: { dualSidePosition: 'false' } })
+    }
+    return Response.json({ code: 0, data: { order: { orderId: '3', status: 'NEW', clientOrderID: 'client-3' } } })
+  }
+  const adapter = new BingxAdapter({ credentials: { apiKey: 'key', secretKey: 'secret' }, environment: 'DEMO', fetchImpl, now: () => 2 })
+
+  await adapter.setLeverage('BTC-USDT', 'LONG', 1)
+  await adapter.placeMarketOrder({ symbol: 'BTC-USDT', direction: 'LONG', side: 'BUY', quantity: 0.0002, reduceOnly: false, clientOrderId: 'client-3' })
+
+  assert.match(requestedUrls[1], /side=BOTH/)
+  assert.match(requestedUrls.at(-1) ?? '', /positionSide=BOTH/)
+})
+
+test('one-way positions infer direction from the signed position amount', async () => {
+  const fetchImpl: typeof fetch = async () => Response.json({
+    code: 0,
+    data: [
+      {
+        symbol: 'BTC-USDT',
+        positionSide: 'BOTH',
+        positionAmt: '-0.0002',
+        availableAmt: '-0.0001',
+        positionValue: '-12',
+        avgPrice: '60000',
+        leverage: '1',
+      },
+    ],
+  })
+  const adapter = new BingxAdapter({
+    credentials: { apiKey: 'key', secretKey: 'secret' }, environment: 'DEMO', fetchImpl, now: () => 2,
+  })
+  const positions = await adapter.getPositions('BTC-USDT')
+  assert.equal(positions.length, 1)
+  assert.equal(positions[0].direction, 'SHORT')
+  assert.equal(positions[0].quantity, 0.0002)
+  assert.equal(positions[0].availableQuantity, 0.0001)
+})
+
+test('missing order is the only broker query error treated as absent', async () => {
+  const fetchImpl: typeof fetch = async () => Response.json({ code: 109421, msg: 'not found' })
+  const adapter = new BingxAdapter({ credentials: { apiKey: 'key', secretKey: 'secret' }, environment: 'DEMO', fetchImpl, now: () => 2 })
+  assert.equal(await adapter.getOrder('BTC-USDT', 'client-3'), null)
+})
+
+test('network failures are retryable and fail closed', async () => {
+  const fetchImpl: typeof fetch = async () => { throw new Error('socket closed') }
+  const adapter = new BingxAdapter({ credentials: { apiKey: 'key', secretKey: 'secret' }, environment: 'DEMO', fetchImpl, now: () => 2 })
+  await assert.rejects(adapter.getBalance(), { code: 'BINGX_NETWORK_ERROR', retryable: true })
+})
+
+test('concurrent accounts coalesce public contract and ticker requests', async () => {
+  const originalFetch = globalThis.fetch
+  let contractRequests = 0
+  let tickerRequests = 0
+  globalThis.fetch = async (input) => {
+    const url = String(input)
+    if (url.includes('/quote/contracts')) {
+      contractRequests += 1
+      return Response.json({
+        code: 0,
+        data: [{
+          symbol: 'LOAD-USDT', quantityPrecision: 3, tradeMinQuantity: 0.001,
+          tradeMinUSDT: 2, pricePrecision: 2, status: 1,
+          apiStateOpen: 'true', apiStateClose: 'true', brokerState: 'true',
+          maxLongLeverage: 10, maxShortLeverage: 10,
+        }],
+      })
+    }
+    tickerRequests += 1
+    return Response.json({ code: 0, data: { price: '100' } })
+  }
+
+  try {
+    const adapters = Array.from({ length: 20 }, (_, index) => new BingxAdapter({
+      credentials: { apiKey: `key-${index}`, secretKey: `secret-${index}` },
+      environment: 'DEMO',
+    }))
+    await Promise.all(adapters.map((adapter) => adapter.getInstrumentRules('LOAD-USDT')))
+    await Promise.all(adapters.map((adapter) => adapter.getLastPrice('LOAD-USDT')))
+    assert.equal(contractRequests, 1)
+    assert.equal(tickerRequests, 1)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
+test('active public contracts do not depend on the brokerState metadata flag', async () => {
+  const fetchImpl: typeof fetch = async () => Response.json({
+    code: 0,
+    data: [{
+      symbol: 'NCCOGOLD2USD-USDT', quantityPrecision: 4, tradeMinQuantity: 0.0005,
+      tradeMinUSDT: 2, pricePrecision: 2, status: 1,
+      apiStateOpen: 'true', apiStateClose: 'true', brokerState: false,
+    }],
+  })
+  const adapter = new BingxAdapter({
+    credentials: { apiKey: 'key', secretKey: 'secret' }, environment: 'DEMO', fetchImpl,
+  })
+  const rules = await adapter.getInstrumentRules('NCCOGOLD2USD-USDT')
+  assert.equal(rules.openEnabled, true)
+  assert.equal(rules.closeEnabled, true)
+  assert.equal(rules.minimumQuantity, 0.0005)
+})

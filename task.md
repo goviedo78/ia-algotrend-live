@@ -12,14 +12,14 @@
 
 El proyecto:
 - **Hub `/official`** de 1 pantalla con logo 3D Materia + tarjetas alrededor → portal premium.
-- **Linktree público `/links`** para compartir desde redes/videos (sin gate de mantenimiento).
+- **Linktree público `/links`** para compartir desde redes/videos.
 - **Sub-productos** dentro de `/official/*` (Lab, Backtesting, Academia, Tienda, Checkout, Analytics, Monte Carlo, etc.).
 - **Tracking NFC `/x/[id]`** para tarjetas físicas del personal branding.
 - **Brand system pages** (`brand-3d.html`, `brand-motion.html`, `brand-system.html`) standalone.
 
 ## 🚨 Reglas inviolables
 
-1. **Muro de "Próximamente" SIEMPRE activo** en `gonovi.app/`. Bypass único: `/?dev=BYPASS_TOKEN`. Solo Gonzalo decide cuándo quitarlo.
+1. **`gonovi.app/` es público** y muestra el hub completo a todos los visitantes.
 2. **NO tocar apps live** (`algotrend.gonovi.app`, `oro15.gonovi.app`, `oro300.gonovi.app`).
 3. **AlgoTrend ≠ marca madre.** gonovi.app es brand personal GONOVI.
 4. **Deploy a producción SIEMPRE** vía `npm run deploy:prod`. NUNCA `git push` solo (crea solo preview).
@@ -194,8 +194,6 @@ tmux send-keys -t GONOVI_LANDING:0.2 "" C-m
 ## 🔐 Env vars críticas (Vercel Production)
 
 ```
-BYPASS_TOKEN              · valor actual: 'materia' (gate del muro)
-OFFICIAL_ENABLED          · 'true' habilita /official
 ANALYTICS_PIN             · PIN para dashboards admin (analytics, nfc, links)
 DASHBOARD_PASSWORD        · fallback del PIN
 NEXT_PUBLIC_SUPABASE_URL  · público

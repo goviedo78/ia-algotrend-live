@@ -8,7 +8,7 @@ Make the IA AlgoTrend promotion readable and visually strong on narrow mobile sc
 
 - Apply the same responsive banner component to BTC 1H and Oro 30M.
 - Do not alter the desktop (`sm` and wider) banner markup, dimensions, artwork, or layout.
-- Do not change trading logic, operations, alerts, APIs, or the maintenance wall.
+- Do not change trading logic, operations, alerts, APIs, or public landing behavior.
 
 ## Mobile design
 

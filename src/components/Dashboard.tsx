@@ -102,60 +102,6 @@ function hourFloor(ts: number): number {
   return Math.floor(ts / STEP) * STEP
 }
 
-function signalFromResult(result: AlgoTrendResult): 'LONG' | 'SHORT' | null {
-  return result.longSig ? 'LONG' : result.shortSig ? 'SHORT' : null
-}
-
-function isSignalStillOpen(signal: 'LONG' | 'SHORT', result: AlgoTrendResult, candlesAfterSignal: Candle[]) {
-  const openPrice = result.close
-  let stopLoss = signal === 'LONG' ? result.longStop : result.shortStop
-  let takeProfit: number | null = signal === 'LONG' ? result.longTp : result.shortTp
-  const trailTriggerPct = 1.0
-  const trailOffsetPct = 0.3
-
-  for (const candle of candlesAfterSignal) {
-    const { open: o, high: h, low: l, close: price } = candle
-    const path: ('high' | 'low')[] = Math.abs(o - h) < Math.abs(o - l) ? ['high', 'low'] : ['low', 'high']
-
-    const hitPath = (leg: 'high' | 'low') => {
-      if (signal === 'LONG') {
-        if (leg === 'low' && l <= stopLoss) return true
-        if (leg === 'high' && takeProfit !== null && h >= takeProfit) return true
-        return false
-      }
-      if (leg === 'high' && h >= stopLoss) return true
-      if (leg === 'low' && takeProfit !== null && l <= takeProfit) return true
-      return false
-    }
-
-    if (hitPath(path[0]) || hitPath(path[1])) return false
-
-    if (signal === 'LONG') {
-      const gainPct = ((h - openPrice) / openPrice) * 100
-      if (gainPct >= trailTriggerPct) {
-        const trail = h * (1 - trailOffsetPct / 100)
-        stopLoss = Math.max(openPrice, stopLoss, trail)
-        takeProfit = null
-      }
-    } else {
-      const gainPct = ((openPrice - l) / openPrice) * 100
-      if (gainPct >= trailTriggerPct) {
-        const trail = l * (1 + trailOffsetPct / 100)
-        stopLoss = Math.min(openPrice, stopLoss, trail)
-        takeProfit = null
-      }
-    }
-
-    const closeHit = signal === 'LONG'
-      ? (price <= stopLoss || (takeProfit !== null && price >= takeProfit))
-      : (price >= stopLoss || (takeProfit !== null && price <= takeProfit))
-
-    if (closeHit) return false
-  }
-
-  return true
-}
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -222,7 +168,7 @@ export default function Dashboard() {
     }
   }, [])
 
-  const processCandle = useCallback(async (newCandle: Candle, isClosed: boolean) => {
+  const processCandle = useCallback((newCandle: Candle) => {
     const eng = engineRef.current
     if (!eng) return
 
@@ -239,24 +185,7 @@ export default function Dashboard() {
     setLiveCandle({ ...newCandle })
     setLastPrice(newCandle.close)
 
-    if (isClosed && res.length > 0) {
-      const last = res[res.length - 1]
-      const signal = last.longSig ? 'LONG' : last.shortSig ? 'SHORT' : null
-      await fetch('/api/signal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          signal, time: last.time, price: last.close,
-          open: newCandle.open, high: newCandle.high, low: newCandle.low,
-          stop: signal === 'LONG' ? last.longStop : last.shortStop,
-          tp: signal === 'LONG' ? last.longTp : last.shortTp,
-          probUp: last.probUp,
-          probDown: last.probDown,
-        }),
-      })
-      await refreshTrades()
-    }
-  }, [refreshTrades])
+  }, [])
 
   // Handle a single Bitstamp trade tick → build live candle
   const handleTrade = useCallback((trade: BitstampTradeData) => {
@@ -268,7 +197,7 @@ export default function Dashboard() {
 
     // Hour rolled over → close previous candle, start new one
     if (prev && prev.time !== hour) {
-      processCandle({ ...prev }, true)   // close the finished candle
+      processCandle({ ...prev })
       liveCandleRef.current = null
     }
 
@@ -293,7 +222,7 @@ export default function Dashboard() {
       }
     }
 
-    processCandle({ ...liveCandleRef.current }, false)
+    processCandle({ ...liveCandleRef.current })
   }, [processCandle])
 
   // Bootstrap: load history + run engine + backfill if no trades
@@ -328,46 +257,6 @@ export default function Dashboard() {
             if (mounted && engineRef.current) {
               const computed = engineRef.current.runAlgoTrend(hist)
               setResults(computed)
-
-              void (async () => {
-                const latestKnownTrade = tradesData.trades[0]
-                const latestKnownTime = latestKnownTrade
-                  ? Math.max(
-                      latestKnownTrade.signal_time ?? 0,
-                      latestKnownTrade.open_time ?? 0,
-                      latestKnownTrade.close_time ?? 0,
-                    )
-                  : 0
-
-                if (tradesData.openTrade) return
-
-                const lookbackStart = Math.max(0, computed.length - 13)
-                for (let i = computed.length - 1; i >= lookbackStart; i--) {
-                  const result = computed[i]
-                  const signal = signalFromResult(result)
-                  if (!signal || result.time <= latestKnownTime) continue
-                  if (!isSignalStillOpen(signal, result, hist.slice(i + 1))) break
-
-                  await fetch('/api/signal', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      signal,
-                      time: result.time,
-                      price: result.close,
-                      open: hist[i]?.open ?? result.close,
-                      high: hist[i]?.high ?? result.close,
-                      low: hist[i]?.low ?? result.close,
-                      stop: signal === 'LONG' ? result.longStop : result.shortStop,
-                      tp: signal === 'LONG' ? result.longTp : result.shortTp,
-                      probUp: result.probUp,
-                      probDown: result.probDown,
-                    }),
-                  })
-                  await refreshTrades()
-                  break
-                }
-              })()
             }
           }
           waited += 100
@@ -561,9 +450,9 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-          {/* Row 1, Col 1: Chart & Sponsor */}
-          <div className="reveal-up reveal-delay-1 xl:col-span-1 xl:row-start-1 flex flex-col gap-4">
+        <div className="grid grid-cols-1 gap-2 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start xl:gap-4">
+          {/* Main stream: sponsor, chart and history stay visually connected. */}
+          <div className="reveal-up reveal-delay-1 flex flex-col gap-2">
             <SponsorBanner />
             <Chart 
               candles={candles} 
@@ -572,16 +461,12 @@ export default function Dashboard() {
               trades={trades}
               openTrade={openTrade}
             />
-          </div>
-
-          {/* Sidebar / Mobile Middle: StatsPanel (Engine, Perf, Risk, Params) */}
-          <div className="reveal-up reveal-delay-3 xl:col-start-2 xl:row-start-1 xl:row-span-2">
-            <StatsPanel stats={stats} engine={lastResult} connected={connected} lastPrice={lastPrice} />
-          </div>
-
-          {/* Mobile Bottom / Desktop Below Chart: TradeTable */}
-          <div className="reveal-up reveal-delay-2 xl:col-start-1 xl:row-start-2">
             <TradeTable trades={trades} openTrade={openTrade} currentPrice={lastPrice} />
+          </div>
+
+          {/* Sidebar / Mobile bottom: StatsPanel (Engine, Perf, Risk, Params) */}
+          <div className="reveal-up reveal-delay-3 xl:col-start-2">
+            <StatsPanel stats={stats} engine={lastResult} connected={connected} lastPrice={lastPrice} />
           </div>
         </div>
 

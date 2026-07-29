@@ -59,7 +59,7 @@ self.addEventListener('push', (event) => {
       badge: '/icons/icon-192.png',
       tag: data.tag || 'signal',
       vibrate: [200, 100, 200],
-      data: { url: data.url || '/?dev=materia&source=notification' },
+      data: { url: data.url || '/?source=notification' },
       actions: [{ action: 'open', title: 'Ver panel' }],
     })
   )
@@ -72,7 +72,7 @@ self.addEventListener('notificationclick', (event) => {
       for (const client of clients) {
         if (client.url.includes('/') && 'focus' in client) return client.focus()
       }
-      return self.clients.openWindow(event.notification.data?.url || '/?dev=materia&source=notification')
+      return self.clients.openWindow(event.notification.data?.url || '/?source=notification')
     })
   )
 })

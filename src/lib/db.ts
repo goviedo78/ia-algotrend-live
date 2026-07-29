@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 import { revalidateTag } from 'next/cache'
-import { safeExecuteBingxClose, type BingxExecutionSource } from '@/lib/bingx'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -62,7 +61,6 @@ export async function openTrade(
   takeProfit: number | null,
   atrPct: number | null,
   tableName: string = TABLE,
-  options: { exchangeSource?: BingxExecutionSource; mirrorExchangeClose?: boolean } = {}
 ): Promise<Trade | null> {
   const { data, error } = await supabase
     .from(tableName)
@@ -85,11 +83,8 @@ export async function openTrade(
     throw new Error(error.message)
   }
 
-  // Insert succeeded — close any other OPEN trade (legacy or different signal_time).
-  // We also mirror the close on the BingX VST account so the exchange position
-  // stays in sync with the app. Without this, when the app flips trades via
-  // openTrade() the previous BingX position stays open and gets misattributed
-  // to the new trade (see incident with phantom trade #282 / #283).
+  // Insert succeeded. Close any stale database row, but keep broker side effects
+  // in the execution layer so they can be persisted, retried and reconciled.
   const { data: others } = await supabase
     .from(tableName)
     .select()
@@ -98,9 +93,6 @@ export async function openTrade(
 
   for (const other of (others ?? []) as Trade[]) {
     await closeTrade(other.id, openTime, openPrice, 'SIGNAL', tableName)
-    if (options.mirrorExchangeClose !== false) {
-      await safeExecuteBingxClose(other, undefined, options.exchangeSource ?? 'cron')
-    }
   }
 
   revalidatePublicTradeSnapshot()
@@ -136,6 +128,13 @@ export async function closeTrade(
   const { data: trade } = await supabase.from(tableName).select().eq('id', id).single()
   const t = trade as Trade
 
+  if (t.status !== 'OPEN') {
+    throw new Error(`Trade ${id} is already closed`)
+  }
+  if (closeTime < t.open_time) {
+    throw new Error(`Trade ${id} cannot close before it opens`)
+  }
+
   const mult   = t.direction === 'LONG' ? 1 : -1
   const pnlPct = ((closePrice - t.open_price) / t.open_price) * mult * 100
   const pnlUsd = (closePrice - t.open_price) * mult
@@ -144,6 +143,7 @@ export async function closeTrade(
     .from(tableName)
     .update({ close_time: closeTime, close_price: closePrice, close_reason: reason, pnl_usd: pnlUsd, pnl_pct: pnlPct, status: 'CLOSED' })
     .eq('id', id)
+    .eq('status', 'OPEN')
     .select()
     .single()
 

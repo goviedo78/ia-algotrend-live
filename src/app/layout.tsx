@@ -23,6 +23,7 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://gonovi.app'),
   title: 'GONOVI · Hub Oficial',
   description: 'Hub oficial de GONOVI: indicadores, Trading Lab, auditoría Montecarlo, educación y comunidad.',
   manifest: '/manifest.json',
