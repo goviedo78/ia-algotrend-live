@@ -60,7 +60,58 @@ export type BrokerOrderHistoryTotals = {
   fillCount: number
 }
 
+export type BrokerPerformanceStats = {
+  closedTradeCount: number
+  winningTradeCount: number
+  losingTradeCount: number
+  breakevenTradeCount: number
+  winRatePct: number | null
+  netPnlUsd: number
+  grossProfitUsd: number
+  grossLossUsd: number
+  profitFactor: number | null
+  averageNetPnlUsd: number | null
+  averageWinUsd: number | null
+  averageLossUsd: number | null
+  bestTradeUsd: number | null
+  worstTradeUsd: number | null
+  lastClosedAt: string | null
+}
+
 export type BrokerOrderHistoryResponse = {
   orders: BrokerOrderHistoryItem[]
   totals: BrokerOrderHistoryTotals
+  performance: BrokerPerformanceStats
+}
+
+export const EMPTY_BROKER_ORDER_HISTORY: BrokerOrderHistoryResponse = {
+  orders: [],
+  totals: {
+    realizedPnlUsd: 0,
+    feesUsd: 0,
+    fundingUsd: 0,
+    adjustmentsUsd: 0,
+    netPnlUsd: 0,
+    notionalUsd: 0,
+    netReturnPct: null,
+    orderCount: 0,
+    fillCount: 0,
+  },
+  performance: {
+    closedTradeCount: 0,
+    winningTradeCount: 0,
+    losingTradeCount: 0,
+    breakevenTradeCount: 0,
+    winRatePct: null,
+    netPnlUsd: 0,
+    grossProfitUsd: 0,
+    grossLossUsd: 0,
+    profitFactor: null,
+    averageNetPnlUsd: null,
+    averageWinUsd: null,
+    averageLossUsd: null,
+    bestTradeUsd: null,
+    worstTradeUsd: null,
+    lastClosedAt: null,
+  },
 }

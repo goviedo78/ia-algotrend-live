@@ -7,12 +7,14 @@ import { ArrowRight, KeyRound, LoaderCircle, ShieldCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BrokerBrand } from './BrokerBrand'
 import { BrokerThemeToggle, useBrokerTheme } from './BrokerThemeToggle'
+import { BrokerPrivacyToggle, redactText, useBrokerPrivacy } from './BrokerPrivacy'
 import styles from './brokers.module.css'
 
 type TotpFactor = { id: string; friendly_name?: string; status: string }
 
 export function BrokerSecurityPanel({ email, nextPath }: { email: string; nextPath: string }) {
   const { theme, toggleTheme } = useBrokerTheme()
+  const { privacyMode, togglePrivacyMode } = useBrokerPrivacy()
   const router = useRouter()
   const [factors, setFactors] = useState<TotpFactor[]>([])
   const [factorId, setFactorId] = useState('')
@@ -93,7 +95,7 @@ export function BrokerSecurityPanel({ email, nextPath }: { email: string; nextPa
     <main className={styles.page} data-theme={theme}>
       <header className={styles.topbar}>
         <BrokerBrand />
-        <nav><BrokerThemeToggle theme={theme} onToggle={toggleTheme} /><span className={styles.identity}>{email}</span></nav>
+        <nav><BrokerPrivacyToggle active={privacyMode} onToggle={togglePrivacyMode} /><BrokerThemeToggle theme={theme} onToggle={toggleTheme} /><span className={styles.identity}>{redactText(privacyMode, email, 'Email oculto')}</span></nav>
       </header>
       <section className={styles.narrow}>
         <div className={styles.titleRow}>
@@ -112,8 +114,8 @@ export function BrokerSecurityPanel({ email, nextPath }: { email: string; nextPa
         {qrCode && (
           <div className={styles.section}>
             <h2>Escaneá el código</h2>
-            <Image className={styles.qr} src={qrCode} width={220} height={220} unoptimized alt="Código QR para configurar MFA" />
-            <label className={styles.field}><span>Clave manual</span><input readOnly value={secret} /></label>
+            {privacyMode ? <div className={styles.qrPlaceholder}>QR oculto</div> : <Image className={styles.qr} src={qrCode} width={220} height={220} unoptimized alt="Código QR para configurar MFA" />}
+            <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><span>Clave manual</span><input readOnly value={privacyMode ? '••••••••••••' : secret} /></label>
           </div>
         )}
         {!busy && activeFactor && (

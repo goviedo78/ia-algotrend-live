@@ -10,7 +10,8 @@ import { BrokerBrand } from './BrokerBrand'
 import { BrokerFieldLabel } from './BrokerFieldHelp'
 import { BrokerThemeToggle, useBrokerTheme } from './BrokerThemeToggle'
 import { BrokerOrderHistory } from './BrokerOrderHistory'
-import type { BrokerOrderHistoryResponse } from '@/lib/brokers/order-history-types'
+import { EMPTY_BROKER_ORDER_HISTORY, type BrokerOrderHistoryResponse } from '@/lib/brokers/order-history-types'
+import { BrokerPrivacyToggle, BrokerSensitiveValue, redactText, useBrokerPrivacy } from './BrokerPrivacy'
 import { BROKER_STRATEGIES } from '@/lib/brokers/strategies'
 import styles from './brokers.module.css'
 
@@ -22,11 +23,6 @@ type RiskEditDraft = {
   allocationPct: number
   compoundEnabled: boolean
 }
-const EMPTY_HISTORY: BrokerOrderHistoryResponse = {
-  orders: [],
-  totals: { realizedPnlUsd: 0, feesUsd: 0, fundingUsd: 0, adjustmentsUsd: 0, netPnlUsd: 0, notionalUsd: 0, netReturnPct: null, orderCount: 0, fillCount: 0 },
-}
-
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...init?.headers } })
   const body = await response.json().catch(() => ({}))
@@ -36,9 +32,10 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function BrokerConnectionsPanel({ email }: { email: string }) {
   const { theme, toggleTheme } = useBrokerTheme()
+  const { privacyMode, togglePrivacyMode } = useBrokerPrivacy()
   const [membership, setMembership] = useState<Membership>(null)
   const [connections, setConnections] = useState<BrokerConnectionDto[]>([])
-  const [orderHistory, setOrderHistory] = useState<BrokerOrderHistoryResponse>(EMPTY_HISTORY)
+  const [orderHistory, setOrderHistory] = useState<BrokerOrderHistoryResponse>(EMPTY_BROKER_ORDER_HISTORY)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [environment, setEnvironment] = useState<'DEMO' | 'LIVE'>('DEMO')
@@ -191,7 +188,7 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
 
   return (
     <main className={styles.page} data-theme={theme}>
-      <header className={styles.topbar}><BrokerBrand /><nav><Link href="/account">Cuenta</Link><BrokerThemeToggle theme={theme} onToggle={toggleTheme} /><span className={styles.identity}>{email}</span></nav></header>
+      <header className={styles.topbar}><BrokerBrand /><nav><Link href="/account">Cuenta</Link><BrokerPrivacyToggle active={privacyMode} onToggle={togglePrivacyMode} /><BrokerThemeToggle theme={theme} onToggle={toggleTheme} /><span className={styles.identity}>{redactText(privacyMode, email, 'Email oculto')}</span></nav></header>
       <div className={styles.content}>
         <div className={styles.titleRow}><Cable size={24} /><div><h1>Conexiones de broker</h1><p>Credenciales, validación y límites operativos.</p></div></div>
         {loading && <div className={styles.notice}><LoaderCircle className={styles.spin} size={18} /> Cargando conexiones…</div>}
@@ -221,7 +218,7 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
                   <BrokerFieldLabel label="Nombre" tooltip="Identificador interno para reconocer esta cuenta. No modifica el nombre en el broker." example="Ejemplo: BTC principal 1H." />
                   <input name="label" required maxLength={80} placeholder="BTC principal 1H" />
                 </label>
-                <label className={styles.field}>
+                <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}>
                   <BrokerFieldLabel label="Capital máximo autorizado (USD)" tooltip="Límite de capital que autorizás para esta estrategia. No deposita, transfiere ni crea fondos; el saldo siempre permanece en BingX." example="Ejemplo: si tu cuenta tiene 1.000 USD y autorizás 300, el bot calcula sus límites sobre un máximo de 300 USD." />
                   <input name="capitalUsd" required type="number" min="100" max="10000000" step="0.01" placeholder="1000" value={capitalUsd} onChange={(event) => setCapitalUsd(Number(event.target.value) || 0)} />
                 </label>
@@ -264,7 +261,7 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
                 </label>
                 <div className={styles.fullWidth}>
                   <p className={styles.automaticRisk}><ShieldCheck size={16} /> El motor calcula el lotaje automáticamente. No necesitás estimar movimientos, comisiones ni ganancias objetivo.</p>
-                  <div className={styles.metrics}><span>Tope base por orden <strong>{suggestion.suggestedNotionalPerOrderUsd.toFixed(2)} USD</strong></span><span>Exposición total máxima <strong>{suggestion.suggestedMaxTotalExposureUsd.toFixed(2)} USD</strong></span><span>Corte de pérdida diaria <strong>{suggestion.suggestedDailyLossLimitUsd.toFixed(2)} USD</strong></span><span>Margen protegido <strong>{suggestion.suggestedMinAvailableMarginUsd.toFixed(2)} USD</strong></span></div>
+                  <div className={styles.metrics}><span>Tope base por orden <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{suggestion.suggestedNotionalPerOrderUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Exposición total máxima <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{suggestion.suggestedMaxTotalExposureUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Corte de pérdida diaria <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{suggestion.suggestedDailyLossLimitUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Margen protegido <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{suggestion.suggestedMinAvailableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span></div>
                   <p className={styles.permissionText}><KeyRound size={16} /> Permitido: lectura y futuros perpetuos. Prohibido: Spot, retiros, transferencias, subcuentas y P2P.</p>
                   <BrokerFieldLabel label="Confirmación de permisos" tooltip="Esta confirmación debe coincidir con los permisos reales de la API. GONOVI no necesita retiros ni transferencias." example="Ejemplo: sólo Leer y Trading con Futuros Perpetuos." />
                   <label className={styles.check}><input type="checkbox" required /><span>Confirmo que la clave sólo permite lectura y trading de futuros perpetuos.</span></label>
@@ -280,7 +277,7 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
                 <div className={styles.sectionHeading}><Pencil size={18} /><h2>Editar capital de {connection.label}</h2></div>
                 <div className={styles.capitalScope}><ShieldCheck size={18} /><div><strong>Misma conexión, nuevos límites</strong><span>{BROKER_STRATEGIES[connection.requestedStrategy.code]?.label ?? connection.requestedStrategy.code} · {connection.environment}. La API, la estrategia y el historial no cambian. Al guardar se pausan nuevas aperturas; si hay una posición abierta, el capital no cambia y sus cierres siguen habilitados.</span></div></div>
                 <form className={styles.formGrid} onSubmit={requestRiskChange}>
-                  <label className={styles.field}><BrokerFieldLabel label="Capital máximo autorizado (USD)" tooltip="Nuevo límite de capital para esta conexión. No transfiere fondos ni crea otra conexión." example={`Actual: ${connection.riskPolicy?.declaredCapitalUsd.toFixed(2) ?? '0.00'} USD.`} /><input type="number" min="100" max="10000000" step="0.01" value={riskEdit.capitalUsd} onChange={(event) => setRiskEdit((current) => current ? { ...current, capitalUsd: Number(event.target.value) || 0 } : current)} required /></label>
+                  <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label="Capital máximo autorizado (USD)" tooltip="Nuevo límite de capital para esta conexión. No transfiere fondos ni crea otra conexión." example={`Actual: ${connection.riskPolicy?.declaredCapitalUsd.toFixed(2) ?? '0.00'} USD.`} /><input type="number" min="100" max="10000000" step="0.01" value={riskEdit.capitalUsd} onChange={(event) => setRiskEdit((current) => current ? { ...current, capitalUsd: Number(event.target.value) || 0 } : current)} required /></label>
                   <div className={styles.field}><BrokerFieldLabel label="Interés compuesto" tooltip="Se mantiene aislado en esta conexión. Encendido recalcula futuras entradas con su resultado neto reconciliado." example="No mezcla resultados de BTC con Oro ni de otros usuarios." /><label className={styles.toggleRow}><input type="checkbox" checked={riskEdit.compoundEnabled} onChange={(event) => setRiskEdit((current) => current ? { ...current, compoundEnabled: event.target.checked } : current)} /><span className={styles.toggleTrack} aria-hidden="true"><span /></span><strong>{riskEdit.compoundEnabled ? 'Activado' : 'Desactivado'}</strong></label></div>
                   <details className={`${styles.advancedRisk} ${styles.fullWidth}`}>
                     <summary>Ajustes avanzados de protección <span>Opcional</span></summary>
@@ -292,7 +289,7 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
                       <label className={styles.field}><BrokerFieldLabel label="Tope por operación (%)" tooltip="Límite máximo para dimensionar futuras aperturas. No modifica una posición ya abierta." example="Ejemplo: 5% del capital autorizado." /><input type="number" min="1" max="20" step="0.1" value={riskEdit.allocationPct} onChange={(event) => setRiskEdit((current) => current ? { ...current, allocationPct: Number(event.target.value) || 0 } : current)} required /></label>
                     </div>
                   </details>
-                  <div className={`${styles.metrics} ${styles.fullWidth}`}><span>Tope base por orden <strong>{editSuggestion.suggestedNotionalPerOrderUsd.toFixed(2)} USD</strong></span><span>Exposición total máxima <strong>{editSuggestion.suggestedMaxTotalExposureUsd.toFixed(2)} USD</strong></span><span>Corte de pérdida diaria <strong>{editSuggestion.suggestedDailyLossLimitUsd.toFixed(2)} USD</strong></span><span>Margen protegido <strong>{editSuggestion.suggestedMinAvailableMarginUsd.toFixed(2)} USD</strong></span></div>
+                  <div className={`${styles.metrics} ${styles.fullWidth}`}><span>Tope base por orden <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editSuggestion.suggestedNotionalPerOrderUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Exposición total máxima <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editSuggestion.suggestedMaxTotalExposureUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Corte de pérdida diaria <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editSuggestion.suggestedDailyLossLimitUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Margen protegido <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editSuggestion.suggestedMinAvailableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span></div>
                   <div className={`${styles.commandRow} ${styles.fullWidth}`}><button className={styles.primaryButton} disabled={submitting || riskEdit.capitalUsd < 100} type="submit">Enviar cambio a aprobación</button><button className={styles.secondaryButton} disabled={submitting} type="button" onClick={() => setRiskEdit(null)}>Cancelar</button></div>
                 </form>
               </section>
@@ -310,9 +307,9 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
 
             <section className={styles.tableSection}>
               <div className={styles.sectionHeading}><Cable size={18} /><h2>Conexiones</h2><button className={styles.iconButton} title="Actualizar" disabled={loading || submitting} onClick={() => void load()}><RefreshCw size={17} /></button></div>
-              {!connections.length ? <p className={styles.muted}>No hay conexiones registradas.</p> : <div className={styles.tableWrap}><table><thead><tr><th>Nombre</th><th>Estrategia</th><th>Broker</th><th>Entorno</th><th>Estado</th><th>Capital autorizado</th><th>Riesgo</th><th aria-label="Acciones" /></tr></thead><tbody>{connections.map((connection) => <tr key={connection.id}><td>{connection.label}</td><td>{BROKER_STRATEGIES[connection.requestedStrategy.code]?.label ?? connection.requestedStrategy.code}<small>{connection.requestedStrategy.symbol} · {connection.requestedStrategy.timeframe}</small></td><td>{connection.broker}</td><td>{connection.environment}</td><td><span className={styles.status} data-status={connection.status} title={connection.status === 'MANUAL_INTERVENTION_REQUIRED' ? 'Verificá las posiciones directamente en BingX y pedí al administrador confirmar la resolución.' : undefined}>{connectionStatusLabel(connection.status)}</span></td><td>{connection.riskPolicy ? `$${connection.riskPolicy.declaredCapitalUsd.toFixed(2)}` : '—'}</td><td>{connection.riskPolicy?.enabled ? connection.riskPolicy.sizingMode === 'EQUITY_PERCENT' ? `Compuesto ${connection.riskPolicy.exposurePerOrderPct}% · ${connection.riskPolicy.maxLeverage}x` : `$${connection.riskPolicy.fixedNotionalUsd} · ${connection.riskPolicy.maxLeverage}x` : connection.riskPolicy ? `Sugerido $${connection.riskPolicy.suggestedNotionalPerOrderUsd}` : 'Desactivado'}</td><td><div className={styles.actions}>{connection.riskPolicy && ['ACTIVE', 'SUSPENDED'].includes(connection.status) && <button title="Editar capital" disabled={submitting} className={styles.iconButton} onClick={() => editRisk(connection)}><Pencil size={16} /></button>}{connection.status === 'VALIDATION_FAILED' && <button title="Revalidar" disabled={submitting} className={styles.iconButton} onClick={() => action(connection.id, 'REVALIDATE')}><RefreshCw size={16} /></button>}{connection.status === 'ACTIVE' && <button title="Suspender" disabled={submitting} className={styles.iconButton} onClick={() => action(connection.id, 'SUSPEND')}><Pause size={16} /></button>}{!['REVOKED', 'DELETED', 'MANUAL_INTERVENTION_REQUIRED'].includes(connection.status) && <button title="Revocar" disabled={submitting} className={styles.dangerIcon} onClick={() => action(connection.id, 'REVOKE')}><XCircle size={16} /></button>}{canDeleteConnection(connection.status) && <button title="Eliminar" disabled={submitting} className={styles.dangerIcon} onClick={() => action(connection.id, 'DELETE')}><Trash2 size={16} /></button>}</div></td></tr>)}</tbody></table></div>}
+              {!connections.length ? <p className={styles.muted}>No hay conexiones registradas.</p> : <div className={styles.tableWrap}><table><thead><tr><th>Nombre</th><th>Estrategia</th><th>Broker</th><th>Entorno</th><th>Estado</th><th>Capital autorizado</th><th>Riesgo</th><th aria-label="Acciones" /></tr></thead><tbody>{connections.map((connection) => <tr key={connection.id}><td>{connection.label}</td><td>{BROKER_STRATEGIES[connection.requestedStrategy.code]?.label ?? connection.requestedStrategy.code}<small>{connection.requestedStrategy.symbol} · {connection.requestedStrategy.timeframe}</small></td><td>{connection.broker}</td><td>{connection.environment}</td><td><span className={styles.status} data-status={connection.status} title={connection.status === 'MANUAL_INTERVENTION_REQUIRED' ? 'Verificá las posiciones directamente en BingX y pedí al administrador confirmar la resolución.' : undefined}>{connectionStatusLabel(connection.status)}</span></td><td><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{connection.riskPolicy ? `$${connection.riskPolicy.declaredCapitalUsd.toFixed(2)}` : '—'}</BrokerSensitiveValue></td><td>{connection.riskPolicy?.enabled ? connection.riskPolicy.sizingMode === 'EQUITY_PERCENT' ? `Compuesto ${connection.riskPolicy.exposurePerOrderPct}% · ${connection.riskPolicy.maxLeverage}x` : <><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{`$${connection.riskPolicy.fixedNotionalUsd}`}</BrokerSensitiveValue> · {connection.riskPolicy.maxLeverage}x</> : connection.riskPolicy ? <><span>Sugerido </span><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{`$${connection.riskPolicy.suggestedNotionalPerOrderUsd}`}</BrokerSensitiveValue></> : 'Desactivado'}</td><td><div className={styles.actions}>{connection.riskPolicy && ['ACTIVE', 'SUSPENDED'].includes(connection.status) && <button title="Editar capital" disabled={submitting} className={styles.iconButton} onClick={() => editRisk(connection)}><Pencil size={16} /></button>}{connection.status === 'VALIDATION_FAILED' && <button title="Revalidar" disabled={submitting} className={styles.iconButton} onClick={() => action(connection.id, 'REVALIDATE')}><RefreshCw size={16} /></button>}{connection.status === 'ACTIVE' && <button title="Suspender" disabled={submitting} className={styles.iconButton} onClick={() => action(connection.id, 'SUSPEND')}><Pause size={16} /></button>}{!['REVOKED', 'DELETED', 'MANUAL_INTERVENTION_REQUIRED'].includes(connection.status) && <button title="Revocar" disabled={submitting} className={styles.dangerIcon} onClick={() => action(connection.id, 'REVOKE')}><XCircle size={16} /></button>}{canDeleteConnection(connection.status) && <button title="Eliminar" disabled={submitting} className={styles.dangerIcon} onClick={() => action(connection.id, 'DELETE')}><Trash2 size={16} /></button>}</div></td></tr>)}</tbody></table></div>}
             </section>
-            <BrokerOrderHistory history={orderHistory} />
+            <BrokerOrderHistory history={orderHistory} privacyMode={privacyMode} />
           </>
         )}
       </div>

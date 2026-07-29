@@ -2,6 +2,7 @@ import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { brokerStrategy } from './strategies'
+import { EMPTY_BROKER_ORDER_HISTORY } from './order-history-types'
 import type { BrokerOrderHistoryItem, BrokerOrderHistoryResponse } from './order-history-types'
 
 type HistoryFilters = {
@@ -25,6 +26,37 @@ const EMPTY_AMOUNTS: LedgerAmounts = {
   adjustmentsUsd: 0,
 }
 
+function performanceFromOrders(orders: BrokerOrderHistoryItem[]): BrokerOrderHistoryResponse['performance'] {
+  const closed = orders.filter((order) => order.action === 'CLOSE' && order.status === 'FILLED')
+  const winning = closed.filter((order) => order.netPnlUsd > 0)
+  const losing = closed.filter((order) => order.netPnlUsd < 0)
+  const breakeven = closed.length - winning.length - losing.length
+  const netPnlUsd = closed.reduce((sum, order) => sum + order.netPnlUsd, 0)
+  const grossProfitUsd = winning.reduce((sum, order) => sum + order.netPnlUsd, 0)
+  const grossLossUsd = Math.abs(losing.reduce((sum, order) => sum + order.netPnlUsd, 0))
+  const closedAt = closed
+    .map((order) => order.lastFillAt ?? order.reconciledAt ?? order.submittedAt ?? order.createdAt)
+    .filter((value): value is string => Boolean(value))
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+  return {
+    closedTradeCount: closed.length,
+    winningTradeCount: winning.length,
+    losingTradeCount: losing.length,
+    breakevenTradeCount: breakeven,
+    winRatePct: closed.length > 0 ? winning.length / closed.length * 100 : null,
+    netPnlUsd,
+    grossProfitUsd,
+    grossLossUsd,
+    profitFactor: grossLossUsd > 0 ? grossProfitUsd / grossLossUsd : null,
+    averageNetPnlUsd: closed.length > 0 ? netPnlUsd / closed.length : null,
+    averageWinUsd: winning.length > 0 ? grossProfitUsd / winning.length : null,
+    averageLossUsd: losing.length > 0 ? -grossLossUsd / losing.length : null,
+    bestTradeUsd: closed.length > 0 ? Math.max(...closed.map((order) => order.netPnlUsd)) : null,
+    worstTradeUsd: closed.length > 0 ? Math.min(...closed.map((order) => order.netPnlUsd)) : null,
+    lastClosedAt: closedAt[0] ?? null,
+  }
+}
+
 export async function loadBrokerOrderHistory(filters: HistoryFilters = {}): Promise<BrokerOrderHistoryResponse> {
   const admin = createAdminClient()
   const limit = Math.min(250, Math.max(1, filters.limit ?? 100))
@@ -39,10 +71,7 @@ export async function loadBrokerOrderHistory(filters: HistoryFilters = {}): Prom
   const { data: orders, error: ordersError } = await ordersQuery
   if (ordersError) throw ordersError
   if (!orders?.length) {
-    return {
-      orders: [],
-      totals: { ...EMPTY_AMOUNTS, netPnlUsd: 0, notionalUsd: 0, netReturnPct: null, orderCount: 0, fillCount: 0 },
-    }
+    return EMPTY_BROKER_ORDER_HISTORY
   }
 
   const orderIds = orders.map((order) => order.id)
@@ -160,5 +189,6 @@ export async function loadBrokerOrderHistory(filters: HistoryFilters = {}): Prom
       netReturnPct: totals.notionalUsd > 0 ? totals.netPnlUsd / totals.notionalUsd * 100 : null,
       orderCount: result.length,
     },
+    performance: performanceFromOrders(result),
   }
 }

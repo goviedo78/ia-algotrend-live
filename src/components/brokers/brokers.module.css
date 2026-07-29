@@ -94,6 +94,13 @@
 .brandLockup strong { color: var(--broker-strong); font-size: 14px; letter-spacing: 0; }
 .brandLockup span { color: var(--broker-muted); font-size: 8px; font-weight: 700; letter-spacing: 0; text-transform: uppercase; }
 .identity { color: var(--broker-muted); font-size: 12px; overflow-wrap: anywhere; }
+.redactedValue {
+  min-width: 72px;
+  display: inline-block;
+  color: var(--broker-muted);
+  letter-spacing: 0;
+  user-select: none;
+}
 .content, .narrow { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 36px 0 64px; }
 .narrow { width: min(620px, calc(100% - 40px)); }
 
@@ -115,6 +122,11 @@
 .field span { font-size: 12px; font-weight: 700; color: var(--broker-label); }
 .field input, .field select { width: 100%; min-width: 0; height: 42px; border: 1px solid var(--broker-border-strong); border-radius: 5px; background: var(--broker-input); color: var(--broker-text); padding: 0 11px; font: inherit; font-size: 14px; box-sizing: border-box; }
 .field input:focus, .field select:focus { outline: 2px solid var(--broker-focus); outline-offset: 1px; border-color: transparent; }
+.sensitiveInput input {
+  color: transparent;
+  text-shadow: 0 0 9px var(--broker-muted);
+  caret-color: var(--broker-focus);
+}
 .fieldLabel { display: flex; align-items: center; gap: 6px; min-height: 18px; }
 .fieldExample { color: var(--broker-muted); font-size: 11px; line-height: 1.35; }
 .tooltipWrap { position: relative; display: inline-flex; align-items: center; }
@@ -179,6 +191,19 @@
 .status[data-status="SUSPENDED"], .status[data-status="PENDING"], .status[data-status="PENDING_VALIDATION"] { background: var(--broker-warning); color: var(--broker-warning-text); }
 
 .qr { width: 220px; height: 220px; display: block; border: 1px solid #d6dade; background: white; margin: 16px 0; }
+.qrPlaceholder {
+  width: 220px;
+  height: 220px;
+  display: grid;
+  place-items: center;
+  margin: 16px 0;
+  border: 1px dashed var(--broker-border-strong);
+  background: var(--broker-notice);
+  color: var(--broker-muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
 .systemStrip { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 10px 18px; padding: 12px 0; border-top: 1px solid var(--broker-border); border-bottom: 1px solid var(--broker-border); font-size: 12px; margin-bottom: 24px; }
 .systemStrip span { color: var(--broker-muted); }
 .systemStrip strong { overflow-wrap: anywhere; }
@@ -186,6 +211,36 @@
 .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
 .metrics span { display: grid; gap: 5px; color: var(--broker-muted); font-size: 11px; text-transform: uppercase; }
 .metrics strong { color: var(--broker-strong); font-size: 15px; text-transform: none; }
+.performanceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.performanceGrid span {
+  min-height: 72px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  padding: 12px 0;
+  border-top: 1px solid var(--broker-border);
+  border-bottom: 1px solid var(--broker-border-soft);
+  color: var(--broker-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.performanceGrid strong {
+  color: var(--broker-strong);
+  font-size: 19px;
+  line-height: 1.1;
+  text-transform: none;
+}
+.performanceGrid small {
+  color: var(--broker-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  text-transform: none;
+}
 .adminConnection { padding: 18px 0; border-top: 1px solid var(--broker-border); }
 .connectionSummary { display: grid; grid-template-columns: minmax(180px, 1.5fr) repeat(3, minmax(100px, 1fr)); gap: 16px; align-items: center; font-size: 13px; }
 .connectionSummary div { display: grid; gap: 4px; }
@@ -215,7 +270,7 @@
   .content, .narrow { width: min(100% - 28px, 1120px); padding-top: 26px; }
   .formGrid, .approvalGrid, .advancedRiskGrid { grid-template-columns: 1fr; }
   .fullWidth { grid-column: auto; }
-  .systemStrip, .connectionSummary, .metrics { grid-template-columns: 1fr; gap: 7px; }
+  .systemStrip, .connectionSummary, .metrics, .performanceGrid { grid-template-columns: 1fr; gap: 7px; }
   .titleRow h1 { font-size: 20px; }
   .primaryButton { width: 100%; }
   .commandRow { justify-content: flex-start; flex-wrap: wrap; }

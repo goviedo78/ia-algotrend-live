@@ -10,7 +10,8 @@ import { BrokerBrand } from './BrokerBrand'
 import { BrokerFieldLabel } from './BrokerFieldHelp'
 import { BrokerThemeToggle, useBrokerTheme } from './BrokerThemeToggle'
 import { BrokerOrderHistory } from './BrokerOrderHistory'
-import type { BrokerOrderHistoryResponse } from '@/lib/brokers/order-history-types'
+import { EMPTY_BROKER_ORDER_HISTORY, type BrokerOrderHistoryResponse } from '@/lib/brokers/order-history-types'
+import { BrokerPrivacyToggle, BrokerSensitiveValue, redactText, useBrokerPrivacy } from './BrokerPrivacy'
 import { BROKER_STRATEGIES } from '@/lib/brokers/strategies'
 import styles from './brokers.module.css'
 
@@ -32,11 +33,6 @@ type RuntimeHealth = {
   goldOutboxFailed: number
   goldOutboxUnrouted: number
 }
-const EMPTY_HISTORY: BrokerOrderHistoryResponse = {
-  orders: [],
-  totals: { realizedPnlUsd: 0, feesUsd: 0, fundingUsd: 0, adjustmentsUsd: 0, netPnlUsd: 0, notionalUsd: 0, netReturnPct: null, orderCount: 0, fillCount: 0 },
-}
-
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...init?.headers } })
   const body = await response.json().catch(() => ({}))
@@ -44,7 +40,17 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T
 }
 
-function ApprovalForm({ connection, busy, onDone }: { connection: AdminConnection; busy: boolean; onDone: () => Promise<void> }) {
+function ApprovalForm({
+  connection,
+  busy,
+  privacyMode,
+  onDone,
+}: {
+  connection: AdminConnection
+  busy: boolean
+  privacyMode: boolean
+  onDone: () => Promise<void>
+}) {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const compoundSizing = connection.riskPolicy?.sizingMode === 'EQUITY_PERCENT'
@@ -81,18 +87,18 @@ function ApprovalForm({ connection, busy, onDone }: { connection: AdminConnectio
 
   return (
     <form className={styles.approvalGrid} onSubmit={approve}>
-      {connection.riskPolicy && <div className={`${styles.metrics} ${styles.fullWidth}`}><span>Capital autorizado <strong>{connection.riskPolicy.declaredCapitalUsd.toFixed(2)} USD</strong></span><span>Perfil <strong>{connection.riskPolicy.riskProfile}</strong></span><span>Máximo sugerido / orden <strong>{connection.riskPolicy.suggestedNotionalPerOrderUsd.toFixed(2)} USD</strong></span><span>Reserva mínima <strong>{connection.riskPolicy.suggestedMinAvailableMarginUsd.toFixed(2)} USD</strong></span></div>}
+      {connection.riskPolicy && <div className={`${styles.metrics} ${styles.fullWidth}`}><span>Capital autorizado <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{connection.riskPolicy.declaredCapitalUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Perfil <strong>{connection.riskPolicy.riskProfile}</strong></span><span>Máximo sugerido / orden <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{connection.riskPolicy.suggestedNotionalPerOrderUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Reserva mínima <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{connection.riskPolicy.suggestedMinAvailableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span></div>}
       <div className={`${styles.strategyLock} ${styles.fullWidth}`}><span>Estrategia solicitada</span><strong>{BROKER_STRATEGIES[connection.requestedStrategy.code]?.label ?? connection.requestedStrategy.code}</strong><small>{connection.requestedStrategy.symbol} · {connection.requestedStrategy.timeframe} · una API exclusiva</small></div>
       <label className={styles.field}><BrokerFieldLabel label="Modo de tamaño" tooltip="Debe respetar la elección del usuario. Compuesto usa el equity de esta cuenta en cada apertura." example={compoundSizing ? 'Ejemplo: equity actual × porcentaje.' : 'Ejemplo: mismo monto en cada entrada.'} /><select name="sizingMode" defaultValue={connection.riskPolicy?.sizingMode ?? 'FIXED_NOTIONAL'}><option value={connection.riskPolicy?.sizingMode ?? 'FIXED_NOTIONAL'}>{compoundSizing ? 'Compuesto por equity' : 'Monto fijo'}</option></select></label>
       <label className={styles.field}><BrokerFieldLabel label="Capital por operación (%)" tooltip="Porcentaje máximo solicitado por el usuario. El administrador puede reducirlo, nunca aumentarlo." example="Ejemplo: 5% de la cuenta." /><input name="exposurePerOrderPct" type="number" min="1" max={connection.riskPolicy?.exposurePerOrderPct ?? 20} step="0.1" defaultValue={connection.riskPolicy?.exposurePerOrderPct ?? 5} required /></label>
-      <label className={styles.field}><BrokerFieldLabel label={compoundSizing ? 'Referencia inicial USD' : 'Notional fijo USD'} tooltip={compoundSizing ? 'Valor inicial informativo y límite de aprobación; la ejecución se recalcula por equity.' : 'Tamaño constante de cada nueva posición.'} example={`Ejemplo: ${connection.riskPolicy?.suggestedNotionalPerOrderUsd ?? 1} USD.`} /><input name="fixedNotionalUsd" type="number" min="1" step="0.01" defaultValue={connection.riskPolicy && connection.riskPolicy.fixedNotionalUsd > 0 ? connection.riskPolicy.fixedNotionalUsd : connection.riskPolicy?.suggestedNotionalPerOrderUsd ?? 1} required /></label>
-      <label className={styles.field}><BrokerFieldLabel label="Máximo inicial por orden USD" tooltip="Techo absoluto aprobado para el modo fijo y referencia inicial para compuesto." example="Ejemplo: igual o menor que la propuesta del usuario." /><input name="maxNotionalPerOrderUsd" type="number" min="1" step="0.01" defaultValue={connection.riskPolicy && connection.riskPolicy.maxNotionalPerOrderUsd > 0 ? connection.riskPolicy.maxNotionalPerOrderUsd : connection.riskPolicy?.suggestedNotionalPerOrderUsd ?? 1} required /></label>
-      <label className={styles.field}><BrokerFieldLabel label="Exposición total inicial USD" tooltip="Suma máxima de posiciones abiertas; en compuesto también se controla como porcentaje del equity." example={`Ejemplo: ${connection.riskPolicy?.suggestedMaxTotalExposureUsd ?? 1} USD.`} /><input name="maxTotalExposureUsd" type="number" min="1" step="0.01" defaultValue={connection.riskPolicy && connection.riskPolicy.maxTotalExposureUsd > 0 ? connection.riskPolicy.maxTotalExposureUsd : connection.riskPolicy?.suggestedMaxTotalExposureUsd ?? 1} required /></label>
+      <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label={compoundSizing ? 'Referencia inicial USD' : 'Notional fijo USD'} tooltip={compoundSizing ? 'Valor inicial informativo y límite de aprobación; la ejecución se recalcula por equity.' : 'Tamaño constante de cada nueva posición.'} example={`Ejemplo: ${connection.riskPolicy?.suggestedNotionalPerOrderUsd ?? 1} USD.`} /><input name="fixedNotionalUsd" type="number" min="1" step="0.01" defaultValue={connection.riskPolicy && connection.riskPolicy.fixedNotionalUsd > 0 ? connection.riskPolicy.fixedNotionalUsd : connection.riskPolicy?.suggestedNotionalPerOrderUsd ?? 1} required /></label>
+      <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label="Máximo inicial por orden USD" tooltip="Techo absoluto aprobado para el modo fijo y referencia inicial para compuesto." example="Ejemplo: igual o menor que la propuesta del usuario." /><input name="maxNotionalPerOrderUsd" type="number" min="1" step="0.01" defaultValue={connection.riskPolicy && connection.riskPolicy.maxNotionalPerOrderUsd > 0 ? connection.riskPolicy.maxNotionalPerOrderUsd : connection.riskPolicy?.suggestedNotionalPerOrderUsd ?? 1} required /></label>
+      <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label="Exposición total inicial USD" tooltip="Suma máxima de posiciones abiertas; en compuesto también se controla como porcentaje del equity." example={`Ejemplo: ${connection.riskPolicy?.suggestedMaxTotalExposureUsd ?? 1} USD.`} /><input name="maxTotalExposureUsd" type="number" min="1" step="0.01" defaultValue={connection.riskPolicy && connection.riskPolicy.maxTotalExposureUsd > 0 ? connection.riskPolicy.maxTotalExposureUsd : connection.riskPolicy?.suggestedMaxTotalExposureUsd ?? 1} required /></label>
       <label className={styles.field}><BrokerFieldLabel label="Apalancamiento máximo" tooltip="Multiplica exposición y riesgo. La plataforma puede imponer un máximo global menor." example="Ejemplo seguro inicial: 1x." /><input name="maxLeverage" type="number" min="1" step="1" defaultValue={connection.riskPolicy?.maxLeverage ?? 1} required /></label>
       <label className={styles.field}><BrokerFieldLabel label="Posiciones máximas" tooltip="Cantidad máxima de posiciones simultáneas para esta conexión." example="Ejemplo: 1 posición." /><input name="maxOpenPositions" type="number" min="1" step="1" defaultValue={connection.riskPolicy && connection.riskPolicy.maxOpenPositions > 0 ? connection.riskPolicy.maxOpenPositions : 1} required /></label>
       <label className={styles.field}><BrokerFieldLabel label="Órdenes por minuto" tooltip="Protección contra señales repetidas o ráfagas accidentales." example="Ejemplo: 2 órdenes permite cerrar y abrir." /><input name="maxOrdersPerMinute" type="number" min="1" step="1" defaultValue={connection.riskPolicy && connection.riskPolicy.maxOrdersPerMinute > 0 ? connection.riskPolicy.maxOrdersPerMinute : 2} required /></label>
-      <label className={styles.field}><BrokerFieldLabel label="Pérdida diaria USD" tooltip="Bloquea nuevas aperturas al alcanzar esta pérdida realizada. Los cierres siguen permitidos." example={`Ejemplo: ${connection.riskPolicy?.suggestedDailyLossLimitUsd ?? 1} USD.`} /><input name="dailyLossLimitUsd" type="number" min="0.01" step="0.01" defaultValue={connection.riskPolicy && connection.riskPolicy.dailyLossLimitUsd > 0 ? connection.riskPolicy.dailyLossLimitUsd : connection.riskPolicy?.suggestedDailyLossLimitUsd ?? 1} required /></label>
-      <label className={styles.field}><BrokerFieldLabel label="Margen disponible mínimo" tooltip="Reserva que debe permanecer libre después de calcular la orden." example={`Ejemplo: ${connection.riskPolicy?.suggestedMinAvailableMarginUsd ?? 0} USD.`} /><input name="minAvailableMarginUsd" type="number" min="0" step="0.01" defaultValue={connection.riskPolicy && connection.riskPolicy.minAvailableMarginUsd > 0 ? connection.riskPolicy.minAvailableMarginUsd : connection.riskPolicy?.suggestedMinAvailableMarginUsd ?? 0} required /></label>
+      <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label="Pérdida diaria USD" tooltip="Bloquea nuevas aperturas al alcanzar esta pérdida realizada. Los cierres siguen permitidos." example={`Ejemplo: ${connection.riskPolicy?.suggestedDailyLossLimitUsd ?? 1} USD.`} /><input name="dailyLossLimitUsd" type="number" min="0.01" step="0.01" defaultValue={connection.riskPolicy && connection.riskPolicy.dailyLossLimitUsd > 0 ? connection.riskPolicy.dailyLossLimitUsd : connection.riskPolicy?.suggestedDailyLossLimitUsd ?? 1} required /></label>
+      <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label="Margen disponible mínimo" tooltip="Reserva que debe permanecer libre después de calcular la orden." example={`Ejemplo: ${connection.riskPolicy?.suggestedMinAvailableMarginUsd ?? 0} USD.`} /><input name="minAvailableMarginUsd" type="number" min="0" step="0.01" defaultValue={connection.riskPolicy && connection.riskPolicy.minAvailableMarginUsd > 0 ? connection.riskPolicy.minAvailableMarginUsd : connection.riskPolicy?.suggestedMinAvailableMarginUsd ?? 0} required /></label>
       <button className={styles.primaryButton} disabled={busy || submitting} type="submit">{submitting ? <LoaderCircle className={styles.spin} size={16} /> : <Check size={16} />} Aprobar y activar</button>
       {error && <p className={styles.error} role="alert">{error}</p>}
     </form>
@@ -101,10 +107,11 @@ function ApprovalForm({ connection, busy, onDone }: { connection: AdminConnectio
 
 export function BrokerAdminPanel({ email, role }: { email: string; role: BrokerAdminRole }) {
   const { theme, toggleTheme } = useBrokerTheme()
+  const { privacyMode, togglePrivacyMode } = useBrokerPrivacy()
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [connections, setConnections] = useState<AdminConnection[]>([])
   const [runtime, setRuntime] = useState<RuntimeHealth | null>(null)
-  const [orderHistory, setOrderHistory] = useState<BrokerOrderHistoryResponse>(EMPTY_HISTORY)
+  const [orderHistory, setOrderHistory] = useState<BrokerOrderHistoryResponse>(EMPTY_BROKER_ORDER_HISTORY)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -192,7 +199,7 @@ export function BrokerAdminPanel({ email, role }: { email: string; role: BrokerA
 
   return (
     <main className={styles.page} data-theme={theme}>
-      <header className={styles.topbar}><BrokerBrand /><nav><Link href="/cuenta/conexiones">Mis conexiones</Link><BrokerThemeToggle theme={theme} onToggle={toggleTheme} /><span className={styles.identity}>{email} · {role}</span></nav></header>
+      <header className={styles.topbar}><BrokerBrand /><nav><Link href="/cuenta/conexiones">Mis conexiones</Link><BrokerPrivacyToggle active={privacyMode} onToggle={togglePrivacyMode} /><BrokerThemeToggle theme={theme} onToggle={toggleTheme} /><span className={styles.identity}>{redactText(privacyMode, email, 'Email oculto')} · {role}</span></nav></header>
       <div className={styles.content}>
         <div className={styles.titleRow}><Shield size={24} /><div><h1>Administración de brokers</h1><p>Aprobaciones, riesgo y revocación de credenciales.</p></div><button className={styles.iconButton} title="Actualizar" onClick={() => void load()}><RefreshCw size={17} /></button></div>
         <div className={styles.systemStrip}><span>Ejecución</span><strong>Dentro de GONOVI</strong><span>Cifrado</span><strong>{runtime?.encryptionConfigured ? 'Configurado' : 'Incompleto'}</strong><span>En cola</span><strong>{runtime?.queuedJobs ?? 0}</strong><span>Procesando</span><strong>{runtime?.processingJobs ?? 0}</strong><span>Más antiguo</span><strong>{runtime?.oldestQueuedAgeSeconds == null ? 'Sin espera' : `${runtime.oldestQueuedAgeSeconds} s`}</strong><span>Latencia p95</span><strong>{runtime?.p95OrderJobLatencyMs == null ? 'Sin datos' : `${runtime.p95OrderJobLatencyMs} ms`}</strong><span>Fallidos</span><strong>{runtime?.failedJobs ?? 0}</strong><span>Oro por enviar</span><strong>{runtime?.goldOutboxPending ?? 0}</strong><span>Oro sin conexión</span><strong>{runtime?.goldOutboxUnrouted ?? 0}</strong><span>Oro fallido</span><strong>{runtime?.goldOutboxFailed ?? 0}{canWrite && Boolean(runtime?.goldOutboxFailed) && <button className={styles.inlineIcon} title="Reintentar señales de Oro 30m" disabled={busy} onClick={retryGoldOutbox}><RefreshCw size={13} /></button>}</strong><span>Demo</span><strong>{runtime?.executionEnabled ? 'Habilitada' : 'Bloqueada'}</strong><span>Real</span><strong>{runtime?.liveExecutionEnabled ? 'Habilitada' : 'Bloqueada'}</strong><span>Ruta antigua</span><strong>{runtime?.legacyExecutionEnabled ? 'Habilitada' : 'Desactivada'}</strong></div>
@@ -201,18 +208,18 @@ export function BrokerAdminPanel({ email, role }: { email: string; role: BrokerA
 
         {!loading && <section className={styles.tableSection}>
           <div className={styles.sectionHeading}><UserCheck size={18} /><h2>Accesos</h2></div>
-          <div className={styles.tableWrap}><table><thead><tr><th>Usuario</th><th>Estado</th><th>Solicitud</th><th aria-label="Acciones" /></tr></thead><tbody>{memberships.map((membership) => <tr key={membership.userId}><td>{membership.email ?? membership.userId}</td><td><span className={styles.status} data-status={membership.status}>{membership.status}</span></td><td>{new Date(membership.requestedAt).toLocaleString()}</td><td><div className={styles.actions}>{canWrite && membership.status !== 'ACTIVE' && <button className={styles.iconButton} title="Aprobar" disabled={busy} onClick={() => reviewMembership(membership.userId, 'ACTIVE')}><Check size={16} /></button>}{canWrite && membership.status === 'ACTIVE' && <button className={styles.iconButton} title="Suspender" disabled={busy} onClick={() => reviewMembership(membership.userId, 'SUSPENDED')}><ShieldX size={16} /></button>}{canRevoke && membership.status !== 'REVOKED' && <button className={styles.dangerIcon} title="Revocar" disabled={busy} onClick={() => reviewMembership(membership.userId, 'REVOKED')}><X size={16} /></button>}</div></td></tr>)}</tbody></table></div>
+          <div className={styles.tableWrap}><table><thead><tr><th>Usuario</th><th>Estado</th><th>Solicitud</th><th aria-label="Acciones" /></tr></thead><tbody>{memberships.map((membership) => <tr key={membership.userId}><td>{redactText(privacyMode, membership.email ?? membership.userId, 'Usuario oculto')}</td><td><span className={styles.status} data-status={membership.status}>{membership.status}</span></td><td>{new Date(membership.requestedAt).toLocaleString()}</td><td><div className={styles.actions}>{canWrite && membership.status !== 'ACTIVE' && <button className={styles.iconButton} title="Aprobar" disabled={busy} onClick={() => reviewMembership(membership.userId, 'ACTIVE')}><Check size={16} /></button>}{canWrite && membership.status === 'ACTIVE' && <button className={styles.iconButton} title="Suspender" disabled={busy} onClick={() => reviewMembership(membership.userId, 'SUSPENDED')}><ShieldX size={16} /></button>}{canRevoke && membership.status !== 'REVOKED' && <button className={styles.dangerIcon} title="Revocar" disabled={busy} onClick={() => reviewMembership(membership.userId, 'REVOKED')}><X size={16} /></button>}</div></td></tr>)}</tbody></table></div>
         </section>}
 
         {!loading && <section className={styles.tableSection}>
           <div className={styles.sectionHeading}><Shield size={18} /><h2>Conexiones</h2></div>
           {!connections.length ? <p className={styles.muted}>No hay conexiones para administrar.</p> : connections.map((connection) => <div className={styles.adminConnection} key={connection.id}>
-            <div className={styles.connectionSummary}><div><strong>{connection.label}</strong><span>{connection.email ?? connection.userId}</span></div><span>{BROKER_STRATEGIES[connection.requestedStrategy.code]?.label ?? connection.requestedStrategy.code}<small>{connection.requestedStrategy.symbol}</small></span><span className={styles.status} data-status={connection.status}>{connectionStatusLabel(connection.status)}</span><span>{connection.broker} · {connection.environment}</span></div>
-            {connection.status === 'PENDING_APPROVAL' && canWrite && <ApprovalForm connection={connection} busy={busy} onDone={load} />}
+            <div className={styles.connectionSummary}><div><strong>{connection.label}</strong><span>{redactText(privacyMode, connection.email ?? connection.userId, 'Usuario oculto')}</span></div><span>{BROKER_STRATEGIES[connection.requestedStrategy.code]?.label ?? connection.requestedStrategy.code}<small>{connection.requestedStrategy.symbol}</small></span><span className={styles.status} data-status={connection.status}>{connectionStatusLabel(connection.status)}</span><span>{connection.broker} · {connection.environment}</span></div>
+            {connection.status === 'PENDING_APPROVAL' && canWrite && <ApprovalForm connection={connection} busy={busy} privacyMode={privacyMode} onDone={load} />}
             <div className={styles.commandRow}>{canWrite && <button disabled={busy} title="Editar nombre" className={styles.iconButton} onClick={() => editLabel(connection)}><Pencil size={16} /></button>}{canWrite && connection.status === 'PENDING_APPROVAL' && <button disabled={busy} className={styles.secondaryButton} onClick={() => connectionAction(connection.id, 'REJECT')}>Rechazar</button>}{canWrite && ['ACTIVE', 'SUSPENDED'].includes(connection.status) && <button disabled={busy} className={styles.secondaryButton} onClick={() => connectionAction(connection.id, 'PREPARE_EDIT')}><Settings2 size={16} /> Editar límites</button>}{canWrite && connection.status === 'ACTIVE' && <button disabled={busy} className={styles.secondaryButton} onClick={() => connectionAction(connection.id, 'SUSPEND')}>Suspender</button>}{canWrite && connection.status === 'SUSPENDED' && <button disabled={busy} className={styles.secondaryButton} onClick={() => connectionAction(connection.id, 'RESUME')}>Revalidar sin cambios</button>}{canRevoke && connection.status === 'MANUAL_INTERVENTION_REQUIRED' && <button disabled={busy} className={styles.secondaryButton} onClick={() => connectionAction(connection.id, 'CONFIRM_MANUAL_RESOLUTION')}>Confirmar posición resuelta</button>}{canRevoke && !['REVOKED', 'DELETED', 'MANUAL_INTERVENTION_REQUIRED'].includes(connection.status) && <button disabled={busy} className={styles.dangerButton} onClick={() => connectionAction(connection.id, 'REVOKE')}>Revocar credencial</button>}{canRevoke && canDeleteConnection(connection.status) && <button disabled={busy} title="Eliminar conexión" className={styles.dangerIcon} onClick={() => connectionAction(connection.id, 'DELETE')}><Trash2 size={16} /></button>}</div>
           </div>)}
         </section>}
-        {!loading && <BrokerOrderHistory history={orderHistory} showUser />}
+        {!loading && <BrokerOrderHistory history={orderHistory} showUser privacyMode={privacyMode} />}
       </div>
     </main>
   )
