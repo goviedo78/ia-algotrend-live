@@ -73,6 +73,31 @@ test('an exact BTC minimum lot is not lost to floating-point division', () => {
   assert.equal(result.notionalUsd, 100)
 })
 
+test('arbitrary USD allocations preserve the exact quote amount requested by the user', () => {
+  const price = 63_061.4
+
+  for (const requestedNotionalUsd of [100, 137.25, 1_000]) {
+    const result = evaluateRisk({
+      action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price,
+      sizingCapitalUsd: requestedNotionalUsd, availableMargin: requestedNotionalUsd,
+      positions: [], ownedPositions: [], rules,
+      policy: {
+        ...policy,
+        declaredCapitalUsd: requestedNotionalUsd,
+        exposurePerOrderPct: 100,
+        maxTotalExposurePct: 100,
+        fixedNotionalUsd: requestedNotionalUsd,
+        maxNotionalPerOrderUsd: requestedNotionalUsd,
+        maxTotalExposureUsd: requestedNotionalUsd,
+        minAvailableMarginUsd: 0,
+      },
+      ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+    })
+
+    assert.equal(result.notionalUsd, requestedNotionalUsd)
+  }
+})
+
 test('the broker minimum lot never overrides an authorized notional limit', () => {
   assert.throws(() => evaluateRisk({
     action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 100_100,

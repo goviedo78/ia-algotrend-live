@@ -183,11 +183,10 @@ export function evaluateRisk(input: RiskEvaluationInput): ApprovedOrder {
   if (currentExposure + orderNotionalUsd > maxTotalExposureUsd) reject('RISK_TOTAL_EXPOSURE_LIMIT', 'La exposición total superaría el máximo.')
 
   const quantity = floorToStep(orderNotionalUsd / input.price, input.rules.quantityStep, input.rules.quantityPrecision)
-  const notionalUsd = quantity * input.price
   if (quantity < input.rules.minimumQuantity || quantity > input.rules.maximumQuantity) {
     reject('RISK_QUANTITY_OUT_OF_RANGE', 'La cantidad no cumple las reglas del instrumento.')
   }
-  if (notionalUsd < input.rules.minimumNotional) reject('RISK_MINIMUM_NOTIONAL', 'El tamaño no alcanza el mínimo del instrumento.')
+  if (orderNotionalUsd < input.rules.minimumNotional) reject('RISK_MINIMUM_NOTIONAL', 'El tamaño no alcanza el mínimo del instrumento.')
 
   return {
     symbol,
@@ -196,6 +195,6 @@ export function evaluateRisk(input: RiskEvaluationInput): ApprovedOrder {
     quantity,
     reduceOnly: false,
     leverage: policy.maxLeverage,
-    notionalUsd,
+    notionalUsd: orderNotionalUsd,
   }
 }

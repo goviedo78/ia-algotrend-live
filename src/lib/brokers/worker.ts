@@ -68,13 +68,19 @@ async function validateConnection(job: Job) {
   try {
     const { connection, adapter } = await loadBrokerAdapter(job.connection_id)
     const validation = await adapter.validateCredentials()
+    const isAlreadyApproved = Boolean(connection.approved_at)
+    const targetStatus = isAlreadyApproved ? 'ACTIVE' : 'PENDING_APPROVAL'
     await admin.from('broker_connections').update({
-      status: 'PENDING_APPROVAL',
+      status: targetStatus,
       validated_at: new Date().toISOString(),
       last_health_check_at: new Date().toISOString(),
       last_error_code: null,
       account_reference: validation.accountReference,
     }).eq('id', job.connection_id).in('status', ['PENDING_VALIDATION', 'VALIDATION_FAILED'])
+    if (isAlreadyApproved) {
+      await admin.from('broker_risk_policies').update({ enabled: true }).eq('connection_id', job.connection_id)
+      await admin.from('broker_strategy_bindings').update({ enabled: true }).eq('connection_id', job.connection_id)
+    }
     await writeBrokerAudit({ userId: connection.user_id, connectionId: job.connection_id, eventType: 'CONNECTION_VALIDATED', outcome: 'SUCCESS' })
     await completeJob(job.id)
   } catch (error) {
@@ -310,7 +316,12 @@ async function reconcileOrder(job: Job) {
 
   const brokerOrderId = remoteOrder.brokerOrderId ?? storedOrder.broker_order_id
   if (!brokerOrderId) throw new BrokerPlatformError('ORDER_ID_MISSING', 'BingX no devolvió un identificador de orden.', 503, true)
-  const fills = await adapter.getOrderFills(storedOrder.symbol, brokerOrderId, new Date(storedOrder.created_at))
+  const fills = await adapter.getOrderFills(
+    storedOrder.symbol,
+    brokerOrderId,
+    new Date(storedOrder.created_at),
+    storedOrder.client_order_id,
+  )
   const fillsQuantity = fills.reduce((sum, fill) => sum + fill.quantity, 0)
   const fillTolerance = Math.max(1e-12, remoteOrder.filledQuantity * Number.EPSILON * 32)
   if (
@@ -365,6 +376,20 @@ async function reconcileOrder(job: Job) {
       })
       return rows
     })
+    const fillsRealizedPnl = fills.reduce((sum, fill) => sum + fill.realizedPnl, 0)
+    if (Math.abs(fillsRealizedPnl) <= 1e-12 && Math.abs(remoteOrder.realizedPnl ?? 0) > 1e-12) {
+      ledgerRows.push({
+        user_id: intent.user_id,
+        connection_id: intent.connection_id,
+        order_id: storedOrder.id,
+        entry_type: 'REALIZED_PNL',
+        asset: 'USDT',
+        amount: remoteOrder.realizedPnl ?? 0,
+        amount_usd: remoteOrder.realizedPnl ?? 0,
+        external_reference: `${brokerOrderId}:order-pnl`,
+        occurred_at: fills.at(-1)?.filledAt ?? new Date().toISOString(),
+      })
+    }
     if (ledgerRows.length) {
       const { error: ledgerError } = await admin.from('broker_ledger_entries').upsert(ledgerRows, {
         onConflict: 'connection_id,entry_type,external_reference',
@@ -375,9 +400,13 @@ async function reconcileOrder(job: Job) {
 
   const feeUsd = fills.length > 0
     ? fills.reduce((sum, fill) => sum + (fill.feeAsset === 'USDT' ? Math.abs(fill.fee) : 0), 0)
-    : Number(storedOrder.fee_usd ?? 0)
+    : remoteOrder.feeAsset === 'USDT'
+      ? Math.abs(remoteOrder.fee ?? 0)
+      : Number(storedOrder.fee_usd ?? 0)
   const actualNotionalUsd = fills.length > 0
-    ? fills.reduce((sum, fill) => sum + fill.quantity * fill.price, 0)
+    ? fills.reduce((sum, fill) => sum + (fill.notionalUsd && fill.notionalUsd > 0
+      ? fill.notionalUsd
+      : fill.quantity * fill.price), 0)
     : remoteOrder.averagePrice && remoteOrder.filledQuantity > 0
       ? remoteOrder.averagePrice * remoteOrder.filledQuantity
       : Number(storedOrder.notional_usd ?? 0)

@@ -130,7 +130,7 @@ test('existing connections edit the same policy through a serialized approval fl
   assert.match(riskRoute, /suspendBrokerConnectionForEdit\(id, user\.id\)[\s\S]*assertBrokerConnectionCanBeConfigured\(id\)[\s\S]*request_broker_risk_change/)
   assert.match(panel, /title="Editar capital"/)
   assert.match(panel, /declaredCapitalUsd/)
-  assert.match(panel, /Enviar cambio a aprobación/)
+  assert.match(panel, /Guardar cambios/)
 })
 
 test('broker recovery drain is secret-authenticated and bounded', async () => {

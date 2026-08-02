@@ -21,12 +21,14 @@ export async function POST(request: NextRequest, context: Context) {
     if (!parsed.success) throw new BrokerPlatformError('INVALID_RISK_PROPOSAL', 'La propuesta de riesgo no es válida.', 400)
     const { id } = await context.params
     const connection = await requireOwnedConnection(id, user.id)
-    if (!['ACTIVE', 'SUSPENDED'].includes(connection.status)) {
+    if (!['ACTIVE', 'SUSPENDED', 'PENDING_APPROVAL'].includes(connection.status)) {
       throw new BrokerPlatformError('INVALID_CONNECTION_STATE', 'La conexión debe estar activa o suspendida para editar su capital.', 409)
     }
-    await suspendBrokerConnectionForEdit(id, user.id)
-    if (connection.status === 'ACTIVE') {
-      await writeBrokerAudit({ request, userId: user.id, actorUserId: user.id, connectionId: id, eventType: 'CONNECTION_SUSPENDED_FOR_EDIT', outcome: 'SUCCESS' })
+    if (connection.status !== 'PENDING_APPROVAL') {
+      await suspendBrokerConnectionForEdit(id, user.id)
+      if (connection.status === 'ACTIVE') {
+        await writeBrokerAudit({ request, userId: user.id, actorUserId: user.id, connectionId: id, eventType: 'CONNECTION_SUSPENDED_FOR_EDIT', outcome: 'SUCCESS' })
+      }
     }
     await assertBrokerConnectionCanBeConfigured(id)
     const suggestion = deriveRiskSuggestion(parsed.data.capitalUsd, parsed.data.riskProfile, parsed.data.allocationPct)
@@ -45,11 +47,12 @@ export async function POST(request: NextRequest, context: Context) {
       proposal_daily_loss_limit_usd: suggestion.suggestedDailyLossLimitUsd,
       proposal_min_available_margin_usd: suggestion.suggestedMinAvailableMarginUsd,
     })
-    if (error || data !== 'PENDING_APPROVAL') {
+    if (error || !['ACTIVE', 'PENDING_APPROVAL'].includes(String(data))) {
       throw new BrokerPlatformError('RISK_CHANGE_FAILED', 'No se pudo guardar la propuesta de riesgo.', 409)
     }
-    await writeBrokerAudit({ request, userId: user.id, actorUserId: user.id, connectionId: id, eventType: 'RISK_CHANGE_REQUESTED', outcome: 'SUCCESS', metadata: { previousStatus: connection.status, sizingMode: parsed.data.sizingMode, capitalUsd: suggestion.declaredCapitalUsd, allocationPct: suggestion.exposurePerOrderPct } })
-    return NextResponse.json({ ok: true, status: 'PENDING_APPROVAL' })
+    const finalStatus = String(data)
+    await writeBrokerAudit({ request, userId: user.id, actorUserId: user.id, connectionId: id, eventType: 'RISK_CHANGE_REQUESTED', outcome: 'SUCCESS', metadata: { previousStatus: connection.status, newStatus: finalStatus, sizingMode: parsed.data.sizingMode, capitalUsd: suggestion.declaredCapitalUsd, allocationPct: suggestion.exposurePerOrderPct } })
+    return NextResponse.json({ ok: true, status: finalStatus })
   } catch (error) {
     const response = publicError(error)
     return NextResponse.json(response.body, { status: response.status })

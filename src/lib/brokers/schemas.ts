@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { DEFAULT_BROKER_ALLOCATION_PCT } from './risk-profiles'
 import { BROKER_STRATEGY_CODES } from './strategies'
 
 const safeLabel = z.string().trim().min(1).max(80)
@@ -13,7 +14,7 @@ export const connectionCreateSchema = z.object({
   capitalUsd: z.number().min(100).max(10_000_000),
   riskProfile: z.enum(['ULTRA_CONSERVATIVE', 'CONSERVATIVE', 'MODERATE']),
   sizingMode: z.enum(['FIXED_NOTIONAL', 'EQUITY_PERCENT']).default('FIXED_NOTIONAL'),
-  allocationPct: z.number().min(1).max(100).default(5),
+  allocationPct: z.number().min(1).max(100).default(DEFAULT_BROKER_ALLOCATION_PCT),
   apiKey: apiSecret,
   secretKey: apiSecret,
   permissions: z.object({

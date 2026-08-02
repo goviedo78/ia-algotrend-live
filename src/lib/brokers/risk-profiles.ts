@@ -1,5 +1,7 @@
 import type { RiskProfile } from './domain'
 
+export const DEFAULT_BROKER_ALLOCATION_PCT = 100
+
 const PROFILES: Record<RiskProfile, {
   exposurePerOrderPct: number
   maxTotalExposurePct: number
@@ -32,9 +34,9 @@ function money(value: number) {
 
 export function deriveRiskSuggestion(capitalUsd: number, profile: RiskProfile, allocationPct?: number) {
   const limits = PROFILES[profile]
-  const exposurePerOrderPct = Math.min(100, Math.max(1, allocationPct ?? limits.exposurePerOrderPct))
+  const exposurePerOrderPct = Math.min(100, Math.max(1, allocationPct ?? DEFAULT_BROKER_ALLOCATION_PCT))
   const maxTotalExposurePct = Math.min(100, Math.max(limits.maxTotalExposurePct, exposurePerOrderPct))
-  const marginReservePct = allocationPct != null ? Math.max(0, Math.min(limits.marginReservePct, 100 - exposurePerOrderPct)) : limits.marginReservePct
+  const marginReservePct = Math.max(0, Math.min(limits.marginReservePct, 100 - exposurePerOrderPct))
   return {
     declaredCapitalUsd: capitalUsd,
     riskProfile: profile,

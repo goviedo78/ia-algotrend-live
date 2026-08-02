@@ -87,16 +87,33 @@ function sanitizeBingxError(payload: BingxPayload, status: number) {
   )
 }
 
+function mapOrderStatus(rawStatus: string): BrokerOrderResult['status'] {
+  const aliases: Record<string, BrokerOrderResult['status']> = {
+    NEW: 'NEW',
+    PENDING: 'NEW',
+    PARTIALLY_FILLED: 'PARTIALLY_FILLED',
+    FILLED: 'FILLED',
+    CANCELED: 'CANCELED',
+    CANCELLED: 'CANCELED',
+    REJECTED: 'REJECTED',
+    FAILED: 'REJECTED',
+    EXPIRED: 'EXPIRED',
+  }
+  return aliases[rawStatus] ?? 'UNKNOWN'
+}
+
 function mapOrder(data: Record<string, unknown>, fallbackClientId: string): BrokerOrderResult {
   const order = (data.order && typeof data.order === 'object' ? data.order : data) as Record<string, unknown>
   const rawStatus = String(order.status ?? 'UNKNOWN').toUpperCase()
-  const statuses = new Set(['NEW', 'PARTIALLY_FILLED', 'FILLED', 'CANCELED', 'REJECTED', 'EXPIRED'])
   return {
     brokerOrderId: order.orderID ? String(order.orderID) : order.orderId ? String(order.orderId) : null,
     clientOrderId: String(order.clientOrderId ?? order.clientOrderID ?? fallbackClientId),
-    status: statuses.has(rawStatus) ? rawStatus as BrokerOrderResult['status'] : 'UNKNOWN',
+    status: mapOrderStatus(rawStatus),
     filledQuantity: finiteNumber(order.executedQty ?? order.filledQty),
     averagePrice: finiteNumber(order.avgPrice) || null,
+    realizedPnl: finiteNumber(order.profit ?? order.realizedPnl),
+    fee: finiteNumber(order.commission ?? order.fee),
+    feeAsset: String(order.feeAsset ?? 'USDT'),
     rawStatus: {
       status: rawStatus,
       orderId: order.orderId ? String(order.orderId) : null,
@@ -286,6 +303,9 @@ export class BingxAdapter implements BrokerAdapter {
 
   async placeMarketOrder(input: PlaceMarketOrderInput) {
     const hedgeMode = await this.isHedgeMode()
+    const useQuoteNotional = !input.reduceOnly
+      && Number.isFinite(input.notionalUsd)
+      && Number(input.notionalUsd) > 0
     const payload = await this.request<{ code?: number; data?: Record<string, unknown> }>(
       'POST',
       '/openApi/swap/v2/trade/order',
@@ -294,7 +314,10 @@ export class BingxAdapter implements BrokerAdapter {
         type: 'MARKET',
         side: input.side,
         positionSide: hedgeMode ? input.direction : 'BOTH',
-        quantity: input.quantity,
+        // BingX supports quote-denominated USD-M orders. Open with the exact
+        // authorized USDT amount; closes must keep using the owned base quantity.
+        quantity: input.reduceOnly || !useQuoteNotional ? input.quantity : undefined,
+        quoteOrderQty: useQuoteNotional ? input.notionalUsd : undefined,
         reduceOnly: input.reduceOnly && !hedgeMode ? true : undefined,
         clientOrderId: input.clientOrderId,
       },
@@ -312,33 +335,58 @@ export class BingxAdapter implements BrokerAdapter {
       if (!payload.data || Object.keys(payload.data).length === 0) return null
       return mapOrder(payload.data, clientOrderId)
     } catch (error) {
-      if (error instanceof BrokerPlatformError && error.code === 'BINGX_109421') return null
+      if (
+        error instanceof BrokerPlatformError
+        && ['BINGX_80016', 'BINGX_109421'].includes(error.code)
+      ) return null
       throw error
     }
   }
 
-  async getOrderFills(symbol: string, brokerOrderId: string, since: Date): Promise<BrokerFillResult[]> {
+  async getOrderFills(symbol: string, brokerOrderId: string, since: Date, clientOrderId?: string): Promise<BrokerFillResult[]> {
     const end = this.now()
     const payload = await this.request<{
       code?: number
-      data?: Array<Record<string, unknown>> | { fills?: Array<Record<string, unknown>> }
+      data?: Array<Record<string, unknown>> | {
+        fills?: Array<Record<string, unknown>>
+        fill_orders?: Array<Record<string, unknown>>
+      }
     }>('GET', '/openApi/swap/v2/trade/allFillOrders', {
       symbol: normalizeSymbol(symbol),
       tradingUnit: 'COIN',
       startTs: Math.max(since.getTime() - 60_000, end - 7 * 24 * 60 * 60 * 1000),
       endTs: end,
-      orderId: brokerOrderId,
+      // BingX serializes some int64 order IDs as JSON numbers, which exceed
+      // Number.MAX_SAFE_INTEGER in JavaScript. When our deterministic textual
+      // client ID is available, fetch the bounded time range and filter by it.
+      orderId: clientOrderId ? undefined : brokerOrderId,
       currency: 'USDT',
     })
-    const fills = Array.isArray(payload.data) ? payload.data : payload.data?.fills ?? []
-    return fills.map((fill) => ({
-      brokerFillId: String(fill.tradeId),
-      quantity: Math.abs(finiteNumber(fill.qty)),
-      price: finiteNumber(fill.price),
-      fee: finiteNumber(fill.fee),
-      feeAsset: String(fill.currency ?? 'USDT'),
-      realizedPnl: finiteNumber(fill.realizedPnl),
-      filledAt: new Date(finiteNumber(fill.time, end)).toISOString(),
-    })).filter((fill) => fill.brokerFillId !== 'undefined' && fill.quantity > 0 && fill.price > 0)
+    const allFills = Array.isArray(payload.data)
+      ? payload.data
+      : payload.data?.fill_orders ?? payload.data?.fills ?? []
+    const fills = clientOrderId
+      ? allFills.filter((fill) => String(fill.clientOrderId ?? fill.clientOrderID ?? '').toLowerCase() === clientOrderId.toLowerCase())
+      : allFills
+    return fills.map((fill, index) => {
+      const quantity = Math.abs(finiteNumber(fill.qty ?? fill.volume))
+      const price = finiteNumber(fill.price ?? fill.tradePrice)
+      const rawFilledAt = fill.tradeTime ?? fill.time ?? fill.filledTm ?? fill.filledTime
+      const numericFilledAt = typeof rawFilledAt === 'number' || /^\d+$/.test(String(rawFilledAt ?? ''))
+        ? finiteNumber(rawFilledAt, end)
+        : Date.parse(String(rawFilledAt ?? ''))
+      const filledAt = new Date(Number.isFinite(numericFilledAt) ? numericFilledAt : end).toISOString()
+      const brokerFillId = String(fill.tradeId ?? [clientOrderId ?? brokerOrderId, filledAt, quantity, price, index].join(':'))
+      return {
+        brokerFillId,
+        quantity,
+        price,
+        notionalUsd: Math.abs(finiteNumber(fill.amount)) || quantity * price,
+        fee: finiteNumber(fill.fee ?? fill.commission),
+        feeAsset: String(fill.feeAsset ?? fill.currency ?? 'USDT'),
+        realizedPnl: finiteNumber(fill.realizedPnl),
+        filledAt,
+      }
+    }).filter((fill) => fill.quantity > 0 && fill.price > 0)
   }
 }

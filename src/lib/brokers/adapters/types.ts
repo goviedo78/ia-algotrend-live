@@ -42,6 +42,7 @@ export interface PlaceMarketOrderInput {
   direction: TradeDirection
   side: 'BUY' | 'SELL'
   quantity: number
+  notionalUsd?: number
   reduceOnly: boolean
   clientOrderId: string
 }
@@ -52,6 +53,9 @@ export interface BrokerOrderResult {
   status: 'NEW' | 'PARTIALLY_FILLED' | 'FILLED' | 'CANCELED' | 'REJECTED' | 'EXPIRED' | 'UNKNOWN'
   filledQuantity: number
   averagePrice: number | null
+  realizedPnl?: number
+  fee?: number
+  feeAsset?: string
   rawStatus: Record<string, unknown>
 }
 
@@ -59,6 +63,7 @@ export interface BrokerFillResult {
   brokerFillId: string
   quantity: number
   price: number
+  notionalUsd?: number
   fee: number
   feeAsset: string
   realizedPnl: number
@@ -82,7 +87,7 @@ export interface BrokerAdapter {
   setLeverage(symbol: string, direction: TradeDirection, leverage: number): Promise<void>
   placeMarketOrder(input: PlaceMarketOrderInput): Promise<BrokerOrderResult>
   getOrder(symbol: string, clientOrderId: string): Promise<BrokerOrderResult | null>
-  getOrderFills(symbol: string, brokerOrderId: string, since: Date): Promise<BrokerFillResult[]>
+  getOrderFills(symbol: string, brokerOrderId: string, since: Date, clientOrderId?: string): Promise<BrokerFillResult[]>
 }
 
 export interface BrokerAdapterFactoryInput {
