@@ -28,7 +28,12 @@ export async function proxy(req: NextRequest) {
   const rawHost = forwardedHost || req.headers.get('host') || ''
   const host = rawHost.split(':')[0]?.toLowerCase() || ''
 
-  const supabaseResponse = await refreshSession(req)
+  // Public results never need an authenticated server session. Skipping the
+  // refresh here keeps the page available when Supabase Auth is degraded and
+  // avoids adding an auth round-trip before the trade snapshot can render.
+  const supabaseResponse = pathname === '/official/estrategias'
+    ? NextResponse.next({ request: req })
+    : await refreshSession(req)
 
   // ── 1. Public GONOVI home rewrite ─────────────────────────────────
   if (

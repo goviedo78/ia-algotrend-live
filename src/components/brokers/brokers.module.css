@@ -257,6 +257,69 @@
 .orderDetailGrid strong { color: var(--broker-text); font-size: 11px; overflow-wrap: anywhere; }
 .fillList { width: min(720px, 72vw); display: grid; gap: 6px; padding: 10px 0; border-top: 1px solid var(--broker-border-soft); }
 .fillList span { color: var(--broker-muted); font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
+.statsCard {
+  background: var(--broker-surface);
+  border: 1px solid var(--broker-border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--broker-border-soft);
+  padding-bottom: 8px;
+}
+.cardHeader h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--broker-strong);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.pctIcon {
+  color: var(--broker-primary);
+}
+.usdIcon {
+  color: var(--broker-success-text);
+}
+.pctGrid, .usdGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 20px;
+}
+.metricBlock {
+  display: grid;
+  gap: 4px;
+}
+.metricLabel {
+  color: var(--broker-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 500;
+}
+.metricBlock strong {
+  color: var(--broker-strong);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.metricBlock small {
+  color: var(--broker-muted);
+  font-size: 11px;
+}
+.highlightValue {
+  color: var(--broker-primary) !important;
+}
+.positiveText {
+  color: var(--broker-success-text) !important;
+}
+.negativeText {
+  color: var(--broker-error-text) !important;
+}
 .positive { color: var(--broker-success-text); }
 .negative { color: var(--broker-error-text); }
 
@@ -270,7 +333,7 @@
   .content, .narrow { width: min(100% - 28px, 1120px); padding-top: 26px; }
   .formGrid, .approvalGrid, .advancedRiskGrid { grid-template-columns: 1fr; }
   .fullWidth { grid-column: auto; }
-  .systemStrip, .connectionSummary, .metrics, .performanceGrid { grid-template-columns: 1fr; gap: 7px; }
+  .systemStrip, .connectionSummary, .metrics, .performanceGrid, .pctGrid, .usdGrid { grid-template-columns: 1fr; gap: 12px; }
   .titleRow h1 { font-size: 20px; }
   .primaryButton { width: 100%; }
   .commandRow { justify-content: flex-start; flex-wrap: wrap; }

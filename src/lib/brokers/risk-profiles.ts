@@ -32,17 +32,19 @@ function money(value: number) {
 
 export function deriveRiskSuggestion(capitalUsd: number, profile: RiskProfile, allocationPct?: number) {
   const limits = PROFILES[profile]
-  const exposurePerOrderPct = Math.min(20, Math.max(1, allocationPct ?? limits.exposurePerOrderPct))
-  const maxTotalExposurePct = Math.min(20, Math.max(limits.maxTotalExposurePct, exposurePerOrderPct))
+  const exposurePerOrderPct = Math.min(100, Math.max(1, allocationPct ?? limits.exposurePerOrderPct))
+  const maxTotalExposurePct = Math.min(100, Math.max(limits.maxTotalExposurePct, exposurePerOrderPct))
+  const marginReservePct = allocationPct != null ? Math.max(0, Math.min(limits.marginReservePct, 100 - exposurePerOrderPct)) : limits.marginReservePct
   return {
     declaredCapitalUsd: capitalUsd,
     riskProfile: profile,
     ...limits,
     exposurePerOrderPct,
     maxTotalExposurePct,
+    marginReservePct,
     suggestedNotionalPerOrderUsd: money(capitalUsd * exposurePerOrderPct / 100),
     suggestedMaxTotalExposureUsd: money(capitalUsd * maxTotalExposurePct / 100),
     suggestedDailyLossLimitUsd: money(capitalUsd * limits.dailyLossLimitPct / 100),
-    suggestedMinAvailableMarginUsd: money(capitalUsd * limits.marginReservePct / 100),
+    suggestedMinAvailableMarginUsd: money(capitalUsd * marginReservePct / 100),
   }
 }

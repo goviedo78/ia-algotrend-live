@@ -153,12 +153,14 @@ export async function closeTrade(
 }
 
 export async function getOpenTrade(tableName: string = TABLE): Promise<Trade | null> {
-  const { data } = await supabase.from(tableName).select().eq('status', 'OPEN').maybeSingle()
+  const { data, error } = await supabase.from(tableName).select().eq('status', 'OPEN').maybeSingle()
+  if (error) throw new Error(error.message)
   return (data as Trade) ?? null
 }
 
 export async function getAllTrades(limit = 200, tableName: string = TABLE): Promise<Trade[]> {
-  const { data } = await supabase.from(tableName).select().order('open_time', { ascending: false }).limit(limit)
+  const { data, error } = await supabase.from(tableName).select().order('open_time', { ascending: false }).limit(limit)
+  if (error) throw new Error(error.message)
   return (data ?? []) as Trade[]
 }
 

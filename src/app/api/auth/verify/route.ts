@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { rateLimiter } from '@/lib/rate-limit'
+import {
+  enforceOtpVerificationLimits,
+  normalizeOtpEmail,
+  OtpRateLimitError,
+} from '@/lib/auth/rate-limit'
 import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -30,17 +34,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    const { success, resetIn } = rateLimiter.check(getIp(req), 'auth')
-    if (!success) {
-      return NextResponse.json(
-        { error: 'invalid_code' },
-        { status: 400, headers: { 'Retry-After': String(Math.ceil(resetIn / 1000)) } }
-      )
-    }
+    const email = normalizeOtpEmail(parsed.data.email)
+    await enforceOtpVerificationLimits({ ip: getIp(req), email })
 
     const supabase = await createClient()
     const { data, error } = await supabase.auth.verifyOtp({
-      email: parsed.data.email,
+      email,
       token: parsed.data.code,
       type: 'email',
     })
@@ -54,10 +53,25 @@ export async function POST(req: NextRequest) {
       ok: true,
       user: {
         id: data.user.id,
-        email: data.user.email ?? parsed.data.email,
+        email: data.user.email ?? email,
       },
     })
   } catch (error) {
+    if (error instanceof OtpRateLimitError) {
+      const unavailable = error.code === 'RATE_LIMIT_UNAVAILABLE'
+      return NextResponse.json(
+        {
+          error: unavailable ? 'verification_unavailable' : 'invalid_code',
+          message: unavailable
+            ? 'No se pudo verificar el código. Intentá de nuevo en unos minutos.'
+            : 'Demasiados intentos. Esperá un minuto.',
+        },
+        {
+          status: unavailable ? 503 : 429,
+          headers: unavailable ? undefined : { 'Retry-After': String(error.retryAfterSeconds ?? 60) },
+        },
+      )
+    }
     console.error('[auth/verify] Unexpected error', error)
     return NextResponse.json({ error: 'invalid_code' }, { status: 400 })
   }

@@ -13,7 +13,7 @@ export const connectionCreateSchema = z.object({
   capitalUsd: z.number().min(100).max(10_000_000),
   riskProfile: z.enum(['ULTRA_CONSERVATIVE', 'CONSERVATIVE', 'MODERATE']),
   sizingMode: z.enum(['FIXED_NOTIONAL', 'EQUITY_PERCENT']).default('FIXED_NOTIONAL'),
-  allocationPct: z.number().min(1).max(20).default(5),
+  allocationPct: z.number().min(1).max(100).default(5),
   apiKey: apiSecret,
   secretKey: apiSecret,
   permissions: z.object({
@@ -37,7 +37,7 @@ export const riskChangeSchema = z.object({
   capitalUsd: z.number().min(100).max(10_000_000),
   riskProfile: z.enum(['ULTRA_CONSERVATIVE', 'CONSERVATIVE', 'MODERATE']),
   sizingMode: z.enum(['FIXED_NOTIONAL', 'EQUITY_PERCENT']),
-  allocationPct: z.number().min(1).max(20),
+  allocationPct: z.number().min(1).max(100),
 }).strict()
 
 export const connectionActionSchema = z.object({
@@ -54,7 +54,7 @@ export const adminConnectionSchema = z.discriminatedUnion('action', [
     action: z.literal('APPROVE'),
     risk: z.object({
       sizingMode: z.enum(['FIXED_NOTIONAL', 'EQUITY_PERCENT']),
-      exposurePerOrderPct: z.number().min(1).max(20),
+      exposurePerOrderPct: z.number().min(1).max(100),
       fixedNotionalUsd: z.number().positive().max(1_000_000),
       maxNotionalPerOrderUsd: z.number().positive().max(1_000_000),
       maxTotalExposureUsd: z.number().positive().max(10_000_000),

@@ -10,6 +10,7 @@ const lifecycleMigrationPath = path.join(root, 'supabase/migrations/202607180338
 const deletedConnectionMigrationPath = path.join(root, 'supabase/migrations/20260718034933_allow_deleted_broker_connections.sql')
 const compoundSizingMigrationPath = path.join(root, 'supabase/migrations/20260718184243_account_equity_compound_sizing.sql')
 const strategyMigrationPath = path.join(root, 'supabase/migrations/20260718191837_strategy_catalog_admin_edit_gold30_outbox.sql')
+const fullAllocationMigrationPath = path.join(root, 'supabase/migrations/20260802020000_allow_full_capital_broker_allocation.sql')
 
 test('every broker table enables RLS in the same migration', async () => {
   const sql = await readFile(migrationPath, 'utf8')
@@ -53,9 +54,24 @@ test('worker persists fees and realized PnL with deduplication', async () => {
   ])
   assert.match(worker, /entry_type: 'FEE'/)
   assert.match(worker, /entry_type: 'REALIZED_PNL'/)
-  assert.match(worker, /const feeUsd = fills\.reduce/)
-  assert.doesNotMatch(worker, /ORDER_FILLS_PENDING/)
+  assert.match(worker, /const feeUsd = fills\.length[\s\S]*fills\.reduce/)
+  assert.match(worker, /ORDER_FILLS_PENDING/)
+  assert.match(worker, /fillsQuantity < remoteOrder\.filledQuantity/)
+  assert.match(worker, /notional_usd: actualNotionalUsd/)
+  assert.doesNotMatch(worker, /brokerFillId:\s*brokerOrderId/)
   assert.match(sql, /unique \(connection_id, entry_type, external_reference\)/i)
+})
+
+test('full-capital allocation is enforced consistently and remains service-only', async () => {
+  const sql = await readFile(fullAllocationMigrationPath, 'utf8')
+  assert.match(sql, /exposure_per_order_pct between 0 and 100/i)
+  assert.match(sql, /max_total_exposure_pct between 0 and 100/i)
+  assert.match(sql, /proposal_exposure_per_order_pct > 100/i)
+  assert.match(sql, /policy_exposure_per_order_pct > 100/i)
+  assert.match(sql, /security definer/gi)
+  assert.match(sql, /auth\.role\(\)[\s\S]*service_role/i)
+  assert.match(sql, /revoke all on function public\.request_broker_risk_change[\s\S]*anon, authenticated/i)
+  assert.match(sql, /grant execute on function public\.approve_broker_connection[\s\S]*service_role/i)
 })
 
 test('database rate limiter is service-only and protected by RLS', async () => {

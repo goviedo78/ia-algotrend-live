@@ -47,6 +47,54 @@ test('open sizing is derived from fixed notional and broker step', () => {
   assert.equal(result.reduceOnly, false)
 })
 
+test('an exact BTC minimum lot is not lost to floating-point division', () => {
+  const exactMinimumRules = {
+    ...rules,
+    quantityStep: 0.001,
+    minimumQuantity: 0.001,
+    quantityPrecision: 3,
+    minimumNotional: 100,
+  }
+  const result = evaluateRisk({
+    action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 100_000,
+    sizingCapitalUsd: 100, availableMargin: 100, positions: [], ownedPositions: [],
+    rules: exactMinimumRules,
+    policy: {
+      ...policy,
+      fixedNotionalUsd: 100,
+      maxNotionalPerOrderUsd: 100,
+      maxTotalExposureUsd: 100,
+      minAvailableMarginUsd: 0,
+    },
+    ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+  })
+
+  assert.equal(result.quantity, 0.001)
+  assert.equal(result.notionalUsd, 100)
+})
+
+test('the broker minimum lot never overrides an authorized notional limit', () => {
+  assert.throws(() => evaluateRisk({
+    action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 100_100,
+    sizingCapitalUsd: 100, availableMargin: 100, positions: [], ownedPositions: [],
+    rules: {
+      ...rules,
+      quantityStep: 0.001,
+      minimumQuantity: 0.001,
+      quantityPrecision: 3,
+      minimumNotional: 100,
+    },
+    policy: {
+      ...policy,
+      fixedNotionalUsd: 100,
+      maxNotionalPerOrderUsd: 100,
+      maxTotalExposureUsd: 100,
+      minAvailableMarginUsd: 0,
+    },
+    ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+  }), { code: 'RISK_QUANTITY_OUT_OF_RANGE' })
+})
+
 test('new positions fail closed when policy is disabled', () => {
   assert.throws(() => evaluateRisk({
     action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 40_000,

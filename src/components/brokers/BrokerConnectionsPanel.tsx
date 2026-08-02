@@ -246,8 +246,8 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
                       }}><option value="ULTRA_CONSERVATIVE">Muy conservador</option><option value="CONSERVATIVE">Conservador (recomendado)</option><option value="MODERATE">Moderado</option></select>
                     </label>
                     <label className={styles.field}>
-                      <BrokerFieldLabel label="Tope por operación (%)" tooltip="Límite máximo de capital para dimensionar una entrada. No es un objetivo de ganancia ni una pérdida programada." example="Ejemplo: 5% de 1.000 USD limita la posición base a 50 USD." />
-                      <input name="allocationPct" required type="number" min="1" max="20" step="0.1" placeholder="5" value={allocationPct} onChange={(event) => setAllocationPct(Number(event.target.value) || 0)} />
+                      <BrokerFieldLabel label="Tope por operación (%)" tooltip="Límite máximo de capital para dimensionar una entrada. No es un objetivo de ganancia ni una pérdida programada." example="Ejemplo: 100% de 1.000 USD limita la posición base a 1.000 USD." />
+                      <input name="allocationPct" required type="number" min="1" max="100" step="0.1" placeholder="100" value={allocationPct} onChange={(event) => setAllocationPct(Number(event.target.value) || 0)} />
                     </label>
                   </div>
                 </details>
@@ -286,7 +286,7 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
                         const nextProfile = event.target.value as RiskProfile
                         setRiskEdit((current) => current ? { ...current, riskProfile: nextProfile, allocationPct: deriveRiskSuggestion(Math.max(current.capitalUsd, 100), nextProfile).exposurePerOrderPct } : current)
                       }}><option value="ULTRA_CONSERVATIVE">Muy conservador</option><option value="CONSERVATIVE">Conservador (recomendado)</option><option value="MODERATE">Moderado</option></select></label>
-                      <label className={styles.field}><BrokerFieldLabel label="Tope por operación (%)" tooltip="Límite máximo para dimensionar futuras aperturas. No modifica una posición ya abierta." example="Ejemplo: 5% del capital autorizado." /><input type="number" min="1" max="20" step="0.1" value={riskEdit.allocationPct} onChange={(event) => setRiskEdit((current) => current ? { ...current, allocationPct: Number(event.target.value) || 0 } : current)} required /></label>
+                      <label className={styles.field}><BrokerFieldLabel label="Tope por operación (%)" tooltip="Límite máximo para dimensionar futuras aperturas. No modifica una posición ya abierta." example="Ejemplo: 100% del capital autorizado." /><input type="number" min="1" max="100" step="0.1" value={riskEdit.allocationPct} onChange={(event) => setRiskEdit((current) => current ? { ...current, allocationPct: Number(event.target.value) || 0 } : current)} required /></label>
                     </div>
                   </details>
                   <div className={`${styles.metrics} ${styles.fullWidth}`}><span>Tope base por orden <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editSuggestion.suggestedNotionalPerOrderUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Exposición total máxima <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editSuggestion.suggestedMaxTotalExposureUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Corte de pérdida diaria <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editSuggestion.suggestedDailyLossLimitUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Margen protegido <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editSuggestion.suggestedMinAvailableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span></div>

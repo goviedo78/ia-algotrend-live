@@ -44,7 +44,12 @@ function reject(code: string, message: string): never {
 }
 
 function floorToStep(value: number, step: number, precision: number) {
-  const stepped = Math.floor((value + Number.EPSILON) / step) * step
+  // Division by a decimal step can produce 0.9999999999999999 for an exact
+  // broker lot. A scale-aware epsilon fixes that representation error without
+  // ever rounding a genuinely smaller requested amount up to the next lot.
+  const ratio = value / step
+  const tolerance = Number.EPSILON * Math.max(1, Math.abs(ratio)) * 8
+  const stepped = Math.floor(ratio + tolerance) * step
   return Number(stepped.toFixed(precision))
 }
 
@@ -123,7 +128,7 @@ export function evaluateRisk(input: RiskEvaluationInput): ApprovedOrder {
   if (compoundSizing && (!Number.isFinite(input.sizingCapitalUsd) || input.sizingCapitalUsd <= 0)) {
     reject('RISK_ACCOUNT_EQUITY_INVALID', 'No se pudo calcular el capital actual de la cuenta.')
   }
-  if (compoundSizing && (policy.exposurePerOrderPct <= 0 || policy.exposurePerOrderPct > 20)) {
+  if (compoundSizing && (policy.exposurePerOrderPct <= 0 || policy.exposurePerOrderPct > 100)) {
     reject('RISK_LIMITS_NOT_CONFIGURED', 'El porcentaje compuesto no es válido.')
   }
   if (!compoundSizing && (policy.fixedNotionalUsd <= 0 || policy.maxNotionalPerOrderUsd <= 0 || policy.maxTotalExposureUsd <= 0)) {

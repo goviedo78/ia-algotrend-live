@@ -43,6 +43,19 @@ test('all public official routes are independent of the retired launch flag', as
   }
 })
 
+test('public results use a cached fail-closed trade snapshot', async () => {
+  const page = await source('src/app/official/estrategias/page.tsx')
+  const database = await source('src/lib/db.ts')
+  const proxy = await source('src/proxy.ts')
+
+  assert.match(page, /dynamic = ['"]force-static['"]/)
+  assert.match(page, /unstable_cache/)
+  assert.match(page, /revalidate: 30/)
+  assert.doesNotMatch(page, /getOpenTrade/)
+  assert.match(database, /getAllTrades[\s\S]*if \(error\) throw new Error/)
+  assert.match(proxy, /pathname === ['"]\/official\/estrategias['"]/)
+})
+
 test('production deploy verifies the complete public home', async () => {
   const script = await source('scripts/deploy-prod.sh')
 

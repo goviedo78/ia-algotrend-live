@@ -1,8 +1,12 @@
 import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { brokerStrategy } from './strategies'
+import {
+  enrichBrokerTradeCycles,
+  summarizeBrokerOrderHistory,
+} from './order-history-metrics'
 import { EMPTY_BROKER_ORDER_HISTORY } from './order-history-types'
+import { brokerStrategy } from './strategies'
 import type { BrokerOrderHistoryItem, BrokerOrderHistoryResponse } from './order-history-types'
 
 type HistoryFilters = {
@@ -26,53 +30,26 @@ const EMPTY_AMOUNTS: LedgerAmounts = {
   adjustmentsUsd: 0,
 }
 
-function performanceFromOrders(orders: BrokerOrderHistoryItem[]): BrokerOrderHistoryResponse['performance'] {
-  const closed = orders.filter((order) => order.action === 'CLOSE' && order.status === 'FILLED')
-  const winning = closed.filter((order) => order.netPnlUsd > 0)
-  const losing = closed.filter((order) => order.netPnlUsd < 0)
-  const breakeven = closed.length - winning.length - losing.length
-  const netPnlUsd = closed.reduce((sum, order) => sum + order.netPnlUsd, 0)
-  const grossProfitUsd = winning.reduce((sum, order) => sum + order.netPnlUsd, 0)
-  const grossLossUsd = Math.abs(losing.reduce((sum, order) => sum + order.netPnlUsd, 0))
-  const closedAt = closed
-    .map((order) => order.lastFillAt ?? order.reconciledAt ?? order.submittedAt ?? order.createdAt)
-    .filter((value): value is string => Boolean(value))
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
-  return {
-    closedTradeCount: closed.length,
-    winningTradeCount: winning.length,
-    losingTradeCount: losing.length,
-    breakevenTradeCount: breakeven,
-    winRatePct: closed.length > 0 ? winning.length / closed.length * 100 : null,
-    netPnlUsd,
-    grossProfitUsd,
-    grossLossUsd,
-    profitFactor: grossLossUsd > 0 ? grossProfitUsd / grossLossUsd : null,
-    averageNetPnlUsd: closed.length > 0 ? netPnlUsd / closed.length : null,
-    averageWinUsd: winning.length > 0 ? grossProfitUsd / winning.length : null,
-    averageLossUsd: losing.length > 0 ? -grossLossUsd / losing.length : null,
-    bestTradeUsd: closed.length > 0 ? Math.max(...closed.map((order) => order.netPnlUsd)) : null,
-    worstTradeUsd: closed.length > 0 ? Math.min(...closed.map((order) => order.netPnlUsd)) : null,
-    lastClosedAt: closedAt[0] ?? null,
-  }
-}
-
-export async function loadBrokerOrderHistory(filters: HistoryFilters = {}): Promise<BrokerOrderHistoryResponse> {
+export async function loadBrokerOrderHistory(
+  filters: HistoryFilters = {},
+): Promise<BrokerOrderHistoryResponse> {
   const admin = createAdminClient()
-  const limit = Math.min(250, Math.max(1, filters.limit ?? 100))
+  const displayLimit = Math.min(250, Math.max(1, filters.limit ?? 100))
+  // Older orders are cost-basis context for OPEN/CLOSE pairing only and never
+  // leave the server in the response.
+  const contextLimit = Math.min(1_000, Math.max(300, displayLimit * 3))
   let ordersQuery = admin.from('broker_orders').select(`
     id, user_id, connection_id, intent_id, client_order_id, broker_order_id,
     symbol, side, position_side, reduce_only, requested_quantity,
     filled_quantity, average_price, notional_usd, fee_usd, status,
     submitted_at, reconciled_at, created_at, updated_at
-  `).order('created_at', { ascending: false }).limit(limit)
+  `).order('created_at', { ascending: false }).limit(contextLimit)
   if (filters.userId) ordersQuery = ordersQuery.eq('user_id', filters.userId)
   if (filters.connectionId) ordersQuery = ordersQuery.eq('connection_id', filters.connectionId)
+
   const { data: orders, error: ordersError } = await ordersQuery
   if (ordersError) throw ordersError
-  if (!orders?.length) {
-    return EMPTY_BROKER_ORDER_HISTORY
-  }
+  if (!orders?.length) return EMPTY_BROKER_ORDER_HISTORY
 
   const orderIds = orders.map((order) => order.id)
   const intentIds = orders.map((order) => order.intent_id)
@@ -80,19 +57,33 @@ export async function loadBrokerOrderHistory(filters: HistoryFilters = {}): Prom
   const userIds = [...new Set(orders.map((order) => order.user_id))]
   const [intentsResult, fillsResult, ledgerResult, connectionsResult, profilesResult] = await Promise.all([
     admin.from('broker_order_intents').select('id, action, direction, signal_id').in('id', intentIds),
-    admin.from('broker_fills').select('id, order_id, broker_fill_id, quantity, price, fee, fee_asset, filled_at').in('order_id', orderIds).order('filled_at', { ascending: true }),
-    admin.from('broker_ledger_entries').select('order_id, entry_type, amount_usd').in('order_id', orderIds).limit(10_000),
-    admin.from('broker_connections').select('id, label, broker, environment, requested_strategy_code, requested_symbol, requested_timeframe').in('id', connectionIds),
+    admin.from('broker_fills')
+      .select('id, order_id, broker_fill_id, quantity, price, fee, fee_asset, filled_at')
+      .in('order_id', orderIds)
+      .order('filled_at', { ascending: true }),
+    admin.from('broker_ledger_entries')
+      .select('order_id, entry_type, amount_usd')
+      .in('order_id', orderIds)
+      .limit(10_000),
+    admin.from('broker_connections')
+      .select('id, label, broker, environment, requested_strategy_code, requested_symbol, requested_timeframe')
+      .in('id', connectionIds),
     filters.includeUserEmails
       ? admin.from('profiles').select('id, email').in('id', userIds)
       : Promise.resolve({ data: [], error: null }),
   ])
-  const firstError = intentsResult.error || fillsResult.error || ledgerResult.error || connectionsResult.error || profilesResult.error
+  const firstError = intentsResult.error
+    || fillsResult.error
+    || ledgerResult.error
+    || connectionsResult.error
+    || profilesResult.error
   if (firstError) throw firstError
 
   const signalIds = [...new Set((intentsResult.data ?? []).map((intent) => intent.signal_id))]
   const signalsResult = signalIds.length
-    ? await admin.from('broker_signals').select('id, external_signal_id, strategy_code, timeframe, signal_time').in('id', signalIds)
+    ? await admin.from('broker_signals')
+        .select('id, external_signal_id, strategy_code, timeframe, signal_time')
+        .in('id', signalIds)
     : { data: [], error: null }
   if (signalsResult.error) throw signalsResult.error
 
@@ -114,6 +105,7 @@ export async function loadBrokerOrderHistory(filters: HistoryFilters = {}): Prom
     })
     fillsByOrder.set(fill.order_id, current)
   }
+
   const ledgerByOrder = new Map<string, LedgerAmounts>()
   for (const entry of ledgerResult.data ?? []) {
     if (!entry.order_id) continue
@@ -126,16 +118,26 @@ export async function loadBrokerOrderHistory(filters: HistoryFilters = {}): Prom
     ledgerByOrder.set(entry.order_id, current)
   }
 
-  const result = orders.map((order): BrokerOrderHistoryItem => {
+  const mappedOrders = orders.map((order): BrokerOrderHistoryItem => {
     const intent = intents.get(order.intent_id)
     const signal = intent ? signals.get(intent.signal_id) : null
     const connection = connections.get(order.connection_id)
     const strategyCode = signal?.strategy_code ?? connection?.requested_strategy_code ?? 'UNKNOWN'
     const strategy = brokerStrategy(strategyCode)
     const orderFills = fillsByOrder.get(order.id) ?? []
-    const ledger = ledgerByOrder.get(order.id) ?? { ...EMPTY_AMOUNTS, feesUsd: Math.abs(Number(order.fee_usd ?? 0)) }
-    const netPnlUsd = ledger.realizedPnlUsd - ledger.feesUsd + ledger.fundingUsd + ledger.adjustmentsUsd
-    const notionalUsd = Number(order.notional_usd ?? 0)
+    const ledger = ledgerByOrder.get(order.id)
+      ?? { ...EMPTY_AMOUNTS, feesUsd: Math.abs(Number(order.fee_usd ?? 0)) }
+    const averagePrice = order.average_price == null ? null : Number(order.average_price)
+    const filledQuantity = Number(order.filled_quantity ?? 0)
+    const notionalUsd = Number(
+      order.notional_usd
+      ?? (averagePrice && filledQuantity ? averagePrice * filledQuantity : 0),
+    )
+    const netPnlUsd = ledger.realizedPnlUsd
+      - ledger.feesUsd
+      + ledger.fundingUsd
+      + ledger.adjustmentsUsd
+
     return {
       id: order.id,
       userId: order.user_id,
@@ -152,15 +154,18 @@ export async function loadBrokerOrderHistory(filters: HistoryFilters = {}): Prom
       action: intent?.action === 'CLOSE' || order.reduce_only ? 'CLOSE' : 'OPEN',
       symbol: order.symbol,
       side: order.side,
-      direction: order.position_side,
+      direction: order.position_side || intent?.direction || 'LONG',
       reduceOnly: order.reduce_only,
       requestedQuantity: Number(order.requested_quantity),
-      filledQuantity: Number(order.filled_quantity),
-      averagePrice: order.average_price == null ? null : Number(order.average_price),
+      filledQuantity,
+      averagePrice,
       notionalUsd,
       ...ledger,
       netPnlUsd,
-      netReturnPct: notionalUsd > 0 ? netPnlUsd / notionalUsd * 100 : null,
+      netReturnPct: null,
+      tradeNetPnlUsd: null,
+      tradeFeesUsd: null,
+      entryNotionalUsd: null,
       status: order.status,
       clientOrderId: order.client_order_id,
       brokerOrderId: order.broker_order_id,
@@ -173,22 +178,8 @@ export async function loadBrokerOrderHistory(filters: HistoryFilters = {}): Prom
       fills: orderFills,
     }
   })
-  const totals = result.reduce((summary, order) => ({
-    realizedPnlUsd: summary.realizedPnlUsd + order.realizedPnlUsd,
-    feesUsd: summary.feesUsd + order.feesUsd,
-    fundingUsd: summary.fundingUsd + order.fundingUsd,
-    adjustmentsUsd: summary.adjustmentsUsd + order.adjustmentsUsd,
-    netPnlUsd: summary.netPnlUsd + order.netPnlUsd,
-    notionalUsd: summary.notionalUsd + order.notionalUsd,
-    fillCount: summary.fillCount + order.fills.length,
-  }), { ...EMPTY_AMOUNTS, netPnlUsd: 0, notionalUsd: 0, fillCount: 0 })
-  return {
-    orders: result,
-    totals: {
-      ...totals,
-      netReturnPct: totals.notionalUsd > 0 ? totals.netPnlUsd / totals.notionalUsd * 100 : null,
-      orderCount: result.length,
-    },
-    performance: performanceFromOrders(result),
-  }
+
+  const ordersWithCycles = enrichBrokerTradeCycles(mappedOrders)
+  const result = ordersWithCycles.slice(0, displayLimit)
+  return { orders: result, ...summarizeBrokerOrderHistory(result) }
 }

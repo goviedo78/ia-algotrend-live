@@ -35,6 +35,9 @@ export type BrokerOrderHistoryItem = {
   fundingUsd: number
   adjustmentsUsd: number
   netPnlUsd: number
+  tradeNetPnlUsd: number | null
+  tradeFeesUsd: number | null
+  entryNotionalUsd: number | null
   netReturnPct: number | null
   status: string
   clientOrderId: string
@@ -55,6 +58,7 @@ export type BrokerOrderHistoryTotals = {
   adjustmentsUsd: number
   netPnlUsd: number
   notionalUsd: number
+  closedEntryNotionalUsd: number
   netReturnPct: number | null
   orderCount: number
   fillCount: number
@@ -75,6 +79,12 @@ export type BrokerPerformanceStats = {
   averageLossUsd: number | null
   bestTradeUsd: number | null
   worstTradeUsd: number | null
+  averageReturnPct: number | null
+  bestTradeReturnPct: number | null
+  worstTradeReturnPct: number | null
+  totalFeesUsd: number
+  closedEntryNotionalUsd: number
+  unmatchedCloseCount: number
   lastClosedAt: string | null
 }
 
@@ -93,6 +103,7 @@ export const EMPTY_BROKER_ORDER_HISTORY: BrokerOrderHistoryResponse = {
     adjustmentsUsd: 0,
     netPnlUsd: 0,
     notionalUsd: 0,
+    closedEntryNotionalUsd: 0,
     netReturnPct: null,
     orderCount: 0,
     fillCount: 0,
@@ -112,6 +123,12 @@ export const EMPTY_BROKER_ORDER_HISTORY: BrokerOrderHistoryResponse = {
     averageLossUsd: null,
     bestTradeUsd: null,
     worstTradeUsd: null,
+    averageReturnPct: null,
+    bestTradeReturnPct: null,
+    worstTradeReturnPct: null,
+    totalFeesUsd: 0,
+    closedEntryNotionalUsd: 0,
+    unmatchedCloseCount: 0,
     lastClosedAt: null,
   },
 }

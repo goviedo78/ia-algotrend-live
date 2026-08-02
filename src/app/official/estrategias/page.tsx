@@ -1,45 +1,46 @@
 import { EstrategiasPage } from '@/components/official/estrategias/EstrategiasPage'
-import { getAllTrades, getOpenTrade } from '@/lib/db'
+import { getAllTrades } from '@/lib/db'
+import { unstable_cache } from 'next/cache'
 
 export const metadata = {
   title: 'Resultados en vivo | GONOVI',
   description: 'Rendimiento mensual y operaciones abiertas de BTC 1H, Oro 15M y Oro 30M.',
 }
 
-export const dynamic = 'force-dynamic'
-// Revalidar cada 30s: los trades cambian en escala de minutos, no de
-// request. Esto cachea el resultado y evita golpear la DB en cada hit.
+// The public snapshot is shared by all visitors and refreshed in the
+// background. This prevents every page view from opening six database queries.
+export const dynamic = 'force-static'
 export const revalidate = 30
 
-// Una sola query por estrategia, allTrades + openTrade en paralelo.
-async function safeFetch(tableName: string) {
-  try {
-    const [all, open] = await Promise.all([
-      getAllTrades(500, tableName),
-      getOpenTrade(tableName),
-    ])
-    return { all, open }
-  } catch (e) {
-    console.error(`Error fetching from ${tableName}:`, e)
-    return { all: [], open: null }
+// One query per strategy; the open trade is derived from the same snapshot.
+// Errors must escape so an interrupted refresh never replaces a valid cached
+// snapshot with an empty page.
+async function fetchStrategy(tableName: string) {
+  const all = await getAllTrades(500, tableName)
+  return {
+    all,
+    open: all.find((trade) => trade.status === 'OPEN') ?? null,
   }
 }
 
-export default async function Page() {
-  // Las 3 estrategias se fetchean en PARALELO (6 queries SQL en simultáneo
-  // en vez de 6 secuenciales). Latencia total ≈ la query más lenta, no la
-  // suma. Antes: ~600-900ms. Ahora: ~150-250ms.
+const getCachedStrategies = unstable_cache(async () => {
   const [btc, oro15, oro30] = await Promise.all([
-    safeFetch('algotrend_trades'),
-    safeFetch('gold15_trades'),
-    safeFetch('gold30_trades'),
+    fetchStrategy('algotrend_trades'),
+    fetchStrategy('gold15_trades'),
+    fetchStrategy('gold30_trades'),
   ])
 
-  const initialData = {
+  return {
     'algotrend_trades': btc,
     'gold15_trades': oro15,
     'gold30_trades': oro30,
   }
+}, ['gonovi-public-strategy-snapshot-v1'], {
+  revalidate: 30,
+  tags: ['algotrend-trades'],
+})
 
+export default async function Page() {
+  const initialData = await getCachedStrategies()
   return <EstrategiasPage initialData={initialData} />
 }

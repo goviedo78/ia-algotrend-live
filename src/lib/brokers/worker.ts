@@ -304,13 +304,27 @@ async function reconcileOrder(job: Job) {
   if (!intent) throw new BrokerPlatformError('INTENT_NOT_FOUND', 'Intención no encontrada.', 404)
   const { data: storedOrder } = await admin.from('broker_orders').select('*').eq('intent_id', intent.id).maybeSingle()
   if (!storedOrder) throw new BrokerPlatformError('ORDER_NOT_PERSISTED', 'La orden todavía no está persistida.', 503, true)
-  const { adapter } = await loadBrokerAdapter(job.connection_id)
+  const { connection, adapter } = await loadBrokerAdapter(job.connection_id)
   const remoteOrder = await adapter.getOrder(storedOrder.symbol, storedOrder.client_order_id)
   if (!remoteOrder) throw new BrokerPlatformError('ORDER_RECONCILIATION_PENDING', 'La orden todavía no está disponible para reconciliar.', 503, true)
 
   const brokerOrderId = remoteOrder.brokerOrderId ?? storedOrder.broker_order_id
   if (!brokerOrderId) throw new BrokerPlatformError('ORDER_ID_MISSING', 'BingX no devolvió un identificador de orden.', 503, true)
   const fills = await adapter.getOrderFills(storedOrder.symbol, brokerOrderId, new Date(storedOrder.created_at))
+  const fillsQuantity = fills.reduce((sum, fill) => sum + fill.quantity, 0)
+  const fillTolerance = Math.max(1e-12, remoteOrder.filledQuantity * Number.EPSILON * 32)
+  if (
+    remoteOrder.filledQuantity > 0
+    && connection.environment === 'LIVE'
+    && fillsQuantity < remoteOrder.filledQuantity - fillTolerance
+  ) {
+    throw new BrokerPlatformError(
+      'ORDER_FILLS_PENDING',
+      'BingX todavía no devolvió las ejecuciones contables de la orden.',
+      503,
+      true,
+    )
+  }
   if (fills.length) {
     const fillRows = fills.map((fill) => ({
       user_id: intent.user_id,
@@ -359,7 +373,17 @@ async function reconcileOrder(job: Job) {
     }
   }
 
-  const feeUsd = fills.reduce((sum, fill) => sum + (fill.feeAsset === 'USDT' ? Math.abs(fill.fee) : 0), 0)
+  const feeUsd = fills.length > 0
+    ? fills.reduce((sum, fill) => sum + (fill.feeAsset === 'USDT' ? Math.abs(fill.fee) : 0), 0)
+    : Number(storedOrder.fee_usd ?? 0)
+  const actualNotionalUsd = fills.length > 0
+    ? fills.reduce((sum, fill) => sum + fill.quantity * fill.price, 0)
+    : remoteOrder.averagePrice && remoteOrder.filledQuantity > 0
+      ? remoteOrder.averagePrice * remoteOrder.filledQuantity
+      : Number(storedOrder.notional_usd ?? 0)
+  const actualAveragePrice = fillsQuantity > 0
+    ? actualNotionalUsd / fillsQuantity
+    : remoteOrder.averagePrice
   const terminal = ['FILLED', 'CANCELED', 'REJECTED', 'EXPIRED'].includes(remoteOrder.status)
   const intentStatus = remoteOrder.status === 'FILLED'
     ? 'FILLED'
@@ -375,7 +399,8 @@ async function reconcileOrder(job: Job) {
       broker_order_id: brokerOrderId,
       status: remoteOrder.status,
       filled_quantity: remoteOrder.filledQuantity,
-      average_price: remoteOrder.averagePrice,
+      average_price: actualAveragePrice,
+      notional_usd: actualNotionalUsd,
       fee_usd: feeUsd,
       raw_status: remoteOrder.rawStatus,
       reconciled_at: new Date().toISOString(),

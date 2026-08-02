@@ -26,7 +26,6 @@ const PRESETS: Record<string, RateLimitConfig> = {
 
   // Auth endpoints (login, OTP)
   auth: { maxRequests: 5, windowMs: 60_000 },             // 5 req/min
-
   // Analytics/tracking (high volume OK)
   analytics: { maxRequests: 120, windowMs: 60_000 },      // 120 req/min
 

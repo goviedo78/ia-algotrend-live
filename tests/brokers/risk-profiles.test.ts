@@ -30,5 +30,5 @@ test('a custom per-account allocation is capped and drives the proposal', () => 
   assert.equal(result.suggestedNotionalPerOrderUsd, 125)
   assert.equal(result.maxTotalExposurePct, 12.5)
   assert.equal(result.suggestedMaxTotalExposureUsd, 125)
-  assert.equal(deriveRiskSuggestion(1_000, 'MODERATE', 100).exposurePerOrderPct, 20)
+  assert.equal(deriveRiskSuggestion(1_000, 'MODERATE', 100).exposurePerOrderPct, 100)
 })
