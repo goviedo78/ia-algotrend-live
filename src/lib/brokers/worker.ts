@@ -370,11 +370,16 @@ async function reconcileOrder(job: Job) {
     storedOrder.client_order_id,
   )
   const fillsQuantity = fills.reduce((sum, fill) => sum + fill.quantity, 0)
-  const fillTolerance = Math.max(1e-12, remoteOrder.filledQuantity * Number.EPSILON * 32)
+  // `getOrder` de BingX a veces devuelve la orden sin cantidad ejecutada. Si nos guiáramos sólo
+  // por eso, una orden que sabemos llena se daría por reconciliada con cero fills y cero ledger:
+  // así fue como las primeras órdenes quedaron sin contabilidad y en silencio. La cantidad que
+  // ya persistimos al colocarla es el piso de lo que hay que recuperar.
+  const expectedQuantity = Math.max(remoteOrder.filledQuantity, Number(storedOrder.filled_quantity) || 0)
+  const fillTolerance = Math.max(1e-12, expectedQuantity * Number.EPSILON * 32)
   if (
-    remoteOrder.filledQuantity > 0
+    expectedQuantity > 0
     && connection.environment === 'LIVE'
-    && fillsQuantity < remoteOrder.filledQuantity - fillTolerance
+    && fillsQuantity < expectedQuantity - fillTolerance
   ) {
     throw new BrokerPlatformError(
       'ORDER_FILLS_PENDING',

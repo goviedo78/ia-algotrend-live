@@ -56,7 +56,9 @@ test('worker persists fees and realized PnL with deduplication', async () => {
   assert.match(worker, /entry_type: 'REALIZED_PNL'/)
   assert.match(worker, /const feeUsd = fills\.length[\s\S]*fills\.reduce/)
   assert.match(worker, /ORDER_FILLS_PENDING/)
-  assert.match(worker, /fillsQuantity < remoteOrder\.filledQuantity/)
+  // El piso de lo que hay que recuperar es lo que ya persistimos al colocar la orden: guiarse
+  // sólo por `remoteOrder.filledQuantity` daba órdenes "reconciliadas" con cero contabilidad.
+  assert.match(worker, /fillsQuantity < expectedQuantity - fillTolerance/)
   assert.match(worker, /notional_usd: actualNotionalUsd/)
   assert.doesNotMatch(worker, /brokerFillId:\s*brokerOrderId/)
   assert.match(sql, /unique \(connection_id, entry_type, external_reference\)/i)

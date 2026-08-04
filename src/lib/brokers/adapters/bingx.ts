@@ -75,6 +75,33 @@ export function signBingxQuery(secret: string, query: string) {
   return createHmac('sha256', secret).update(query).digest('hex')
 }
 
+/**
+ * Decide si una ejecución devuelta por `allFillOrders` pertenece a nuestra orden.
+ *
+ * No alcanza con comparar `clientOrderId`: BingX no lo incluye en todas las filas de fills, y
+ * cuando falta el filtro descartaba TODO y la orden quedaba sin contabilidad. El `orderId` sí
+ * viene siempre, pero llega como número JSON y los int64 de BingX pierden los últimos dígitos
+ * al pasar por `Number` (2084551686433742848 → 2084551686433742800). Comparar en `Number` a
+ * ambos lados normaliza esa pérdida: los dos colapsan al mismo doble y el match funciona.
+ */
+export function fillBelongsToOrder(
+  fill: Record<string, unknown>,
+  brokerOrderId: string,
+  clientOrderId?: string,
+) {
+  const fillClientId = String(fill.clientOrderId ?? fill.clientOrderID ?? fill.origClientOrderId ?? '')
+  if (clientOrderId && fillClientId && fillClientId.toLowerCase() === clientOrderId.toLowerCase()) {
+    return true
+  }
+  const rawFillOrderId = fill.orderId ?? fill.orderID ?? fill.order_id
+  if (rawFillOrderId == null || !brokerOrderId) return false
+  const fillOrderId = String(rawFillOrderId)
+  if (fillOrderId === brokerOrderId) return true
+  const asNumber = Number(fillOrderId)
+  const targetAsNumber = Number(brokerOrderId)
+  return Number.isFinite(asNumber) && Number.isFinite(targetAsNumber) && asNumber === targetAsNumber
+}
+
 function sanitizeBingxError(payload: BingxPayload, status: number) {
   const brokerCode = String(payload.code ?? status).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40)
   const retryableCodes = new Set(['100410', '100500', '109500', '110500'])
@@ -366,7 +393,7 @@ export class BingxAdapter implements BrokerAdapter {
       ? payload.data
       : payload.data?.fill_orders ?? payload.data?.fills ?? []
     const fills = clientOrderId
-      ? allFills.filter((fill) => String(fill.clientOrderId ?? fill.clientOrderID ?? '').toLowerCase() === clientOrderId.toLowerCase())
+      ? allFills.filter((fill) => fillBelongsToOrder(fill, brokerOrderId, clientOrderId))
       : allFills
     return fills.map((fill, index) => {
       const quantity = Math.abs(finiteNumber(fill.qty ?? fill.volume))
