@@ -111,9 +111,10 @@ test('signal fanout is transactional and preserves per-account ordering', async 
   assert.match(workerSource, /const groups = new Map<string, Job\[\]>/)
 })
 
-test('existing connections edit the same policy through a serialized approval flow', async () => {
-  const [migration, riskRoute, lifecycle, panel] = await Promise.all([
+test('approved connections apply serialized self-service risk edits without a second approval', async () => {
+  const [migration, selfServiceMigration, riskRoute, lifecycle, panel] = await Promise.all([
     readFile(path.join(root, 'supabase/migrations/20260718210034_safe_existing_connection_edits.sql'), 'utf8'),
+    readFile(path.join(root, 'supabase/migrations/20260802103000_auto_approve_risk_edits_for_existing_connections.sql'), 'utf8'),
     readFile(path.join(root, 'src/app/api/broker-connections/[id]/risk/route.ts'), 'utf8'),
     readFile(path.join(root, 'src/lib/brokers/connection-lifecycle.ts'), 'utf8'),
     readFile(path.join(root, 'src/components/brokers/BrokerConnectionsPanel.tsx'), 'utf8'),
@@ -127,10 +128,44 @@ test('existing connections edit the same policy through a serialized approval fl
   assert.match(migration, /update public\.broker_strategy_bindings[\s\S]*where connection_id = target_connection_id/i)
   assert.doesNotMatch(migration, /insert into public\.broker_connections/i)
   assert.match(lifecycle, /suspend_broker_connection_for_edit/)
-  assert.match(riskRoute, /suspendBrokerConnectionForEdit\(id, user\.id\)[\s\S]*assertBrokerConnectionCanBeConfigured\(id\)[\s\S]*request_broker_risk_change/)
+  assert.match(riskRoute, /request_broker_risk_change/)
+  assert.match(selfServiceMigration, /is_already_approved := connection_record\.approved_at is not null/i)
+  assert.match(selfServiceMigration, /if is_already_approved then[\s\S]*set status = 'ACTIVE'/i)
+  assert.match(selfServiceMigration, /connection has pending execution jobs/i)
+  assert.match(selfServiceMigration, /grant execute on function public\.request_broker_risk_change[\s\S]*service_role/i)
   assert.match(panel, /title="Editar capital"/)
   assert.match(panel, /declaredCapitalUsd/)
   assert.match(panel, /Guardar cambios/)
+})
+
+test('self-service lot and daily loss stay inside the authorized capital and never starve the exposure ceiling', async () => {
+  const [riskRoute, schemas, panel] = await Promise.all([
+    readFile(path.join(root, 'src/app/api/broker-connections/[id]/risk/route.ts'), 'utf8'),
+    readFile(path.join(root, 'src/lib/brokers/schemas.ts'), 'utf8'),
+    readFile(path.join(root, 'src/components/brokers/BrokerConnectionsPanel.tsx'), 'utf8'),
+  ])
+
+  // El lotaje elegido por el titular nunca puede quedar por encima de la exposición total
+  // enviada a la RPC: la función rechaza max_total_exposure_usd < notional_per_order_usd.
+  assert.match(riskRoute, /const maxTotalExposureUsd = Math\.max\(suggestion\.suggestedMaxTotalExposureUsd, fixedNotionalUsd\)/)
+  assert.match(riskRoute, /proposal_max_total_exposure_usd: maxTotalExposureUsd/)
+  // La reserva de margen no puede solaparse con la orden autorizada.
+  assert.match(riskRoute, /const minAvailableMarginUsd = Math\.max\(0, Math\.min\(suggestion\.suggestedMinAvailableMarginUsd, suggestion\.declaredCapitalUsd - fixedNotionalUsd\)\)/)
+  assert.match(riskRoute, /proposal_min_available_margin_usd: minAvailableMarginUsd/)
+  // El capital autorizado sigue siendo el techo real de la conexión.
+  assert.match(riskRoute, /if \(fixedNotionalUsd > suggestion\.declaredCapitalUsd\)/)
+  assert.match(riskRoute, /if \(dailyLossLimitUsd > suggestion\.declaredCapitalUsd\)/)
+  // La auditoría registra los montos que efectivamente cambiaron.
+  assert.match(riskRoute, /notionalPerOrderUsd: fixedNotionalUsd/)
+  assert.match(riskRoute, /dailyLossLimitUsd, maxTotalExposureUsd, minAvailableMarginUsd/)
+  // Perfil y tope porcentual siguen siendo obligatorios: un default silencioso escalaría el riesgo.
+  assert.match(schemas, /riskProfile: z\.enum\(\['ULTRA_CONSERVATIVE', 'CONSERVATIVE', 'MODERATE'\]\),/)
+  assert.match(schemas, /allocationPct: z\.number\(\)\.min\(1\)\.max\(100\),/)
+  assert.doesNotMatch(schemas, /allocationPct: z\.number\(\)\.min\(1\)\.max\(100\)\.optional\(\)/)
+  // En compuesto el motor dimensiona por equity: el resumen no puede mostrar el monto fijo.
+  assert.match(panel, /const effectiveNotionalUsd = riskEdit\.compoundEnabled \? editSuggestion\.suggestedNotionalPerOrderUsd : riskEdit\.fixedNotionalUsd/)
+  assert.match(panel, /const effectiveDailyLossUsd = riskEdit\.compoundEnabled \? editSuggestion\.suggestedDailyLossLimitUsd : riskEdit\.dailyLossLimitUsd/)
+  assert.match(panel, /% del equity real/)
 })
 
 test('broker recovery drain is secret-authenticated and bounded', async () => {

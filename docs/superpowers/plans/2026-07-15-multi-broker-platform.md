@@ -134,15 +134,17 @@ No admite `quantity`, `notional` ni `leverage`. La unicidad de estrategia más i
 
 ### Riesgo
 
-El usuario no configura lotes. Declara capital asignado y elige un perfil:
+El usuario no configura lotes. Declara el capital autorizado, elige qué porcentaje usar por apertura (1–100%, 100% por defecto) y selecciona un perfil de protección:
 
-| Perfil | Orden | Exposición | Pérdida diaria | Reserva |
-| --- | ---: | ---: | ---: | ---: |
-| Muy conservador | 3% | 6% | 1% | 70% |
-| Conservador | 5% | 10% | 2% | 60% |
-| Moderado | 8% | 16% | 3% | 50% |
+| Perfil | Pérdida diaria | Reserva objetivo |
+| --- | ---: | ---: |
+| Muy conservador | 1% | 70% |
+| Conservador | 2% | 60% |
+| Moderado | 3% | 50% |
 
-Para USD 100 conservador, la propuesta es USD 5 por orden con máximo global `1x`. El administrador sólo puede reducir la propuesta. La función de aprobación vuelve a imponer esa relación en base de datos.
+Con USD 100 al 100%, la apertura autorizada es USD 100; con USD 1.000 al 100%, es USD 1.000. Un porcentaje menor sigue disponible como decisión del titular. La reserva se acota para no solaparse con el capital autorizado por operación y el máximo global inicial permanece en `1x`.
+
+La aprobación administrativa es única y habilita la cuenta/API. Después de esa primera aprobación, el titular puede cambiar su capital y porcentaje en la misma conexión; el cambio se serializa, se rechaza si hay ejecuciones pendientes y queda auditado, pero no vuelve a aprobación administrativa.
 
 El motor fail-closed verifica en el momento de enviar:
 
@@ -157,7 +159,7 @@ El motor fail-closed verifica en el momento de enviar:
 - precio y reglas del instrumento;
 - precisión, step y mínimo de notional.
 
-Para abrir, `quantity = floorToStep(fixedNotionalUsd / price)`. Para cerrar, se usa la cantidad real de la posición y `reduceOnly`. Así BTC, oro u otro instrumento no comparten lotes incompatibles.
+Para abrir, el motor valida precio, cantidad estimada, mínimos y límites, y envía el monto autorizado mediante `quoteOrderQty`. Para cerrar, usa la cantidad real propia de la posición y `reduceOnly`. Así una apertura respeta el importe en USD elegido, mientras BTC, oro u otro instrumento conservan sus reglas de contrato.
 
 ## Seguridad
 

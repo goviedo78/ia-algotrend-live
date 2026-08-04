@@ -45,24 +45,26 @@ Una clave pegada en chat, correo, captura o logs se considera comprometida y deb
 
 ## Capital y riesgo
 
-El usuario declara capital asignado y selecciona un perfil. No introduce lotes del activo. El servidor convierte el notional USD a la cantidad válida de BTC según precio, precisión, paso y mínimo reportados por BingX.
+El usuario declara capital asignado, elige qué porcentaje usar por apertura (1–100%, 100% por defecto) y selecciona un perfil. No introduce lotes del activo. El servidor valida el monto contra precio, precisión, paso y mínimos reportados por BingX.
 
-| Perfil | Por orden | Exposición total | Pérdida diaria | Reserva de margen |
-| --- | ---: | ---: | ---: | ---: |
-| Muy conservador | 3% | 6% | 1% | 70% |
-| Conservador | 5% | 10% | 2% | 60% |
-| Moderado | 8% | 16% | 3% | 50% |
+| Perfil | Pérdida diaria | Reserva objetivo |
+| --- | ---: | ---: |
+| Muy conservador | 1% | 70% |
+| Conservador | 2% | 60% |
+| Moderado | 3% | 50% |
 
-Con USD 100 y perfil conservador, la propuesta es USD 5 por apertura, USD 10 de exposición total, USD 2 de pérdida diaria y USD 60 de margen reservado. El administrador puede reducir estos valores, pero la aprobación de base de datos impide superar la propuesta del usuario. El máximo global inicial es `1x`.
+Con USD 100 al 100%, la apertura autorizada es USD 100; con USD 1.000 al 100%, es USD 1.000. El titular puede elegir un porcentaje menor. La reserva se reduce cuando sea necesario para no solaparse con el importe por operación. El máximo global inicial es `1x`.
+
+La aprobación administrativa se realiza una sola vez para habilitar la cuenta/API. Una conexión ya aprobada puede cambiar capital, porcentaje y modo de tamaño sin una segunda aprobación. El backend serializa el cambio, exige que no haya ejecuciones pendientes, reactiva la misma conexión y registra la auditoría.
 
 El usuario elige el modo de tamaño al crear cada conexión:
 
 - `Monto fijo`: el notional inicial se conserva en todas las entradas.
 - `Interés compuesto`: cada entrada usa `porcentaje × capital gestionado actual`. El capital gestionado es el capital declarado más PnL realizado y comisiones reconciliadas de esa conexión. También se limita por el equity real disponible en el broker, por lo que un saldo Demo inflado no aumenta el lotaje.
 
-Las políticas, el ledger y el cálculo están identificados por `connection_id`. Una cuenta de USD 150 configurada al 5% abre USD 7,50; otra de USD 300 al 5% abre USD 15. Sus resultados no se mezclan. Si una cuenta de USD 1.000 gana USD 29 netos, su siguiente entrada compuesta al 5% usa USD 51,45; con compuesto apagado permanece en USD 50.
+Las políticas, el ledger y el cálculo están identificados por `connection_id`. Una cuenta de USD 150 al 100% abre USD 150; otra de USD 300 al 100% abre USD 300. Si el titular elige 5%, los importes serían USD 7,50 y USD 15 respectivamente. Sus resultados no se mezclan. Si una cuenta de USD 1.000 gana USD 29 netos, su siguiente entrada compuesta al 100% usa USD 1.029; con compuesto apagado permanece en USD 1.000.
 
-La rentabilidad del activo se aplica a la posición, no automáticamente a todo el capital. Una posición de USD 50 que gana 3% produce USD 1,50 bruto antes de comisiones. Para ganar USD 30 netos con un movimiento de 3% se necesita aproximadamente toda una posición de USD 1.000, y algo más al considerar comisiones; eso supera el límite operativo de 20% por entrada configurado en GONOVI.
+La rentabilidad del activo se aplica a la posición, no automáticamente a todo el capital. Una posición de USD 50 que gana 3% produce USD 1,50 bruto antes de comisiones. Una posición de USD 1.000 con el mismo movimiento produce aproximadamente USD 30 bruto. El titular decide el capital autorizado y el porcentaje por operación.
 
 Antes de abrir, el motor valida:
 

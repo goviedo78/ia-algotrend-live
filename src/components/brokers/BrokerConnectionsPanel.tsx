@@ -22,6 +22,8 @@ type RiskEditDraft = {
   riskProfile: RiskProfile
   allocationPct: number
   compoundEnabled: boolean
+  fixedNotionalUsd: number
+  dailyLossLimitUsd: number
 }
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...init?.headers } })
@@ -148,6 +150,8 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
           riskProfile: riskEdit.riskProfile,
           sizingMode: riskEdit.compoundEnabled ? 'EQUITY_PERCENT' : 'FIXED_NOTIONAL',
           allocationPct: riskEdit.allocationPct,
+          fixedNotionalUsd: riskEdit.fixedNotionalUsd,
+          dailyLossLimitUsd: riskEdit.dailyLossLimitUsd,
         }),
       })
       setRiskEdit(null)
@@ -167,6 +171,8 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
       riskProfile: connection.riskPolicy.riskProfile,
       allocationPct: connection.riskPolicy.exposurePerOrderPct,
       compoundEnabled: connection.riskPolicy.sizingMode === 'EQUITY_PERCENT',
+      fixedNotionalUsd: connection.riskPolicy.fixedNotionalUsd || connection.riskPolicy.suggestedNotionalPerOrderUsd || 10,
+      dailyLossLimitUsd: connection.riskPolicy.dailyLossLimitUsd || connection.riskPolicy.suggestedDailyLossLimitUsd || 10,
     })
     window.setTimeout(() => document.getElementById('editar-capital')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
   }
@@ -269,20 +275,29 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
               const connection = connections.find((item) => item.id === riskEdit.connectionId)
               const editSuggestion = deriveRiskSuggestion(riskEdit.capitalUsd, riskEdit.riskProfile, riskEdit.allocationPct)
               if (!connection) return null
+              // Con interés compuesto el motor dimensiona por porcentaje del equity real y NO usa
+              // el lotaje ni la pérdida en USD: el resumen debe mostrar lo que se va a ejecutar.
+              const effectiveNotionalUsd = riskEdit.compoundEnabled ? editSuggestion.suggestedNotionalPerOrderUsd : riskEdit.fixedNotionalUsd
+              const effectiveDailyLossUsd = riskEdit.compoundEnabled ? editSuggestion.suggestedDailyLossLimitUsd : riskEdit.dailyLossLimitUsd
+              const effectiveMaxExposureUsd = Math.max(editSuggestion.suggestedMaxTotalExposureUsd, effectiveNotionalUsd)
+              const effectiveMarginUsd = Math.max(0, Math.min(editSuggestion.suggestedMinAvailableMarginUsd, riskEdit.capitalUsd - effectiveNotionalUsd))
               return <section className={styles.section} id="editar-capital">
-                <div className={styles.sectionHeading}><Pencil size={18} /><h2>Editar capital de {connection.label}</h2></div>
-                <div className={styles.capitalScope}><ShieldCheck size={18} /><div><strong>Misma conexión, nuevos límites</strong><span>{BROKER_STRATEGIES[connection.requestedStrategy.code]?.label ?? connection.requestedStrategy.code} · {connection.environment}. La API, la estrategia y el historial no cambian. Al guardar se pausan nuevas aperturas; si hay una posición abierta, el capital no cambia y sus cierres siguen habilitados.</span></div></div>
+                <div className={styles.sectionHeading}><Pencil size={18} /><h2>Editar capital y riesgo de {connection.label}</h2></div>
+                <div className={styles.capitalScope}><ShieldCheck size={18} /><div><strong>Misma conexión, actualización directa</strong><span>{BROKER_STRATEGIES[connection.requestedStrategy.code]?.label ?? connection.requestedStrategy.code} · {connection.environment}. Las claves API permanecen guardadas de forma segura. Podés cambiar capital, lotaje y pérdida máxima sin volver a ingresar credenciales ni pedir una segunda aprobación. El cambio se rechaza si hay órdenes en curso.</span></div></div>
                 <form className={styles.formGrid} onSubmit={requestRiskChange}>
-                  <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label="Capital máximo autorizado (USD)" tooltip="Nuevo límite de capital para esta conexión. No transfiere fondos ni crea otra conexión." example={`Actual: ${connection.riskPolicy?.declaredCapitalUsd.toFixed(2) ?? '0.00'} USD.`} /><input type="number" min="100" max="10000000" step="0.01" value={riskEdit.capitalUsd} onChange={(event) => setRiskEdit((current) => current ? { ...current, capitalUsd: Number(event.target.value) || 0 } : current)} required /></label>
+                  <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label="Capital máximo autorizado (USD)" tooltip="Nuevo límite de capital para esta conexión. No transfiere fondos ni modifica la API." example={`Actual: ${connection.riskPolicy?.declaredCapitalUsd.toFixed(2) ?? '0.00'} USD.`} /><input type="number" min="100" max="10000000" step="0.01" value={riskEdit.capitalUsd} onChange={(event) => setRiskEdit((current) => current ? { ...current, capitalUsd: Number(event.target.value) || 0 } : current)} required /></label>
+                  <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label="Lotaje / Notional por orden (USD)" tooltip="Monto en dólares por orden en cada entrada. Cualquier número entre 1 USD y el capital autorizado. Sólo aplica con interés compuesto apagado." example="Ejemplo: 10.00 USD." /><input type="number" min="1" max={riskEdit.capitalUsd} step="0.01" value={riskEdit.fixedNotionalUsd} onChange={(event) => setRiskEdit((current) => current ? { ...current, fixedNotionalUsd: Number(event.target.value) || 0 } : current)} required /></label>
+                  <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label="Pérdida máxima diaria (USD)" tooltip="Límite máximo de pérdida diaria permitida en dólares. Cualquier número entre 1 USD y el capital autorizado. Sólo aplica con interés compuesto apagado." example="Ejemplo: 20.00 USD." /><input type="number" min="1" max={riskEdit.capitalUsd} step="0.01" value={riskEdit.dailyLossLimitUsd} onChange={(event) => setRiskEdit((current) => current ? { ...current, dailyLossLimitUsd: Number(event.target.value) || 0 } : current)} required /></label>
                   <div className={styles.field}><BrokerFieldLabel label="Interés compuesto" tooltip="Se mantiene aislado en esta conexión. Encendido recalcula futuras entradas con su resultado neto reconciliado." example="No mezcla resultados de BTC con Oro ni de otros usuarios." /><label className={styles.toggleRow}><input type="checkbox" checked={riskEdit.compoundEnabled} onChange={(event) => setRiskEdit((current) => current ? { ...current, compoundEnabled: event.target.checked } : current)} /><span className={styles.toggleTrack} aria-hidden="true"><span /></span><strong>{riskEdit.compoundEnabled ? 'Activado' : 'Desactivado'}</strong></label></div>
                   <details className={`${styles.advancedRisk} ${styles.fullWidth}`}>
-                    <summary>Ajustes avanzados de protección <span>Opcional</span></summary>
+                    <summary>Ajustes avanzados de perfil <span>Opcional</span></summary>
                     <div className={styles.advancedRiskGrid}>
-                      <label className={styles.field}><BrokerFieldLabel label="Nivel de protección" tooltip="Recalcula automáticamente reserva de margen, exposición total y corte diario." example="Conservador es la opción recomendada." /><select value={riskEdit.riskProfile} onChange={(event) => setRiskEdit((current) => current ? { ...current, riskProfile: event.target.value as RiskProfile } : current)}><option value="ULTRA_CONSERVATIVE">Muy conservador</option><option value="CONSERVATIVE">Conservador (recomendado)</option><option value="MODERATE">Moderado</option></select></label>
-                      <label className={styles.field}><BrokerFieldLabel label="Tope por operación (%)" tooltip="Límite máximo para dimensionar futuras aperturas. No modifica una posición ya abierta." example="Ejemplo: 100% del capital autorizado." /><input type="number" min="1" max="100" step="0.1" value={riskEdit.allocationPct} onChange={(event) => setRiskEdit((current) => current ? { ...current, allocationPct: Number(event.target.value) || 0 } : current)} required /></label>
+                      <label className={styles.field}><BrokerFieldLabel label="Nivel de protección" tooltip="Perfil base de riesgo." example="Conservador es la opción recomendada." /><select value={riskEdit.riskProfile} onChange={(event) => setRiskEdit((current) => current ? { ...current, riskProfile: event.target.value as RiskProfile } : current)}><option value="ULTRA_CONSERVATIVE">Muy conservador</option><option value="CONSERVATIVE">Conservador (recomendado)</option><option value="MODERATE">Moderado</option></select></label>
+                      <label className={styles.field}><BrokerFieldLabel label="Tope por operación (%)" tooltip="Límite porcentual opcional." example="Ejemplo: 100% del capital autorizado." /><input type="number" min="1" max="100" step="0.1" value={riskEdit.allocationPct} onChange={(event) => setRiskEdit((current) => current ? { ...current, allocationPct: Number(event.target.value) || 0 } : current)} required /></label>
                     </div>
                   </details>
-                  <div className={`${styles.metrics} ${styles.fullWidth}`}><span>Tope base por orden <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editSuggestion.suggestedNotionalPerOrderUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Exposición total máxima <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editSuggestion.suggestedMaxTotalExposureUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Corte de pérdida diaria <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editSuggestion.suggestedDailyLossLimitUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Margen protegido <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editSuggestion.suggestedMinAvailableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span></div>
+                  <div className={`${styles.metrics} ${styles.fullWidth}`}><span>{riskEdit.compoundEnabled ? 'Orden estimada (compuesto)' : 'Tope base por orden'} <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{effectiveNotionalUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Exposición total máxima <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{effectiveMaxExposureUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Corte de pérdida diaria <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{effectiveDailyLossUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Margen protegido <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{effectiveMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span></div>
+                  {riskEdit.compoundEnabled && <p className={styles.fullWidth}><small>Con interés compuesto activado el motor dimensiona cada entrada como <strong>{riskEdit.allocationPct}% del equity real</strong> de la cuenta; el lotaje y la pérdida en USD de arriba quedan como referencia y no se aplican. Apagá el compuesto para que el monto fijo mande.</small></p>}
                   <div className={`${styles.commandRow} ${styles.fullWidth}`}><button className={styles.primaryButton} disabled={submitting || riskEdit.capitalUsd < 100} type="submit">Guardar cambios</button><button className={styles.secondaryButton} disabled={submitting} type="button" onClick={() => setRiskEdit(null)}>Cancelar</button></div>
                 </form>
               </section>

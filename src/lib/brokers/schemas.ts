@@ -39,6 +39,8 @@ export const riskChangeSchema = z.object({
   riskProfile: z.enum(['ULTRA_CONSERVATIVE', 'CONSERVATIVE', 'MODERATE']),
   sizingMode: z.enum(['FIXED_NOTIONAL', 'EQUITY_PERCENT']),
   allocationPct: z.number().min(1).max(100),
+  fixedNotionalUsd: z.number().positive().max(1_000_000).optional(),
+  dailyLossLimitUsd: z.number().positive().max(1_000_000).optional(),
 }).strict()
 
 export const connectionActionSchema = z.object({
