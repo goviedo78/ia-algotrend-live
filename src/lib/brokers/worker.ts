@@ -206,6 +206,37 @@ async function computeOwnedPositions(connectionId: string): Promise<OwnedPositio
   return Array.from(totals.values()).filter((entry) => entry.quantity > 1e-12)
 }
 
+// Una estrategia que da vuelta la posición emite CLOSE e inmediatamente OPEN en sentido
+// contrario. El cierre puede estar confirmado en nuestros libros mientras BingX todavía reporta
+// la posición: en esa ventana el motor rechazaría la reapertura con RISK_POSITION_LIMIT (si aún
+// la contamos como propia) o con RISK_FOREIGN_OPPOSITE_POSITION (si ya no), y ambos son 422
+// terminales que perderían el reverso para siempre. Mientras el cierre no termine de asentarse,
+// la apertura espera y reintenta en vez de morir.
+const CLOSE_SETTLEMENT_GRACE_MS = 120_000
+const IN_FLIGHT_INTENT_STATUSES = ['QUEUED', 'SUBMITTING', 'SUBMITTED', 'PARTIALLY_FILLED']
+
+async function closeIsStillSettling(connectionId: string, symbol: string, intentId: string) {
+  const admin = createAdminClient()
+  const [inFlight, recentlyClosed] = await Promise.all([
+    admin.from('broker_order_intents')
+      .select('id', { count: 'exact', head: true })
+      .eq('connection_id', connectionId)
+      .eq('symbol', symbol)
+      .eq('action', 'CLOSE')
+      .neq('id', intentId)
+      .in('status', IN_FLIGHT_INTENT_STATUSES),
+    admin.from('broker_orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('connection_id', connectionId)
+      .eq('symbol', symbol)
+      .eq('reduce_only', true)
+      .gte('submitted_at', new Date(Date.now() - CLOSE_SETTLEMENT_GRACE_MS).toISOString()),
+  ])
+  if (inFlight.error) throw inFlight.error
+  if (recentlyClosed.error) throw recentlyClosed.error
+  return (inFlight.count ?? 0) > 0 || (recentlyClosed.count ?? 0) > 0
+}
+
 async function executeOrder(job: Job) {
   const executionStartedAt = Date.now()
   const admin = createAdminClient()
@@ -250,6 +281,22 @@ async function executeOrder(job: Job) {
     balance.equity,
     Number(runtimeRisk?.compound_capital_usd ?? policy.declaredCapitalUsd),
   ))
+  // Gate del reverso: sólo frena si el broker todavía muestra posición en el símbolo Y esta
+  // conexión acaba de cerrarla (o la está cerrando). Fuera de esa ventana no cambia nada.
+  if (intent.action === 'OPEN') {
+    const symbolStillHeld = positions.some((position) => (
+      normalizeSymbol(position.symbol) === normalizeSymbol(String(intent.symbol)) && position.quantity > 0
+    ))
+    if (symbolStillHeld && await closeIsStillSettling(connection.id, String(intent.symbol), String(intent.id))) {
+      throw new BrokerPlatformError(
+        'POSITION_SETTLEMENT_PENDING',
+        'El cierre anterior todavía se está asentando en el broker; la reapertura reintenta.',
+        503,
+        true,
+      )
+    }
+  }
+
   const approved = evaluateRisk({
     action: intent.action,
     direction: intent.direction,
@@ -452,10 +499,13 @@ export async function processBrokerJob(job: Job) {
     if (job.intent_id && job.job_type === 'EXECUTE_ORDER') {
       const retryable = error instanceof BrokerPlatformError && error.retryable && job.attempts < job.max_attempts
       await createAdminClient().from('broker_order_intents').update({
+        // Una espera no es un rechazo: la intención sigue en cola y el job la reintenta.
         status: error instanceof BrokerPlatformError && error.code.startsWith('RISK_')
           ? 'RISK_REJECTED'
           : retryable
-            ? (error.code.endsWith('EXECUTION_DISABLED') ? 'QUEUED' : 'UNKNOWN')
+            ? (error.code.endsWith('EXECUTION_DISABLED') || error.code === 'POSITION_SETTLEMENT_PENDING'
+              ? 'QUEUED'
+              : 'UNKNOWN')
             : 'FAILED',
         rejection_code: errorCode(error),
       }).eq('id', job.intent_id)

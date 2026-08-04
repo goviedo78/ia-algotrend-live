@@ -68,6 +68,12 @@ Las políticas, el ledger y el cálculo están identificados por `connection_id`
 
 La rentabilidad del activo se aplica a la posición, no automáticamente a todo el capital. Una posición de USD 50 que gana 3% produce USD 1,50 bruto antes de comisiones. Una posición de USD 1.000 con el mismo movimiento produce aproximadamente USD 30 bruto. El titular decide el capital autorizado y el porcentaje por operación.
 
+## Reversos y operaciones no ejecutadas
+
+Cuando la estrategia da vuelta la posición emite un cierre y enseguida una apertura contraria. El cierre puede estar confirmado en nuestros libros mientras el broker todavía reporta la posición. En esa ventana la reapertura **espera y reintenta** (`POSITION_SETTLEMENT_PENDING`, la intención queda en `QUEUED`) en vez de morir con `RISK_POSITION_LIMIT` o `RISK_FOREIGN_OPPOSITE_POSITION`, que son rechazos terminales. El gate sólo actúa si el broker sigue mostrando posición en ese símbolo y esta conexión acaba de cerrarla o la está cerrando; pasada la ventana de gracia vuelve la evaluación normal, así que un bloqueo real sigue dando su error propio.
+
+Toda intención rechazada aparece en el panel del titular bajo «Operaciones que no se ejecutaron», con el motivo en castellano y, cuando la estrategia ya cerró ese trade, el resultado que se perdió. El porcentaje sale de los precios de referencia de las señales y es exacto; el importe en USD es bruto, estimado con el lotaje configurado y sin comisiones. Un cierre rechazado no genera resultado: la posición sigue viva.
+
 Antes de abrir, el motor valida:
 
 - conexión `ACTIVE` y política habilitada;

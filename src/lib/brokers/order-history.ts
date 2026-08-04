@@ -5,6 +5,7 @@ import {
   enrichBrokerTradeCycles,
   summarizeBrokerOrderHistory,
 } from './order-history-metrics'
+import { loadMissedOpportunities } from './missed-opportunities'
 import { EMPTY_BROKER_ORDER_HISTORY } from './order-history-types'
 import { brokerStrategy } from './strategies'
 import type { BrokerOrderHistoryItem, BrokerOrderHistoryResponse } from './order-history-types'
@@ -47,9 +48,14 @@ export async function loadBrokerOrderHistory(
   if (filters.userId) ordersQuery = ordersQuery.eq('user_id', filters.userId)
   if (filters.connectionId) ordersQuery = ordersQuery.eq('connection_id', filters.connectionId)
 
-  const { data: orders, error: ordersError } = await ordersQuery
+  // Las oportunidades perdidas viven en `broker_order_intents`, no en `broker_orders`: una
+  // conexión puede no haber ejecutado nunca y aun así tener rechazos que mostrar.
+  const [{ data: orders, error: ordersError }, missedOpportunities] = await Promise.all([
+    ordersQuery,
+    loadMissedOpportunities({ userId: filters.userId, connectionId: filters.connectionId }),
+  ])
   if (ordersError) throw ordersError
-  if (!orders?.length) return EMPTY_BROKER_ORDER_HISTORY
+  if (!orders?.length) return { ...EMPTY_BROKER_ORDER_HISTORY, missedOpportunities }
 
   const orderIds = orders.map((order) => order.id)
   const intentIds = orders.map((order) => order.intent_id)
@@ -181,5 +187,5 @@ export async function loadBrokerOrderHistory(
 
   const ordersWithCycles = enrichBrokerTradeCycles(mappedOrders)
   const result = ordersWithCycles.slice(0, displayLimit)
-  return { orders: result, ...summarizeBrokerOrderHistory(result) }
+  return { orders: result, ...summarizeBrokerOrderHistory(result), missedOpportunities }
 }

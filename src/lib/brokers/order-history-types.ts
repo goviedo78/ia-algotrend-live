@@ -88,14 +88,43 @@ export type BrokerPerformanceStats = {
   lastClosedAt: string | null
 }
 
+/**
+ * Una operación que el motor rechazó antes de enviarla al broker. Si fue una apertura y la
+ * estrategia ya emitió su cierre, `missedReturnPct` dice qué habría dado ese trade.
+ */
+export type BrokerMissedOpportunity = {
+  id: string
+  connectionId: string
+  connectionLabel: string
+  strategyCode: string
+  strategyLabel: string
+  symbol: string
+  action: 'OPEN' | 'CLOSE'
+  direction: 'LONG' | 'SHORT'
+  rejectionCode: string | null
+  reason: string
+  insufficientFunds: boolean
+  rejectedAt: string
+  signalTime: string | null
+  entryPrice: number | null
+  exitPrice: number | null
+  closedAt: string | null
+  notionalUsd: number | null
+  missedReturnPct: number | null
+  missedGrossPnlUsd: number | null
+  outcome: 'WIN' | 'LOSS' | 'FLAT' | 'PENDING' | 'NOT_APPLICABLE'
+}
+
 export type BrokerOrderHistoryResponse = {
   orders: BrokerOrderHistoryItem[]
   totals: BrokerOrderHistoryTotals
   performance: BrokerPerformanceStats
+  missedOpportunities: BrokerMissedOpportunity[]
 }
 
 export const EMPTY_BROKER_ORDER_HISTORY: BrokerOrderHistoryResponse = {
   orders: [],
+  missedOpportunities: [],
   totals: {
     realizedPnlUsd: 0,
     feesUsd: 0,
