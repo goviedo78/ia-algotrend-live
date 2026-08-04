@@ -138,7 +138,7 @@ test('approved connections apply serialized self-service risk edits without a se
   assert.match(panel, /Guardar cambios/)
 })
 
-test('self-service lot and daily loss stay inside the authorized capital and never starve the exposure ceiling', async () => {
+test('self-service lot and daily loss are uncapped by the platform and never starve their own limits', async () => {
   const [riskRoute, schemas, panel] = await Promise.all([
     readFile(path.join(root, 'src/app/api/broker-connections/[id]/risk/route.ts'), 'utf8'),
     readFile(path.join(root, 'src/lib/brokers/schemas.ts'), 'utf8'),
@@ -152,9 +152,13 @@ test('self-service lot and daily loss stay inside the authorized capital and nev
   // La reserva de margen no puede solaparse con la orden autorizada.
   assert.match(riskRoute, /const minAvailableMarginUsd = Math\.max\(0, Math\.min\(suggestion\.suggestedMinAvailableMarginUsd, suggestion\.declaredCapitalUsd - fixedNotionalUsd\)\)/)
   assert.match(riskRoute, /proposal_min_available_margin_usd: minAvailableMarginUsd/)
-  // El capital autorizado sigue siendo el techo real de la conexión.
-  assert.match(riskRoute, /if \(fixedNotionalUsd > suggestion\.declaredCapitalUsd\)/)
-  assert.match(riskRoute, /if \(dailyLossLimitUsd > suggestion\.declaredCapitalUsd\)/)
+  // Decisión de producto: el titular configura el riesgo que quiera. La plataforma no impone
+  // un techo propio sobre el lotaje ni sobre la pérdida diaria; el límite real es el margen del
+  // broker. Nadie debe reintroducir una validación de "no puede superar el capital".
+  assert.doesNotMatch(riskRoute, /fixedNotionalUsd > suggestion\.declaredCapitalUsd/)
+  assert.doesNotMatch(riskRoute, /dailyLossLimitUsd > suggestion\.declaredCapitalUsd/)
+  assert.match(schemas, /fixedNotionalUsd: z\.number\(\)\.positive\(\)\.max\(10_000_000\)\.optional\(\)/)
+  assert.match(schemas, /dailyLossLimitUsd: z\.number\(\)\.positive\(\)\.max\(10_000_000\)\.optional\(\)/)
   // La auditoría registra los montos que efectivamente cambiaron.
   assert.match(riskRoute, /notionalPerOrderUsd: fixedNotionalUsd/)
   assert.match(riskRoute, /dailyLossLimitUsd, maxTotalExposureUsd, minAvailableMarginUsd/)

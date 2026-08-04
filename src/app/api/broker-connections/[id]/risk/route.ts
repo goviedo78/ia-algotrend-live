@@ -26,18 +26,12 @@ export async function POST(request: NextRequest, context: Context) {
     const suggestion = deriveRiskSuggestion(parsed.data.capitalUsd, parsed.data.riskProfile, parsed.data.allocationPct)
     const fixedNotionalUsd = parsed.data.fixedNotionalUsd ?? suggestion.suggestedNotionalPerOrderUsd
     const dailyLossLimitUsd = parsed.data.dailyLossLimitUsd ?? suggestion.suggestedDailyLossLimitUsd
-    // El titular fija el lotaje en USD. La exposición total nunca puede quedar por debajo de una
-    // sola orden: la RPC rechaza `max_total_exposure_usd < notional_per_order_usd`, y el motor
-    // rechazaría igual la apertura con RISK_TOTAL_EXPOSURE_LIMIT.
+    // El titular decide su lotaje y su pérdida diaria sin techo nuestro: el único límite real es
+    // el margen que tenga en el broker. Estos dos ajustes NO son restricciones, son coherencia
+    // interna — sin ellos la propia propuesta del usuario se auto-bloquearía:
+    //  - la RPC rechaza `max_total_exposure_usd < notional_per_order_usd`;
+    //  - el motor rechaza con RISK_MARGIN_RESERVE si la reserva se solapa con la orden.
     const maxTotalExposureUsd = Math.max(suggestion.suggestedMaxTotalExposureUsd, fixedNotionalUsd)
-    if (fixedNotionalUsd > suggestion.declaredCapitalUsd) {
-      throw new BrokerPlatformError('INVALID_RISK_PROPOSAL', 'El lotaje por orden no puede superar el capital autorizado de la conexión.', 400)
-    }
-    if (dailyLossLimitUsd > suggestion.declaredCapitalUsd) {
-      throw new BrokerPlatformError('INVALID_RISK_PROPOSAL', 'La pérdida máxima diaria no puede superar el capital autorizado de la conexión.', 400)
-    }
-    // La reserva de margen se acota al capital declarado menos la orden autorizada; si no,
-    // el motor bloquea cada apertura con RISK_MARGIN_RESERVE.
     const minAvailableMarginUsd = Math.max(0, Math.min(suggestion.suggestedMinAvailableMarginUsd, suggestion.declaredCapitalUsd - fixedNotionalUsd))
     const { data, error } = await createAdminClient().rpc('request_broker_risk_change', {
       target_connection_id: id,

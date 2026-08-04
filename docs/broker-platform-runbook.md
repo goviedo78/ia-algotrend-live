@@ -55,7 +55,9 @@ El usuario declara capital asignado, elige qué porcentaje usar por apertura (1�
 
 Con USD 100 al 100%, la apertura autorizada es USD 100; con USD 1.000 al 100%, es USD 1.000. El titular puede elegir un porcentaje menor. La reserva se reduce cuando sea necesario para no solaparse con el importe por operación. El máximo global inicial es `1x`.
 
-La aprobación administrativa se realiza una sola vez para habilitar la cuenta/API. Una conexión ya aprobada puede cambiar capital, porcentaje y modo de tamaño sin una segunda aprobación. El backend serializa el cambio, exige que no haya ejecuciones pendientes, reactiva la misma conexión y registra la auditoría.
+La aprobación administrativa se realiza una sola vez para habilitar la cuenta/API. Una conexión ya aprobada puede cambiar capital, porcentaje, lotaje por orden, pérdida diaria y modo de tamaño sin una segunda aprobación. El backend serializa el cambio, exige que no haya ejecuciones pendientes, reactiva la misma conexión y registra la auditoría.
+
+**La plataforma no impone un techo propio sobre el lotaje ni sobre la pérdida diaria de una conexión aprobada.** El titular es responsable de su cuenta y configura el riesgo que quiera; el único límite real es el margen disponible en el broker, que rechaza lo que no pueda financiar. La exposición total y la reserva de margen se ajustan automáticamente al lotaje elegido: no son restricciones, evitan que la propia configuración del titular se auto-bloquee con `RISK_TOTAL_EXPOSURE_LIMIT` o `RISK_MARGIN_RESERVE`. No reintroducir validaciones del tipo "el lotaje no puede superar el capital".
 
 El usuario elige el modo de tamaño al crear cada conexión:
 
