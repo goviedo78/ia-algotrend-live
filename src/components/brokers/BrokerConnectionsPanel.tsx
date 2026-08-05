@@ -24,6 +24,11 @@ type RiskEditDraft = {
   compoundEnabled: boolean
   fixedNotionalUsd: number
   dailyLossLimitUsd: number
+  maxTotalExposureUsd: number
+  minAvailableMarginUsd: number
+  maxOpenPositions: number
+  maxOrdersPerMinute: number
+  maxLeverage: number
 }
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...init?.headers } })
@@ -152,6 +157,11 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
           allocationPct: riskEdit.allocationPct,
           fixedNotionalUsd: riskEdit.fixedNotionalUsd,
           dailyLossLimitUsd: riskEdit.dailyLossLimitUsd,
+          maxTotalExposureUsd: riskEdit.maxTotalExposureUsd,
+          minAvailableMarginUsd: riskEdit.minAvailableMarginUsd,
+          maxOpenPositions: riskEdit.maxOpenPositions,
+          maxOrdersPerMinute: riskEdit.maxOrdersPerMinute,
+          maxLeverage: riskEdit.maxLeverage,
         }),
       })
       setRiskEdit(null)
@@ -173,6 +183,11 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
       compoundEnabled: connection.riskPolicy.sizingMode === 'EQUITY_PERCENT',
       fixedNotionalUsd: connection.riskPolicy.fixedNotionalUsd || connection.riskPolicy.suggestedNotionalPerOrderUsd || 10,
       dailyLossLimitUsd: connection.riskPolicy.dailyLossLimitUsd || connection.riskPolicy.suggestedDailyLossLimitUsd || 10,
+      maxTotalExposureUsd: connection.riskPolicy.maxTotalExposureUsd || connection.riskPolicy.suggestedMaxTotalExposureUsd || 10,
+      minAvailableMarginUsd: connection.riskPolicy.minAvailableMarginUsd || 0,
+      maxOpenPositions: connection.riskPolicy.maxOpenPositions || 1,
+      maxOrdersPerMinute: connection.riskPolicy.maxOrdersPerMinute || 2,
+      maxLeverage: connection.riskPolicy.maxLeverage || 1,
     })
     window.setTimeout(() => document.getElementById('editar-capital')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
   }
@@ -279,8 +294,13 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
               // el lotaje ni la pérdida en USD: el resumen debe mostrar lo que se va a ejecutar.
               const effectiveNotionalUsd = riskEdit.compoundEnabled ? editSuggestion.suggestedNotionalPerOrderUsd : riskEdit.fixedNotionalUsd
               const effectiveDailyLossUsd = riskEdit.compoundEnabled ? editSuggestion.suggestedDailyLossLimitUsd : riskEdit.dailyLossLimitUsd
-              const effectiveMaxExposureUsd = Math.max(editSuggestion.suggestedMaxTotalExposureUsd, effectiveNotionalUsd)
-              const effectiveMarginUsd = Math.max(0, Math.min(editSuggestion.suggestedMinAvailableMarginUsd, riskEdit.capitalUsd - effectiveNotionalUsd))
+              const effectiveMaxExposureUsd = riskEdit.maxTotalExposureUsd
+              const effectiveMarginUsd = riskEdit.minAvailableMarginUsd
+              // La exposición total por debajo del lotaje deja la propuesta inconsistente: el
+              // servidor la rechaza y el motor tampoco podría abrir. Se avisa antes de enviar.
+              const exposicionInsuficiente = effectiveMaxExposureUsd < effectiveNotionalUsd
+              // Aviso de margen: para abrir hacen falta lotaje + reserva libres en el broker.
+              const margenNecesarioUsd = effectiveNotionalUsd / Math.max(1, riskEdit.maxLeverage) + effectiveMarginUsd
               return <section className={styles.section} id="editar-capital">
                 <div className={styles.sectionHeading}><Pencil size={18} /><h2>Editar capital y riesgo de {connection.label}</h2></div>
                 <div className={styles.capitalScope}><ShieldCheck size={18} /><div><strong>Misma conexión, actualización directa</strong><span>{BROKER_STRATEGIES[connection.requestedStrategy.code]?.label ?? connection.requestedStrategy.code} · {connection.environment}. Las claves API permanecen guardadas de forma segura. Vos decidís capital, lotaje y pérdida máxima con el número que quieras, sin volver a ingresar credenciales ni pedir una segunda aprobación. El único límite real es el margen disponible en tu cuenta. El cambio se rechaza si hay órdenes en curso.</span></div></div>
@@ -294,11 +314,18 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
                     <div className={styles.advancedRiskGrid}>
                       <label className={styles.field}><BrokerFieldLabel label="Nivel de protección" tooltip="Perfil base de riesgo." example="Conservador es la opción recomendada." /><select value={riskEdit.riskProfile} onChange={(event) => setRiskEdit((current) => current ? { ...current, riskProfile: event.target.value as RiskProfile } : current)}><option value="ULTRA_CONSERVATIVE">Muy conservador</option><option value="CONSERVATIVE">Conservador (recomendado)</option><option value="MODERATE">Moderado</option></select></label>
                       <label className={styles.field}><BrokerFieldLabel label="Tope por operación (%)" tooltip="Límite porcentual opcional." example="Ejemplo: 100% del capital autorizado." /><input type="number" min="1" max="100" step="0.1" value={riskEdit.allocationPct} onChange={(event) => setRiskEdit((current) => current ? { ...current, allocationPct: Number(event.target.value) || 0 } : current)} required /></label>
+                      <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label="Exposición total máxima (USD)" tooltip="Suma máxima de todas tus posiciones abiertas a la vez. No puede ser menor que el lotaje por orden." example="Ejemplo: igual al lotaje si operás de a una posición." /><input type="number" min="1" max="10000000" step="0.01" value={riskEdit.maxTotalExposureUsd} onChange={(event) => setRiskEdit((current) => current ? { ...current, maxTotalExposureUsd: Number(event.target.value) || 0 } : current)} required /></label>
+                      <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label="Reserva de margen (USD)" tooltip="Margen que debe quedar libre en el broker DESPUÉS de abrir. Si tu margen disponible no lo cubre, la orden se rechaza con RISK_MARGIN_RESERVE. Poné 0 para no reservar nada." example="Ejemplo: 0 para usar todo el margen disponible." /><input type="number" min="0" max="10000000" step="0.01" value={riskEdit.minAvailableMarginUsd} onChange={(event) => setRiskEdit((current) => current ? { ...current, minAvailableMarginUsd: Number(event.target.value) || 0 } : current)} required /></label>
+                      <label className={styles.field}><BrokerFieldLabel label="Posiciones simultáneas" tooltip="Cuántas posiciones propias puede tener abiertas esta conexión a la vez." example="Ejemplo: 1 para una sola posición por vez." /><input type="number" min="1" max="20" step="1" value={riskEdit.maxOpenPositions} onChange={(event) => setRiskEdit((current) => current ? { ...current, maxOpenPositions: Number(event.target.value) || 1 } : current)} required /></label>
+                      <label className={styles.field}><BrokerFieldLabel label="Órdenes por minuto" tooltip="Freno contra ráfagas de señales repetidas. Un reverso necesita al menos 2: una para cerrar y otra para abrir." example="Ejemplo: 2 permite cerrar y abrir en la misma vela." /><input type="number" min="1" max="60" step="1" value={riskEdit.maxOrdersPerMinute} onChange={(event) => setRiskEdit((current) => current ? { ...current, maxOrdersPerMinute: Number(event.target.value) || 1 } : current)} required /></label>
+                      <label className={styles.field}><BrokerFieldLabel label="Apalancamiento" tooltip="Multiplica exposición y riesgo. La plataforma impone su propio máximo global vía BROKER_MAX_ALLOWED_LEVERAGE, y el instrumento el suyo." example="Ejemplo: 1x sin apalancamiento." /><input type="number" min="1" max="20" step="1" value={riskEdit.maxLeverage} onChange={(event) => setRiskEdit((current) => current ? { ...current, maxLeverage: Number(event.target.value) || 1 } : current)} required /></label>
                     </div>
                   </details>
                   <div className={`${styles.metrics} ${styles.fullWidth}`}><span>{riskEdit.compoundEnabled ? 'Orden estimada (compuesto)' : 'Tope base por orden'} <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{effectiveNotionalUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Exposición total máxima <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{effectiveMaxExposureUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Corte de pérdida diaria <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{effectiveDailyLossUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Margen protegido <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{effectiveMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span></div>
                   {riskEdit.compoundEnabled && <p className={styles.fullWidth}><small>Con interés compuesto activado el motor dimensiona cada entrada como <strong>{riskEdit.allocationPct}% del equity real</strong> de la cuenta; el lotaje y la pérdida en USD de arriba quedan como referencia y no se aplican. Apagá el compuesto para que el monto fijo mande.</small></p>}
-                  <div className={`${styles.commandRow} ${styles.fullWidth}`}><button className={styles.primaryButton} disabled={submitting || riskEdit.capitalUsd < 100} type="submit">Guardar cambios</button><button className={styles.secondaryButton} disabled={submitting} type="button" onClick={() => setRiskEdit(null)}>Cancelar</button></div>
+                  {exposicionInsuficiente && <p className={`${styles.notice} ${styles.fullWidth}`} role="alert">La exposición total ({effectiveMaxExposureUsd.toFixed(2)} USD) es menor que el lotaje por orden ({effectiveNotionalUsd.toFixed(2)} USD). Subila al menos hasta el lotaje o el motor no va a poder abrir.</p>}
+                  <p className={styles.fullWidth}><small>Para abrir, tu cuenta necesita <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{margenNecesarioUsd.toFixed(2)} USD</BrokerSensitiveValue></strong> de margen libre en el broker: {effectiveNotionalUsd.toFixed(2)} de la orden a {riskEdit.maxLeverage}x más {effectiveMarginUsd.toFixed(2)} de reserva. Si no los tenés, la señal se rechaza con RISK_MARGIN_RESERVE.</small></p>
+                  <div className={`${styles.commandRow} ${styles.fullWidth}`}><button className={styles.primaryButton} disabled={submitting || riskEdit.capitalUsd < 100 || exposicionInsuficiente} type="submit">Guardar cambios</button><button className={styles.secondaryButton} disabled={submitting} type="button" onClick={() => setRiskEdit(null)}>Cancelar</button></div>
                 </form>
               </section>
             })()}

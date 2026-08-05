@@ -147,10 +147,12 @@ test('self-service lot and daily loss are uncapped by the platform and never sta
 
   // El lotaje elegido por el titular nunca puede quedar por encima de la exposición total
   // enviada a la RPC: la función rechaza max_total_exposure_usd < notional_per_order_usd.
-  assert.match(riskRoute, /const maxTotalExposureUsd = Math\.max\(suggestion\.suggestedMaxTotalExposureUsd, fixedNotionalUsd\)/)
+  // El titular puede fijar la exposición a mano; cuando no la manda, el respaldo derivado
+  // nunca puede quedar por debajo de una sola orden.
+  assert.match(riskRoute, /Math\.max\(suggestion\.suggestedMaxTotalExposureUsd, fixedNotionalUsd\)/)
   assert.match(riskRoute, /proposal_max_total_exposure_usd: maxTotalExposureUsd/)
   // La reserva de margen no puede solaparse con la orden autorizada.
-  assert.match(riskRoute, /const minAvailableMarginUsd = Math\.max\(0, Math\.min\(suggestion\.suggestedMinAvailableMarginUsd, suggestion\.declaredCapitalUsd - fixedNotionalUsd\)\)/)
+  assert.match(riskRoute, /Math\.max\(0, Math\.min\(suggestion\.suggestedMinAvailableMarginUsd, suggestion\.declaredCapitalUsd - fixedNotionalUsd\)\)/)
   assert.match(riskRoute, /proposal_min_available_margin_usd: minAvailableMarginUsd/)
   // Decisión de producto: el titular configura el riesgo que quiera. La plataforma no impone
   // un techo propio sobre el lotaje ni sobre la pérdida diaria; el límite real es el margen del

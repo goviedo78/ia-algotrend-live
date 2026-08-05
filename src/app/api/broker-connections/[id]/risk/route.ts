@@ -11,6 +11,21 @@ import { riskChangeSchema } from '@/lib/brokers/schemas'
 
 type Context = { params: Promise<{ id: string }> }
 
+// Un campo omitido conserva lo que la conexión ya tenía: editar el lotaje no debe resetear
+// las posiciones simultáneas ni el apalancamiento a un default.
+async function loadCurrentRiskPolicy(connectionId: string) {
+  const { data } = await createAdminClient()
+    .from('broker_risk_policies')
+    .select('max_open_positions, max_orders_per_minute, max_leverage')
+    .eq('connection_id', connectionId)
+    .maybeSingle()
+  return {
+    maxOpenPositions: Number(data?.max_open_positions) || 1,
+    maxOrdersPerMinute: Number(data?.max_orders_per_minute) || 2,
+    maxLeverage: Number(data?.max_leverage) || 1,
+  }
+}
+
 export async function POST(request: NextRequest, context: Context) {
   try {
     assertSameOrigin(request)
@@ -31,8 +46,35 @@ export async function POST(request: NextRequest, context: Context) {
     // interna — sin ellos la propia propuesta del usuario se auto-bloquearía:
     //  - la RPC rechaza `max_total_exposure_usd < notional_per_order_usd`;
     //  - el motor rechaza con RISK_MARGIN_RESERVE si la reserva se solapa con la orden.
-    const maxTotalExposureUsd = Math.max(suggestion.suggestedMaxTotalExposureUsd, fixedNotionalUsd)
-    const minAvailableMarginUsd = Math.max(0, Math.min(suggestion.suggestedMinAvailableMarginUsd, suggestion.declaredCapitalUsd - fixedNotionalUsd))
+    // El titular puede fijar cada parámetro a mano. Si no lo manda, se conserva lo que ya tenía
+    // la política; y si nunca tuvo valor, se cae en el derivado del perfil.
+    const currentPolicy = await loadCurrentRiskPolicy(id)
+    const maxTotalExposureUsd = parsed.data.maxTotalExposureUsd
+      ?? Math.max(suggestion.suggestedMaxTotalExposureUsd, fixedNotionalUsd)
+    const minAvailableMarginUsd = parsed.data.minAvailableMarginUsd
+      ?? Math.max(0, Math.min(suggestion.suggestedMinAvailableMarginUsd, suggestion.declaredCapitalUsd - fixedNotionalUsd))
+    const maxOpenPositions = parsed.data.maxOpenPositions ?? Math.max(1, currentPolicy.maxOpenPositions)
+    const maxOrdersPerMinute = parsed.data.maxOrdersPerMinute ?? Math.max(1, currentPolicy.maxOrdersPerMinute)
+    const maxLeverage = parsed.data.maxLeverage ?? Math.max(1, currentPolicy.maxLeverage)
+    // Tope global de apalancamiento: es configuración del dueño de la plataforma
+    // (BROKER_MAX_ALLOWED_LEVERAGE), la misma que ya aplica la ruta de administración.
+    const globalMaxLeverage = Math.max(1, Number(process.env.BROKER_MAX_ALLOWED_LEVERAGE ?? 1))
+    if (maxLeverage > globalMaxLeverage) {
+      throw new BrokerPlatformError(
+        'LEVERAGE_ABOVE_PLATFORM_LIMIT',
+        `El apalancamiento máximo permitido por la plataforma es ${globalMaxLeverage}x. Subí BROKER_MAX_ALLOWED_LEVERAGE para ampliarlo.`,
+        400,
+      )
+    }
+    // La exposición total nunca puede quedar por debajo de una sola orden: la RPC la rechaza y
+    // el motor tampoco podría abrir. No es un techo, es coherencia de la propia propuesta.
+    if (maxTotalExposureUsd < fixedNotionalUsd) {
+      throw new BrokerPlatformError(
+        'INVALID_RISK_PROPOSAL',
+        'La exposición total no puede ser menor que el lotaje por orden.',
+        400,
+      )
+    }
     const { data, error } = await createAdminClient().rpc('request_broker_risk_change', {
       target_connection_id: id,
       expected_user_id: user.id,
@@ -47,12 +89,15 @@ export async function POST(request: NextRequest, context: Context) {
       proposal_max_total_exposure_usd: maxTotalExposureUsd,
       proposal_daily_loss_limit_usd: dailyLossLimitUsd,
       proposal_min_available_margin_usd: minAvailableMarginUsd,
+      proposal_max_open_positions: maxOpenPositions,
+      proposal_max_orders_per_minute: maxOrdersPerMinute,
+      proposal_max_leverage: maxLeverage,
     })
     if (error || !['ACTIVE', 'PENDING_APPROVAL'].includes(String(data))) {
       throw new BrokerPlatformError('RISK_CHANGE_FAILED', 'No se pudo guardar la propuesta de riesgo.', 409)
     }
     const finalStatus = String(data)
-    await writeBrokerAudit({ request, userId: user.id, actorUserId: user.id, connectionId: id, eventType: 'RISK_CHANGE_REQUESTED', outcome: 'SUCCESS', metadata: { previousStatus: connection.status, newStatus: finalStatus, sizingMode: parsed.data.sizingMode, capitalUsd: suggestion.declaredCapitalUsd, allocationPct: suggestion.exposurePerOrderPct, notionalPerOrderUsd: fixedNotionalUsd, dailyLossLimitUsd, maxTotalExposureUsd, minAvailableMarginUsd } })
+    await writeBrokerAudit({ request, userId: user.id, actorUserId: user.id, connectionId: id, eventType: 'RISK_CHANGE_REQUESTED', outcome: 'SUCCESS', metadata: { previousStatus: connection.status, newStatus: finalStatus, sizingMode: parsed.data.sizingMode, capitalUsd: suggestion.declaredCapitalUsd, allocationPct: suggestion.exposurePerOrderPct, notionalPerOrderUsd: fixedNotionalUsd, dailyLossLimitUsd, maxTotalExposureUsd, minAvailableMarginUsd, maxOpenPositions, maxOrdersPerMinute, maxLeverage } })
     return NextResponse.json({ ok: true, status: finalStatus })
   } catch (error) {
     const response = publicError(error)
