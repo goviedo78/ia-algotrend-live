@@ -209,6 +209,12 @@ async function findActionableSignal(
   actions: string[]
 ): Promise<ActionableSignal | null> {
   const latestSignal = signalFromResult(last)
+  // El cron vuelve a analizar la última vela cerrada durante toda la hora. Si esa misma señal
+  // ya abrió el trade, no debe interpretarla como un reverso y cerrarlo contra sí mismo.
+  if (existingTrade && latestSignal && existingTrade.signal_time === last.time) {
+    actions.push(`signal_${latestSignal}_already_open_${last.time}`)
+    return null
+  }
   if (latestSignal) {
     return { signal: latestSignal, result: last, candle: lastCandle, source: 'latest' }
   }

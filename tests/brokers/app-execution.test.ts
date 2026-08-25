@@ -78,7 +78,30 @@ test('AlgoTrend cron dispatches signals and drains jobs inside the app', async (
   assert.match(source, /symbol: 'BTC-USDT'/)
   assert.match(source, /isLegacyBingxEnabled\(\)/)
   assert.match(source, /concurrency: 20/)
+  assert.match(source, /existingTrade && latestSignal && existingTrade\.signal_time === last\.time/)
   assert.doesNotMatch(source, /fetch\([^)]*broker-signals/i)
+})
+
+test('a still-open rejected signal can be requeued atomically without losing its close linkage', async () => {
+  const [migration, route, history, panel] = await Promise.all([
+    readFile(path.join(root, 'supabase/migrations/20260806120000_retry_open_missed_signals_and_margin_reserve.sql'), 'utf8'),
+    readFile(path.join(root, 'src/app/api/broker-orders/[id]/retry/route.ts'), 'utf8'),
+    readFile(path.join(root, 'src/lib/brokers/missed-opportunities.ts'), 'utf8'),
+    readFile(path.join(root, 'src/components/brokers/BrokerOrderHistory.tsx'), 'utf8'),
+  ])
+
+  assert.match(migration, /create or replace function public\.retry_broker_missed_open/i)
+  assert.match(migration, /intent_record\.action <> 'OPEN'/i)
+  assert.match(migration, /intent_record\.status <> 'RISK_REJECTED'/i)
+  assert.match(migration, /closes\.signal_time > signal_record\.signal_time/i)
+  assert.match(migration, /set status = 'QUEUED',[\s\S]*policy_version = policy_record\.version/i)
+  assert.match(migration, /grant execute on function public\.retry_broker_missed_open\(uuid, uuid\)[\s\S]*to service_role/i)
+  assert.match(route, /requireBrokerMember\(\)/)
+  assert.match(route, /assertSameOrigin\(request\)/)
+  assert.match(route, /safeProcessBrokerJobsInApp/)
+  assert.match(history, /canRetry: intent\.action === 'OPEN' && closedAt == null && connection\?\.status === 'ACTIVE'/)
+  assert.match(panel, /item\.canRetry/)
+  assert.match(panel, /'Reenviar'/)
 })
 
 test('broker routes schedule validation and execution in the Next.js runtime', async () => {
@@ -151,8 +174,9 @@ test('self-service lot and daily loss are uncapped by the platform and never sta
   // nunca puede quedar por debajo de una sola orden.
   assert.match(riskRoute, /Math\.max\(suggestion\.suggestedMaxTotalExposureUsd, fixedNotionalUsd\)/)
   assert.match(riskRoute, /proposal_max_total_exposure_usd: maxTotalExposureUsd/)
-  // La reserva de margen no puede solaparse con la orden autorizada.
-  assert.match(riskRoute, /Math\.max\(0, Math\.min\(suggestion\.suggestedMinAvailableMarginUsd, suggestion\.declaredCapitalUsd - fixedNotionalUsd\)\)/)
+  // La regla general deja como máximo 10% del capital reservado.
+  assert.match(riskRoute, /Math\.floor\(suggestion\.declaredCapitalUsd \* marginReservePct\) \/ 100/)
+  assert.match(riskRoute, /proposal_margin_reserve_pct: marginReservePct/)
   assert.match(riskRoute, /proposal_min_available_margin_usd: minAvailableMarginUsd/)
   // Decisión de producto: el titular configura el riesgo que quiera. La plataforma no impone
   // un techo propio sobre el lotaje ni sobre la pérdida diaria; el límite real es el margen del

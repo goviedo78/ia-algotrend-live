@@ -12,6 +12,11 @@ export interface BrokerBalance {
   usedMargin: number
 }
 
+export interface BrokerCommissionRates {
+  taker: number
+  maker: number
+}
+
 export interface BrokerPosition {
   symbol: string
   direction: TradeDirection
@@ -81,6 +86,7 @@ export interface BrokerAdapter {
   readonly broker: BrokerCode
   validateCredentials(): Promise<ValidationResult>
   getBalance(): Promise<BrokerBalance>
+  getCommissionRates(): Promise<BrokerCommissionRates>
   getPositions(symbol?: string): Promise<BrokerPosition[]>
   getInstrumentRules(symbol: string): Promise<InstrumentRules>
   getLastPrice(symbol: string): Promise<number>

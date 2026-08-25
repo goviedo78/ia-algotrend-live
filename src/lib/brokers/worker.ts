@@ -266,7 +266,7 @@ async function executeOrder(job: Job) {
     throw new BrokerPlatformError('RISK_POLICY_VERSION_MISMATCH', 'La política cambió después de crear la orden.', 409)
   }
 
-  const [balance, positions, rules, priceResult, recentOrders, riskRuntime, ownedPositions] = await Promise.all([
+  const [balance, positions, rules, priceResult, recentOrders, riskRuntime, ownedPositions, commissionRates] = await Promise.all([
     adapter.getBalance(),
     adapter.getPositions(),
     adapter.getInstrumentRules(intent.symbol),
@@ -274,6 +274,9 @@ async function executeOrder(job: Job) {
     admin.from('broker_orders').select('*', { count: 'exact', head: true }).eq('connection_id', connection.id).gte('created_at', new Date(Date.now() - 60_000).toISOString()),
     admin.rpc('get_broker_risk_runtime', { target_connection_id: connection.id }),
     computeOwnedPositions(connection.id),
+    intent.action === 'OPEN'
+      ? adapter.getCommissionRates()
+      : Promise.resolve({ taker: 0, maker: 0 }),
   ])
   if (riskRuntime.error) throw riskRuntime.error
   const runtimeRisk = Array.isArray(riskRuntime.data) ? riskRuntime.data[0] : riskRuntime.data
@@ -309,6 +312,7 @@ async function executeOrder(job: Job) {
     policy,
     ordersLastMinute: recentOrders.count ?? 0,
     realizedPnlTodayUsd: Number(runtimeRisk?.daily_net_pnl_usd ?? 0),
+    openingFeeRate: commissionRates.taker,
     connectionStatus: connection.status,
     ownedPositions,
   })

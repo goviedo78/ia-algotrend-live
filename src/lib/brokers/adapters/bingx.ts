@@ -215,6 +215,24 @@ export class BingxAdapter implements BrokerAdapter {
     }
   }
 
+  async getCommissionRates() {
+    const payload = await this.request<{
+      code?: number
+      data?: {
+        commission?: {
+          takerCommissionRate?: string | number
+          makerCommissionRate?: string | number
+        }
+      }
+    }>('GET', '/openApi/swap/v2/user/commissionRate')
+    const taker = finiteNumber(payload.data?.commission?.takerCommissionRate, -1)
+    const maker = finiteNumber(payload.data?.commission?.makerCommissionRate, -1)
+    if (taker < 0 || maker < 0) {
+      throw new BrokerPlatformError('BINGX_COMMISSION_RATE_INVALID', 'BingX no informó la comisión de la cuenta.', 503, true)
+    }
+    return { taker, maker }
+  }
+
   async getPositions(symbol?: string): Promise<BrokerPosition[]> {
     const normalized = symbol ? normalizeSymbol(symbol) : undefined
     const payload = await this.request<{ code?: number; data?: Array<Record<string, unknown>> }>(

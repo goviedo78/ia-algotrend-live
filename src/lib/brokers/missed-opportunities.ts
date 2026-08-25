@@ -106,7 +106,7 @@ export function buildMissedOpportunities(input: {
   intents: IntentRow[]
   signalsById: Map<string, SignalRow>
   laterSignals: SignalRow[]
-  connections: Map<string, { label: string; notionalUsd: number | null }>
+  connections: Map<string, { label: string; status: string; notionalUsd: number | null }>
 }): BrokerMissedOpportunity[] {
   const closesByKey = new Map<string, SignalRow[]>()
   for (const signal of input.laterSignals) {
@@ -167,6 +167,7 @@ export function buildMissedOpportunities(input: {
       closedAt,
       notionalUsd,
       ...result,
+      canRetry: intent.action === 'OPEN' && closedAt == null && connection?.status === 'ACTIVE',
     } satisfies BrokerMissedOpportunity
   })
 }
@@ -198,7 +199,7 @@ export async function loadMissedOpportunities(filters: {
     admin.from('broker_signals')
       .select('id, strategy_code, symbol, action, direction, signal_time, reference_price')
       .in('id', signalIds),
-    admin.from('broker_connections').select('id, label').in('id', connectionIds),
+    admin.from('broker_connections').select('id, label, status').in('id', connectionIds),
     admin.from('broker_risk_policies')
       .select('connection_id, fixed_notional_usd, suggested_notional_per_order_usd')
       .in('connection_id', connectionIds),
@@ -236,7 +237,7 @@ export async function loadMissedOpportunities(filters: {
   const connections = new Map(
     (connectionsResult.data ?? []).map((connection) => [
       connection.id,
-      { label: connection.label, notionalUsd: notionalByConnection.get(connection.id) ?? null },
+      { label: connection.label, status: connection.status, notionalUsd: notionalByConnection.get(connection.id) ?? null },
     ]),
   )
 

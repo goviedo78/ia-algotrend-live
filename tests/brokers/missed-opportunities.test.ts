@@ -77,7 +77,7 @@ test('a rejected open is paired with the strategy close that followed it', () =>
       // Un cierre posterior más lejano no debe ganarle al primero.
       { ...signal, id: 'sig-later', action: 'CLOSE', signal_time: '2026-08-01T18:00:00.000Z', reference_price: 2500 },
     ],
-    connections: new Map([['conn-1', { label: 'oro 30 prueba', notionalUsd: 100 }]]),
+    connections: new Map([['conn-1', { label: 'oro 30 prueba', status: 'ACTIVE', notionalUsd: 100 }]]),
   })
 
   assert.equal(result.length, 1)
@@ -89,6 +89,7 @@ test('a rejected open is paired with the strategy close that followed it', () =>
   assert.equal(missed.missedReturnPct, 2)
   assert.equal(missed.missedGrossPnlUsd, 2)
   assert.equal(missed.outcome, 'WIN')
+  assert.equal(missed.canRetry, false)
   assert.equal(missed.connectionLabel, 'oro 30 prueba')
 })
 
@@ -115,13 +116,47 @@ test('a rejected close never produces a phantom trade result', () => {
     }],
     signalsById: new Map([['sig-close-intent', signal]]),
     laterSignals: [{ ...signal, id: 'other', signal_time: '2026-08-01T14:00:00.000Z', reference_price: 66000 }],
-    connections: new Map([['conn-2', { label: 'Prueba conexion', notionalUsd: 50 }]]),
+    connections: new Map([['conn-2', { label: 'Prueba conexion', status: 'ACTIVE', notionalUsd: 50 }]]),
   })
 
   assert.equal(missed.outcome, 'NOT_APPLICABLE')
   assert.equal(missed.missedReturnPct, null)
   assert.equal(missed.missedGrossPnlUsd, null)
   assert.equal(missed.insufficientFunds, false)
+  assert.equal(missed.canRetry, false)
+})
+
+test('only a rejected open whose strategy operation is still active can be retried', () => {
+  const signal = {
+    id: 'sig-current-open',
+    strategy_code: 'ALGOTREND_BTC_1H',
+    symbol: 'BTC-USDT',
+    action: 'OPEN',
+    direction: 'LONG',
+    signal_time: '2026-08-06T05:00:00.000Z',
+    reference_price: 64844.16,
+  }
+  const [missed] = buildMissedOpportunities({
+    intents: [{
+      id: 'intent-current-open',
+      connection_id: 'conn-current',
+      signal_id: signal.id,
+      action: 'OPEN',
+      direction: 'LONG',
+      symbol: signal.symbol,
+      rejection_code: 'RISK_MARGIN_RESERVE',
+      created_at: '2026-08-06T05:00:05.000Z',
+    }],
+    signalsById: new Map([[signal.id, signal]]),
+    // Un cierre técnico de la misma vela puede pertenecer al trade anterior. Sólo un cierre
+    // posterior vuelve inelegible esta apertura.
+    laterSignals: [{ ...signal, id: 'same-candle-close', action: 'CLOSE' }],
+    connections: new Map([['conn-current', { label: 'BTC', status: 'ACTIVE', notionalUsd: 90 }]]),
+  })
+
+  assert.equal(missed.outcome, 'PENDING')
+  assert.equal(missed.closedAt, null)
+  assert.equal(missed.canRetry, true)
 })
 
 test('rejected intents reach the holder even when the connection never executed an order', async () => {
@@ -138,4 +173,5 @@ test('rejected intents reach the holder even when the connection never executed 
   assert.match(types, /missedOpportunities: BrokerMissedOpportunity\[\]/)
   assert.match(component, /Operaciones que no se ejecutaron/)
   assert.match(component, /Sin fondos\./)
+  assert.match(component, /Reenviar/)
 })

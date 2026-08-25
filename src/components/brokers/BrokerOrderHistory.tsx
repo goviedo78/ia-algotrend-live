@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertTriangle, DollarSign, ListOrdered, Percent } from 'lucide-react'
+import { Activity, AlertTriangle, DollarSign, ListOrdered, LoaderCircle, Percent, RotateCcw } from 'lucide-react'
 import type {
   BrokerOrderHistoryItem,
   BrokerOrderHistoryResponse,
@@ -43,12 +43,16 @@ export function BrokerOrderHistory({
   history,
   showUser = false,
   privacyMode = false,
+  onRetry,
+  retryingIntentId = null,
 }: {
   history: BrokerOrderHistoryResponse
   showUser?: boolean
   privacyMode?: boolean
+  onRetry?: (intentId: string) => void
+  retryingIntentId?: string | null
 }) {
-  const { orders, totals, performance, missedOpportunities } = history
+  const { orders, openPositions = [], totals, performance, missedOpportunities } = history
   const missed = missedOpportunities ?? []
   const missedWithResult = missed.filter((item) => item.missedReturnPct != null)
   const missedNetUsd = missedWithResult.reduce((total, item) => total + (item.missedGrossPnlUsd ?? 0), 0)
@@ -60,56 +64,33 @@ export function BrokerOrderHistory({
         <h2>Órdenes, ejecuciones y resultado neto</h2>
       </div>
 
-      {missed.length > 0 && (
+      {openPositions.length > 0 && (
         <div className={styles.statsCard}>
           <div className={styles.cardHeader}>
-            <AlertTriangle size={18} />
-            <h3>Operaciones que no se ejecutaron ({missed.length})</h3>
+            <Activity size={18} className={styles.pctIcon} />
+            <h3>Posiciones abiertas y vinculadas ({openPositions.length})</h3>
           </div>
           <p className={styles.notice} role="status">
-            El motor rechazó estas señales antes de mandarlas al broker. Cuando la estrategia ya
-            cerró el trade, acá ves el resultado que te perdiste: el porcentaje sale de los precios
-            reales de la señal y el importe es bruto, estimado con tu lotaje actual y sin comisiones.
-            {missedWithResult.length > 0 && (
-              <> Balance de lo no ejecutado: <strong className={valueClass(missedNetUsd)}>
-                <BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(missedNetUsd)}</BrokerSensitiveValue>
-              </strong>.</>
-            )}
+            Estas entradas sí fueron ejecutadas. Permanecen ligadas a su conexión y la próxima
+            señal de salida de la misma estrategia, símbolo y dirección enviará su cierre.
           </p>
-          <div className={styles.tableWrap}>
-            <table>
-              <thead><tr>
-                <th>Fecha</th><th>Conexión</th><th>Señal</th><th>Motivo</th>
-                <th>Precio señal</th><th>Precio cierre</th><th>Resultado perdido</th>
-              </tr></thead>
-              <tbody>
-                {missed.map((item) => (
-                  <tr key={item.id}>
-                    <td>{date(item.signalTime ?? item.rejectedAt)}</td>
-                    <td>{redactText(privacyMode, item.connectionLabel)}</td>
-                    <td>{item.action === 'OPEN' ? 'Apertura' : 'Cierre'} {item.direction} · {item.symbol}<br /><small>{item.strategyLabel}</small></td>
-                    <td>
-                      {item.insufficientFunds && <strong className={styles.negativeText}>Sin fondos. </strong>}
-                      {item.reason}
-                    </td>
-                    <td><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{item.entryPrice == null ? '—' : usd(item.entryPrice)}</BrokerSensitiveValue></td>
-                    <td><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{item.exitPrice == null ? '—' : usd(item.exitPrice)}</BrokerSensitiveValue></td>
-                    <td>
-                      {item.outcome === 'NOT_APPLICABLE' && <span>No aplica</span>}
-                      {item.outcome === 'PENDING' && <span>La estrategia todavía no cerró</span>}
-                      {item.missedReturnPct != null && (
-                        <strong className={valueClass(item.missedReturnPct)}>
-                          {pct(item.missedReturnPct)}
-                          {item.missedGrossPnlUsd != null && (
-                            <> · <BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(item.missedGrossPnlUsd)}</BrokerSensitiveValue> bruto</>
-                          )}
-                        </strong>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className={styles.openPositionGrid}>
+            {openPositions.map((position) => (
+              <article className={styles.openPositionCard} key={position.key}>
+                <div className={styles.openPositionTitle}>
+                  <strong>{position.direction} · {position.symbol}</strong>
+                  <span>Abierta</span>
+                </div>
+                <div className={styles.openPositionMetrics}>
+                  <span>Capital realmente usado <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(position.notionalUsd)}</BrokerSensitiveValue></strong></span>
+                  <span>Cantidad <strong>{quantity(position.quantity)}</strong></span>
+                  <span>Precio medio de entrada <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(position.averageEntryPrice)}</BrokerSensitiveValue></strong></span>
+                  <span>Comisión de entrada <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(position.entryFeesUsd)}</BrokerSensitiveValue></strong></span>
+                </div>
+                <small>{redactText(privacyMode, position.connectionLabel)} · {position.strategyLabel} · abierta {date(position.openedAt)}</small>
+                <small>Señal vinculada: {position.externalSignalId ?? '—'}</small>
+              </article>
+            ))}
           </div>
         </div>
       )}
@@ -213,7 +194,7 @@ export function BrokerOrderHistory({
       {!orders.length ? <p className={styles.muted}>Todavía no hay órdenes reconciliadas.</p> : (
         <div className={styles.tableWrap}>
           <table className={styles.orderTable}>
-            <thead><tr>{showUser && <th>Usuario</th>}<th>Fecha efectiva</th><th>Conexión</th><th>Operación</th><th>Lotaje</th><th>Precio</th><th>Notional</th><th>Comisión</th><th>Neto</th><th>Detalle</th></tr></thead>
+            <thead><tr>{showUser && <th>Usuario</th>}<th>Fecha efectiva</th><th>Conexión</th><th>Operación</th><th>Lotaje</th><th>Precio</th><th>Capital usado</th><th>Comisión</th><th>Neto</th><th>Detalle</th></tr></thead>
             <tbody>{orders.map((order) => {
               const netPnlUsd = displayedNetPnl(order)
               return (
@@ -258,6 +239,77 @@ export function BrokerOrderHistory({
               )
             })}</tbody>
           </table>
+        </div>
+      )}
+
+      {missed.length > 0 && (
+        <div className={`${styles.statsCard} ${styles.missedOperationsCard}`}>
+          <div className={styles.cardHeader}>
+            <AlertTriangle size={18} />
+            <h3>Operaciones que no se ejecutaron ({missed.length})</h3>
+          </div>
+          <p className={styles.notice} role="status">
+            El motor rechazó estas señales antes de mandarlas al broker. Cuando la estrategia ya
+            cerró el trade, acá ves el resultado que te perdiste: el porcentaje sale de los precios
+            reales de la señal y el importe es bruto, estimado con tu lotaje actual y sin comisiones.
+            {onRetry && <> “Reenviar” sólo está disponible mientras esa operación siga abierta en la estrategia.</>}
+            {missedWithResult.length > 0 && (
+              <> Balance de lo no ejecutado: <strong className={valueClass(missedNetUsd)}>
+                <BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(missedNetUsd)}</BrokerSensitiveValue>
+              </strong>.</>
+            )}
+          </p>
+          <div className={styles.tableWrap}>
+            <table>
+              <thead><tr>
+                <th>Fecha</th><th>Conexión</th><th>Señal</th><th>Capital previsto</th><th>Motivo</th>
+                <th>Precio señal</th><th>Precio cierre</th><th>Resultado perdido</th>{onRetry && <th>Acción</th>}
+              </tr></thead>
+              <tbody>
+                {missed.map((item) => (
+                  <tr key={item.id}>
+                    <td>{date(item.signalTime ?? item.rejectedAt)}</td>
+                    <td>{redactText(privacyMode, item.connectionLabel)}</td>
+                    <td>{item.action === 'OPEN' ? 'Apertura no ejecutada' : 'Cierre fallido histórico'}<br /><small>{item.direction} · {item.symbol} · {item.strategyLabel}</small></td>
+                    <td><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{item.notionalUsd == null ? '—' : usd(item.notionalUsd)}</BrokerSensitiveValue></td>
+                    <td>
+                      {item.insufficientFunds && <strong className={styles.negativeText}>Sin fondos. </strong>}
+                      {item.reason}
+                    </td>
+                    <td><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{item.entryPrice == null ? '—' : usd(item.entryPrice)}</BrokerSensitiveValue></td>
+                    <td><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{item.exitPrice == null ? '—' : usd(item.exitPrice)}</BrokerSensitiveValue></td>
+                    <td>
+                      {item.outcome === 'NOT_APPLICABLE' && <span>No aplica</span>}
+                      {item.outcome === 'PENDING' && <span>La estrategia todavía no cerró</span>}
+                      {item.missedReturnPct != null && (
+                        <strong className={valueClass(item.missedReturnPct)}>
+                          {pct(item.missedReturnPct)}
+                          {item.missedGrossPnlUsd != null && (
+                            <> · <BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(item.missedGrossPnlUsd)}</BrokerSensitiveValue> bruto</>
+                          )}
+                        </strong>
+                      )}
+                    </td>
+                    {onRetry && <td>
+                      {item.canRetry ? (
+                        <button
+                          type="button"
+                          className={styles.retryButton}
+                          disabled={retryingIntentId != null}
+                          onClick={() => onRetry(item.id)}
+                        >
+                          {retryingIntentId === item.id
+                            ? <LoaderCircle className={styles.spin} size={14} />
+                            : <RotateCcw size={14} />}
+                          {retryingIntentId === item.id ? 'Reenviando…' : 'Reenviar'}
+                        </button>
+                      ) : '—'}
+                    </td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </section>

@@ -6,7 +6,7 @@ import { BrokerPlatformError, publicError } from '@/lib/brokers/errors'
 import { requireOwnedConnection } from '@/lib/brokers/ownership'
 import { enforceBrokerRateLimit, requestIdentifier } from '@/lib/brokers/rate-limit'
 import { readBrokerJson } from '@/lib/brokers/request'
-import { deriveRiskSuggestion } from '@/lib/brokers/risk-profiles'
+import { DEFAULT_BROKER_MARGIN_RESERVE_PCT, deriveRiskSuggestion } from '@/lib/brokers/risk-profiles'
 import { riskChangeSchema } from '@/lib/brokers/schemas'
 
 type Context = { params: Promise<{ id: string }> }
@@ -16,13 +16,16 @@ type Context = { params: Promise<{ id: string }> }
 async function loadCurrentRiskPolicy(connectionId: string) {
   const { data } = await createAdminClient()
     .from('broker_risk_policies')
-    .select('max_open_positions, max_orders_per_minute, max_leverage')
+    .select('max_open_positions, max_orders_per_minute, max_leverage, margin_reserve_pct')
     .eq('connection_id', connectionId)
     .maybeSingle()
   return {
     maxOpenPositions: Number(data?.max_open_positions) || 1,
     maxOrdersPerMinute: Number(data?.max_orders_per_minute) || 2,
     maxLeverage: Number(data?.max_leverage) || 1,
+    marginReservePct: Number.isFinite(Number(data?.margin_reserve_pct))
+      ? Math.min(DEFAULT_BROKER_MARGIN_RESERVE_PCT, Math.max(0, Number(data?.margin_reserve_pct)))
+      : DEFAULT_BROKER_MARGIN_RESERVE_PCT,
   }
 }
 
@@ -51,8 +54,9 @@ export async function POST(request: NextRequest, context: Context) {
     const currentPolicy = await loadCurrentRiskPolicy(id)
     const maxTotalExposureUsd = parsed.data.maxTotalExposureUsd
       ?? Math.max(suggestion.suggestedMaxTotalExposureUsd, fixedNotionalUsd)
+    const marginReservePct = parsed.data.marginReservePct ?? currentPolicy.marginReservePct
     const minAvailableMarginUsd = parsed.data.minAvailableMarginUsd
-      ?? Math.max(0, Math.min(suggestion.suggestedMinAvailableMarginUsd, suggestion.declaredCapitalUsd - fixedNotionalUsd))
+      ?? Math.floor(suggestion.declaredCapitalUsd * marginReservePct) / 100
     const maxOpenPositions = parsed.data.maxOpenPositions ?? Math.max(1, currentPolicy.maxOpenPositions)
     const maxOrdersPerMinute = parsed.data.maxOrdersPerMinute ?? Math.max(1, currentPolicy.maxOrdersPerMinute)
     const maxLeverage = parsed.data.maxLeverage ?? Math.max(1, currentPolicy.maxLeverage)
@@ -84,7 +88,7 @@ export async function POST(request: NextRequest, context: Context) {
       proposal_exposure_per_order_pct: suggestion.exposurePerOrderPct,
       proposal_max_total_exposure_pct: suggestion.maxTotalExposurePct,
       proposal_daily_loss_limit_pct: suggestion.dailyLossLimitPct,
-      proposal_margin_reserve_pct: suggestion.marginReservePct,
+      proposal_margin_reserve_pct: marginReservePct,
       proposal_notional_per_order_usd: fixedNotionalUsd,
       proposal_max_total_exposure_usd: maxTotalExposureUsd,
       proposal_daily_loss_limit_usd: dailyLossLimitUsd,
@@ -97,7 +101,7 @@ export async function POST(request: NextRequest, context: Context) {
       throw new BrokerPlatformError('RISK_CHANGE_FAILED', 'No se pudo guardar la propuesta de riesgo.', 409)
     }
     const finalStatus = String(data)
-    await writeBrokerAudit({ request, userId: user.id, actorUserId: user.id, connectionId: id, eventType: 'RISK_CHANGE_REQUESTED', outcome: 'SUCCESS', metadata: { previousStatus: connection.status, newStatus: finalStatus, sizingMode: parsed.data.sizingMode, capitalUsd: suggestion.declaredCapitalUsd, allocationPct: suggestion.exposurePerOrderPct, notionalPerOrderUsd: fixedNotionalUsd, dailyLossLimitUsd, maxTotalExposureUsd, minAvailableMarginUsd, maxOpenPositions, maxOrdersPerMinute, maxLeverage } })
+    await writeBrokerAudit({ request, userId: user.id, actorUserId: user.id, connectionId: id, eventType: 'RISK_CHANGE_REQUESTED', outcome: 'SUCCESS', metadata: { previousStatus: connection.status, newStatus: finalStatus, sizingMode: parsed.data.sizingMode, capitalUsd: suggestion.declaredCapitalUsd, allocationPct: suggestion.exposurePerOrderPct, notionalPerOrderUsd: fixedNotionalUsd, dailyLossLimitUsd, maxTotalExposureUsd, minAvailableMarginUsd, marginReservePct, maxOpenPositions, maxOrdersPerMinute, maxLeverage } })
     return NextResponse.json({ ok: true, status: finalStatus })
   } catch (error) {
     const response = publicError(error)

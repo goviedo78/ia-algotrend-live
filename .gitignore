@@ -62,3 +62,6 @@ test-bingx-postfix.mjs
 
 # isolated feature worktrees
 .worktrees/
+
+# scratch local, no forma parte del producto
+scratch/

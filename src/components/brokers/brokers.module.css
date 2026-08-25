@@ -169,10 +169,18 @@
 .iconButton:hover, .themeToggle:hover { border-color: var(--broker-focus); }
 .dangerIcon { color: var(--broker-danger); border-color: var(--broker-danger-border); }
 .primaryButton:focus-visible, .secondaryButton:focus-visible, .dangerButton:focus-visible, .iconButton:focus-visible, .dangerIcon:focus-visible, .themeToggle:focus-visible { outline: 2px solid var(--broker-focus); outline-offset: 2px; }
+.retryButton { min-height: 32px; padding: 0 10px; border: 1px solid var(--broker-secondary-border); border-radius: 5px; background: var(--broker-secondary); color: var(--broker-secondary-text); display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.retryButton:hover { border-color: var(--broker-focus); }
+.retryButton:disabled { opacity: .45; cursor: not-allowed; }
+.retryButton:focus-visible { outline: 2px solid var(--broker-focus); outline-offset: 2px; }
 
 .notice, .error { padding: 12px 14px; border-radius: 5px; font-size: 13px; }
 .notice { display: flex; align-items: center; gap: 8px; color: var(--broker-notice-text); background: var(--broker-notice); }
 .error { color: var(--broker-error-text); background: var(--broker-error); border: 1px solid var(--broker-error-border); }
+.noticeWrap { flex-wrap: wrap; align-items: baseline; line-height: 1.5; }
+.linkButton { border: 0; background: none; padding: 0; margin: 0; font: inherit; font-weight: 700; color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.linkButton:hover { text-decoration-thickness: 2px; }
+.linkButton:focus-visible { outline: 2px solid var(--broker-focus); outline-offset: 2px; border-radius: 3px; }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -211,6 +219,16 @@
 .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
 .metrics span { display: grid; gap: 5px; color: var(--broker-muted); font-size: 11px; text-transform: uppercase; }
 .metrics strong { color: var(--broker-strong); font-size: 15px; text-transform: none; }
+.fundingEstimateGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+.fundingEstimateCard { display: grid; gap: 5px; padding: 16px; border: 1px solid var(--broker-border); border-radius: 8px; background: var(--broker-surface); }
+.fundingEstimateCard > small { color: var(--broker-muted); font-size: 10px; }
+.fundingEstimateCard > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
+.fundingEstimateCard span { display: grid; gap: 4px; color: var(--broker-muted); font-size: 10px; text-transform: uppercase; }
+.fundingEstimateCard span strong { color: var(--broker-strong); font-size: 15px; text-transform: none; }
+.fundingEstimateCard > .requiredCapitalBox { display: grid; grid-template-columns: 1fr; gap: 4px; margin: 10px 0 8px; padding: 16px; border: 2px solid var(--broker-primary); border-radius: 7px; background: var(--broker-success); box-shadow: inset 4px 0 0 var(--broker-primary); }
+.requiredCapitalBox > span { color: var(--broker-success-text); font-size: 11px; font-weight: 800; letter-spacing: .04em; }
+.requiredCapitalBox > strong { color: var(--broker-strong); font-size: clamp(24px, 3vw, 34px); line-height: 1; letter-spacing: -.035em; }
+.requiredCapitalBox > small { color: var(--broker-success-text); font-size: 11px; font-weight: 700; }
 .performanceGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -264,6 +282,7 @@
   padding: 16px 20px;
   margin-bottom: 20px;
 }
+.missedOperationsCard { margin-top: 28px; border-color: var(--broker-warning-text); }
 .cardHeader {
   display: flex;
   align-items: center;
@@ -311,6 +330,14 @@
   color: var(--broker-muted);
   font-size: 11px;
 }
+.openPositionGrid { display: grid; gap: 12px; }
+.openPositionCard { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--broker-border-soft); border-left: 3px solid var(--broker-primary); border-radius: 7px; background: var(--broker-notice); }
+.openPositionTitle { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.openPositionTitle span { padding: 4px 7px; border-radius: 4px; background: var(--broker-success); color: var(--broker-success-text); font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.openPositionMetrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.openPositionMetrics span { display: grid; gap: 4px; color: var(--broker-muted); font-size: 10px; text-transform: uppercase; }
+.openPositionMetrics strong { color: var(--broker-strong); font-size: 14px; text-transform: none; }
+.openPositionCard > small { color: var(--broker-muted); font-size: 10px; overflow-wrap: anywhere; }
 .highlightValue {
   color: var(--broker-primary) !important;
 }
@@ -333,7 +360,7 @@
   .content, .narrow { width: min(100% - 28px, 1120px); padding-top: 26px; }
   .formGrid, .approvalGrid, .advancedRiskGrid { grid-template-columns: 1fr; }
   .fullWidth { grid-column: auto; }
-  .systemStrip, .connectionSummary, .metrics, .performanceGrid, .pctGrid, .usdGrid { grid-template-columns: 1fr; gap: 12px; }
+  .systemStrip, .connectionSummary, .metrics, .performanceGrid, .pctGrid, .usdGrid, .openPositionMetrics, .fundingEstimateGrid, .fundingEstimateCard > div { grid-template-columns: 1fr; gap: 12px; }
   .titleRow h1 { font-size: 20px; }
   .primaryButton { width: 100%; }
   .commandRow { justify-content: flex-start; flex-wrap: wrap; }

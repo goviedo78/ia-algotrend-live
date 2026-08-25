@@ -3,26 +3,26 @@ import test from 'node:test'
 import { deriveRiskSuggestion } from '../../src/lib/brokers/risk-profiles'
 import { connectionCreateSchema } from '../../src/lib/brokers/schemas'
 
-test('the default order uses the full amount explicitly authorized by the user', () => {
+test('the default rule allocates 90% and keeps a 10% margin reserve', () => {
   assert.deepEqual(deriveRiskSuggestion(100, 'CONSERVATIVE'), {
     declaredCapitalUsd: 100,
     riskProfile: 'CONSERVATIVE',
-    exposurePerOrderPct: 100,
-    maxTotalExposurePct: 100,
+    exposurePerOrderPct: 90,
+    maxTotalExposurePct: 90,
     dailyLossLimitPct: 2,
-    marginReservePct: 0,
-    suggestedNotionalPerOrderUsd: 100,
-    suggestedMaxTotalExposureUsd: 100,
+    marginReservePct: 10,
+    suggestedNotionalPerOrderUsd: 90,
+    suggestedMaxTotalExposureUsd: 90,
     suggestedDailyLossLimitUsd: 2,
-    suggestedMinAvailableMarginUsd: 0,
+    suggestedMinAvailableMarginUsd: 10,
   })
 })
 
 test('suggestions scale in USD without creating asset-specific lots', () => {
   const result = deriveRiskSuggestion(250, 'ULTRA_CONSERVATIVE')
-  assert.equal(result.suggestedNotionalPerOrderUsd, 250)
-  assert.equal(result.suggestedMaxTotalExposureUsd, 250)
-  assert.equal(result.suggestedMinAvailableMarginUsd, 0)
+  assert.equal(result.suggestedNotionalPerOrderUsd, 225)
+  assert.equal(result.suggestedMaxTotalExposureUsd, 225)
+  assert.equal(result.suggestedMinAvailableMarginUsd, 25)
 })
 
 test('a custom per-account allocation is capped and drives the proposal', () => {
@@ -34,7 +34,7 @@ test('a custom per-account allocation is capped and drives the proposal', () => 
   assert.equal(deriveRiskSuggestion(1_000, 'MODERATE', 100).exposurePerOrderPct, 100)
 })
 
-test('connection input defaults to the full user-authorized amount', () => {
+test('connection input defaults to the general 90/10 allocation rule', () => {
   const parsed = connectionCreateSchema.parse({
     broker: 'BINGX',
     environment: 'DEMO',
@@ -55,6 +55,6 @@ test('connection input defaults to the full user-authorized amount', () => {
     },
   })
 
-  assert.equal(parsed.allocationPct, 100)
-  assert.equal(deriveRiskSuggestion(parsed.capitalUsd, parsed.riskProfile, parsed.allocationPct).suggestedNotionalPerOrderUsd, 1_000)
+  assert.equal(parsed.allocationPct, 90)
+  assert.equal(deriveRiskSuggestion(parsed.capitalUsd, parsed.riskProfile, parsed.allocationPct).suggestedNotionalPerOrderUsd, 900)
 })

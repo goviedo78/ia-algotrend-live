@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   enrichBrokerTradeCycles,
+  openBrokerPositionsFromOrders,
   summarizeBrokerOrderHistory,
 } from '../../src/lib/brokers/order-history-metrics'
 import type { BrokerOrderHistoryItem } from '../../src/lib/brokers/order-history-types'
@@ -124,4 +125,41 @@ test('a broker realized PnL value is authoritative and unmatched closes are excl
   assert.equal(summary.performance.closedTradeCount, 1)
   assert.equal(summary.performance.unmatchedCloseCount, 1)
   assert.equal(summary.performance.netPnlUsd, 10)
+})
+
+test('open position summaries preserve the linked signal and actual deployed capital', () => {
+  const positions = openBrokerPositionsFromOrders([
+    order({
+      id: 'btc-open',
+      externalSignalId: 'algotrend-btc-open-350',
+      filledQuantity: 0.0013,
+      requestedQuantity: 0.0013,
+      averagePrice: 64_458.5,
+      notionalUsd: 83.79605,
+      feesUsd: 0.041898,
+      createdAt: '2026-08-06T18:09:04.000Z',
+    }),
+  ])
+
+  assert.equal(positions.length, 1)
+  assert.equal(positions[0]?.externalSignalId, 'algotrend-btc-open-350')
+  assert.equal(positions[0]?.quantity, 0.0013)
+  assert.equal(positions[0]?.notionalUsd, 83.79605)
+  assert.equal(positions[0]?.averageEntryPrice, 64_458.5)
+})
+
+test('a later close consumes the same owned position summary', () => {
+  const positions = openBrokerPositionsFromOrders([
+    order({ id: 'open', filledQuantity: 2, notionalUsd: 200, feesUsd: 2 }),
+    order({
+      id: 'partial-close', action: 'CLOSE', side: 'SELL', reduceOnly: true,
+      filledQuantity: 0.5, notionalUsd: 55, feesUsd: 0.5,
+      createdAt: '2026-08-01T01:00:00.000Z',
+    }),
+  ])
+
+  assert.equal(positions.length, 1)
+  assert.equal(positions[0]?.quantity, 1.5)
+  assert.equal(positions[0]?.notionalUsd, 150)
+  assert.equal(positions[0]?.entryFeesUsd, 1.5)
 })

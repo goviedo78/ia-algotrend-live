@@ -56,7 +56,7 @@ function openShort(overrides: Partial<Parameters<typeof evaluateRisk>[0]> = {}) 
   return evaluateRisk({
     action: 'OPEN', direction: 'SHORT', symbol: 'BTC-USDT', price: 40_000,
     sizingCapitalUsd: 100, availableMargin: 100, rules, policy, ordersLastMinute: 0,
-    realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+    realizedPnlTodayUsd: 0, openingFeeRate: 0, connectionStatus: 'ACTIVE',
     positions: [], ownedPositions: [],
     ...overrides,
   })

@@ -95,6 +95,23 @@ test('one-way positions infer direction from the signed position amount', async 
   assert.equal(positions[0].availableQuantity, 0.0001)
 })
 
+test('account-specific commission rates are read from BingX before sizing an opening', async () => {
+  let requestedUrl = ''
+  const fetchImpl: typeof fetch = async (input) => {
+    requestedUrl = String(input)
+    return Response.json({
+      code: 0,
+      data: { commission: { takerCommissionRate: '0.0005', makerCommissionRate: '0.0002' } },
+    })
+  }
+  const adapter = new BingxAdapter({
+    credentials: { apiKey: 'key', secretKey: 'secret' }, environment: 'LIVE', fetchImpl, now: () => 2,
+  })
+
+  assert.deepEqual(await adapter.getCommissionRates(), { taker: 0.0005, maker: 0.0002 })
+  assert.match(requestedUrl, /\/openApi\/swap\/v2\/user\/commissionRate\?/)
+})
+
 test('missing order is the only broker query error treated as absent', async () => {
   const fetchImpl: typeof fetch = async () => Response.json({ code: 80016, msg: 'order does not exist' })
   const adapter = new BingxAdapter({ credentials: { apiKey: 'key', secretKey: 'secret' }, environment: 'DEMO', fetchImpl, now: () => 2 })

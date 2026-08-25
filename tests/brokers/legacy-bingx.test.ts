@@ -26,6 +26,7 @@ function adapterStub(overrides: Partial<BrokerAdapter>): BrokerAdapter {
     broker: 'BINGX',
     validateCredentials: async () => { throw new Error('unused') },
     getBalance: async () => { throw new Error('unused') },
+    getCommissionRates: async () => ({ taker: 0.0005, maker: 0.0002 }),
     getPositions: async () => [],
     getInstrumentRules: async () => { throw new Error('unused') },
     getLastPrice: async () => { throw new Error('unused') },

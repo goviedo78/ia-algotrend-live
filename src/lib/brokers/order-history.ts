@@ -3,6 +3,7 @@ import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
   enrichBrokerTradeCycles,
+  openBrokerPositionsFromOrders,
   summarizeBrokerOrderHistory,
 } from './order-history-metrics'
 import { loadMissedOpportunities } from './missed-opportunities'
@@ -187,5 +188,10 @@ export async function loadBrokerOrderHistory(
 
   const ordersWithCycles = enrichBrokerTradeCycles(mappedOrders)
   const result = ordersWithCycles.slice(0, displayLimit)
-  return { orders: result, ...summarizeBrokerOrderHistory(result), missedOpportunities }
+  return {
+    orders: result,
+    openPositions: openBrokerPositionsFromOrders(ordersWithCycles),
+    ...summarizeBrokerOrderHistory(result),
+    missedOpportunities,
+  }
 }

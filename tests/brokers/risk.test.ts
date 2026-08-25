@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { evaluateRisk } from '../../src/lib/brokers/risk'
+import { evaluateRisk as evaluateRiskRaw } from '../../src/lib/brokers/risk'
 import type { RiskPolicy } from '../../src/lib/brokers/domain'
+import type { RiskEvaluationInput } from '../../src/lib/brokers/risk'
+
+function evaluateRisk(input: Omit<RiskEvaluationInput, 'openingFeeRate'> & { openingFeeRate?: number }) {
+  return evaluateRiskRaw({ ...input, openingFeeRate: input.openingFeeRate ?? 0 })
+}
 
 const policy: RiskPolicy = {
   enabled: true,
@@ -96,6 +101,63 @@ test('arbitrary USD allocations preserve the exact quote amount requested by the
 
     assert.equal(result.notionalUsd, requestedNotionalUsd)
   }
+})
+
+test('fixed sizing never changes the configured quote amount to fit the live balance', () => {
+  assert.throws(() => evaluateRisk({
+    action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 100,
+    sizingCapitalUsd: 100, availableMargin: 99.9, positions: [], ownedPositions: [],
+    rules: { ...rules, quantityStep: 0.001, quantityPrecision: 3 },
+    policy: {
+      ...policy,
+      fixedNotionalUsd: 90,
+      maxNotionalPerOrderUsd: 90,
+      maxTotalExposureUsd: 90,
+      minAvailableMarginUsd: 10,
+      marginReservePct: 10,
+    },
+    ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+  }), { code: 'RISK_MARGIN_RESERVE' })
+})
+
+test('fixed sizing sends the exact configured quote amount when order plus reserve fit', () => {
+  const result = evaluateRisk({
+    action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 64_458.5,
+    sizingCapitalUsd: 100, availableMargin: 100, positions: [], ownedPositions: [],
+    rules,
+    policy: {
+      ...policy,
+      fixedNotionalUsd: 90,
+      maxNotionalPerOrderUsd: 90,
+      maxTotalExposureUsd: 90,
+      minAvailableMarginUsd: 10,
+      marginReservePct: 10,
+    },
+    ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+  })
+
+  assert.equal(result.notionalUsd, 90)
+  assert.equal(result.quantity, 0.0013)
+})
+
+test('the displayed cent is the strict threshold for margin, reserve and opening fee', () => {
+  const input = {
+    action: 'OPEN' as const, direction: 'LONG' as const, symbol: 'BTC-USDT', price: 64_458.5,
+    sizingCapitalUsd: 100, positions: [], ownedPositions: [], rules,
+    policy: {
+      ...policy,
+      fixedNotionalUsd: 90,
+      maxNotionalPerOrderUsd: 90,
+      maxTotalExposureUsd: 90,
+      minAvailableMarginUsd: 10,
+      marginReservePct: 10,
+    },
+    openingFeeRate: 0.0005,
+    ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+  }
+
+  assert.throws(() => evaluateRisk({ ...input, availableMargin: 100.04 }), { code: 'RISK_MARGIN_RESERVE' })
+  assert.equal(evaluateRisk({ ...input, availableMargin: 100.05 }).notionalUsd, 90)
 })
 
 test('the broker minimum lot never overrides an authorized notional limit', () => {

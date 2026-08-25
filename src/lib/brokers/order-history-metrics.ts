@@ -1,4 +1,5 @@
 import type {
+  BrokerOpenPositionSummary,
   BrokerOrderHistoryItem,
   BrokerOrderHistoryTotals,
   BrokerPerformanceStats,
@@ -11,6 +12,9 @@ type OpenCostBasis = {
   fundingUsd: number
   adjustmentsUsd: number
 }
+
+type OpenPositionAccumulator = OpenCostBasis & Omit<BrokerOpenPositionSummary,
+  'quantity' | 'notionalUsd' | 'entryFeesUsd' | 'averageEntryPrice'>
 
 function finite(value: number) {
   return Number.isFinite(value) ? value : 0
@@ -137,6 +141,80 @@ export function enrichBrokerTradeCycles(
   }
 
   return enriched
+}
+
+/**
+ * Reconstruye las posiciones todavía abiertas usando únicamente fills propios de
+ * la conexión. Una señal de cierre posterior consumirá exactamente este mismo
+ * ownership, por eso esta vista también funciona como confirmación del vínculo.
+ */
+export function openBrokerPositionsFromOrders(
+  orders: BrokerOrderHistoryItem[],
+): BrokerOpenPositionSummary[] {
+  const chronological = [...orders].sort((left, right) => (
+    new Date(effectiveTime(left)).getTime() - new Date(effectiveTime(right)).getTime()
+  ))
+  const positions = new Map<string, OpenPositionAccumulator>()
+
+  for (const order of chronological) {
+    const quantity = positive(order.filledQuantity)
+    if (quantity <= 0) continue
+    const key = positionKey(order)
+
+    if (order.action === 'OPEN') {
+      const current = positions.get(key) ?? {
+        key,
+        connectionId: order.connectionId,
+        connectionLabel: order.connectionLabel,
+        strategyCode: order.strategyCode,
+        strategyLabel: order.strategyLabel,
+        timeframe: order.timeframe,
+        externalSignalId: order.externalSignalId,
+        symbol: order.symbol,
+        direction: order.direction,
+        openedAt: effectiveTime(order),
+        quantity: 0,
+        notionalUsd: 0,
+        feesUsd: 0,
+        fundingUsd: 0,
+        adjustmentsUsd: 0,
+      }
+      current.quantity += quantity
+      current.notionalUsd += orderNotional(order)
+      current.feesUsd += positive(order.feesUsd)
+      positions.set(key, current)
+      continue
+    }
+
+    const current = positions.get(key)
+    if (!current || current.quantity <= 0) continue
+    const coveredQuantity = Math.min(quantity, current.quantity)
+    const remainingRatio = Math.max(0, 1 - coveredQuantity / current.quantity)
+    current.quantity = Math.max(0, current.quantity - coveredQuantity)
+    current.notionalUsd *= remainingRatio
+    current.feesUsd *= remainingRatio
+    const tolerance = Math.max(Number.EPSILON * quantity * 16, 1e-12)
+    if (current.quantity <= tolerance) positions.delete(key)
+  }
+
+  return [...positions.values()]
+    .map((position): BrokerOpenPositionSummary => ({
+      key: position.key,
+      connectionId: position.connectionId,
+      connectionLabel: position.connectionLabel,
+      strategyCode: position.strategyCode,
+      strategyLabel: position.strategyLabel,
+      timeframe: position.timeframe,
+      externalSignalId: position.externalSignalId,
+      symbol: position.symbol,
+      direction: position.direction,
+      quantity: position.quantity,
+      averageEntryPrice: position.quantity > 0 ? position.notionalUsd / position.quantity : 0,
+      notionalUsd: position.notionalUsd,
+      entryFeesUsd: position.feesUsd,
+      openedAt: position.openedAt,
+    }))
+    .sort((left, right) => new Date(right.openedAt).getTime() - new Date(left.openedAt).getTime())
 }
 
 export function performanceFromBrokerOrders(

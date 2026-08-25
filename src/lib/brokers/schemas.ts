@@ -47,6 +47,7 @@ export const riskChangeSchema = z.object({
   // los rangos son los que la base y el motor aceptan, no criterios de producto.
   maxTotalExposureUsd: z.number().positive().max(10_000_000).optional(),
   minAvailableMarginUsd: z.number().min(0).max(10_000_000).optional(),
+  marginReservePct: z.number().min(0).max(10).optional(),
   maxOpenPositions: z.number().int().min(1).max(20).optional(),
   maxOrdersPerMinute: z.number().int().min(1).max(60).optional(),
   maxLeverage: z.number().min(1).max(20).optional(),
