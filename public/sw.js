@@ -1,6 +1,11 @@
 // GONOVI Service Worker — PWA shell + push notifications.
-// Do not cache Next.js chunks: stale app-client bundles can break local/dev previews.
-const CACHE_NAME = 'gonovi-pwa-v3'
+//
+// Regla central: las navegaciones NUNCA se cachean ni se sirven desde caché.
+// Un documento HTML guardado de un deploy anterior apunta a chunks
+// /_next/static/... que ya no existen en producción; al servirlo, React no
+// hidrata nunca y el PWA queda mostrando el shell estático ("Reconectando",
+// precios en cero) sin forma de recuperarse desde la pantalla de inicio.
+const CACHE_NAME = 'gonovi-pwa-v4-20260826'
 const PRECACHE = ['/manifest.json']
 
 self.addEventListener('install', (event) => {
@@ -19,28 +24,33 @@ self.addEventListener('activate', (event) => {
   self.clients.claim()
 })
 
-// Network-first, fallback to cache
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return
+  const request = event.request
+  if (request.method !== 'GET') return
 
-  const url = new URL(event.request.url)
-  const isLocal = ['localhost', '127.0.0.1'].includes(url.hostname)
-  const isNextAsset = url.pathname.startsWith('/_next/')
-  const isApi = url.pathname.startsWith('/api/')
+  const url = new URL(request.url)
+  if (url.origin !== self.location.origin) return
 
-  if (isLocal || isNextAsset || isApi) {
-    event.respondWith(fetch(event.request))
-    return
-  }
+  // Documentos, bundles de Next y API: siempre red directa, sin caché.
+  if (request.mode === 'navigate' || request.destination === 'document') return
+  if (url.pathname.startsWith('/_next/')) return
+  if (url.pathname.startsWith('/api/')) return
+  if (['localhost', '127.0.0.1'].includes(url.hostname)) return
 
+  // Assets estáticos propios (iconos, logos, manifest): red primero, caché de respaldo.
   event.respondWith(
-    fetch(event.request)
+    fetch(request)
       .then((response) => {
-        const clone = response.clone()
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
+        // Solo se guardan respuestas sanas: un 404/502 cacheado envenena el PWA.
+        if (response.ok && response.type === 'basic') {
+          const clone = response.clone()
+          caches.open(CACHE_NAME)
+            .then((cache) => cache.put(request, clone))
+            .catch(() => {})
+        }
         return response
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => caches.match(request))
   )
 })
 

@@ -22,14 +22,26 @@ export default function ServiceWorkerRegistrar() {
       return
     }
 
+    let registration: ServiceWorkerRegistration | null = null
+
     navigator.serviceWorker
       .register('/sw.js')
       .then((reg) => {
+        registration = reg
         console.log('[SW] registered', reg.scope)
       })
       .catch((err) => {
         console.error('[SW] registration failed', err)
       })
+
+    // El PWA instalado se reanuda sin navegar, así que el navegador no revisa
+    // /sw.js por su cuenta. Sin esto, un service worker viejo puede quedar
+    // sirviendo caché rancia por días en el teléfono.
+    const checkForUpdate = () => {
+      if (document.visibilityState === 'visible') registration?.update().catch(() => {})
+    }
+    document.addEventListener('visibilitychange', checkForUpdate)
+    return () => document.removeEventListener('visibilitychange', checkForUpdate)
   }, [])
 
   return null

@@ -278,9 +278,12 @@ export default function Dashboard() {
 
   // Bitstamp WebSocket — live trades
   useEffect(() => {
-    let retryTimer: ReturnType<typeof setTimeout>
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
+    let disposed = false
 
     function connect() {
+      if (disposed) return
+
       const ws = new WebSocket(WS_URL)
       wsRef.current = ws
 
@@ -293,6 +296,7 @@ export default function Dashboard() {
       }
 
       ws.onclose = () => {
+        if (disposed) return
         setConnected(false)
         retryTimer = setTimeout(connect, 3000)
       }
@@ -300,15 +304,40 @@ export default function Dashboard() {
       ws.onerror = () => ws.close()
 
       ws.onmessage = (ev: MessageEvent) => {
-        const msg = JSON.parse(ev.data as string) as BitstampWsMsg
-        if (msg.event === 'trade') {
-          handleTrade(msg.data as BitstampTradeData)
+        try {
+          const msg = JSON.parse(ev.data as string) as BitstampWsMsg
+          if (msg.event === 'trade') {
+            handleTrade(msg.data as BitstampTradeData)
+          }
+        } catch {
+          // Frame no-JSON de Bitstamp: ignorar en lugar de matar el handler.
         }
       }
     }
 
+    // El móvil congela el socket y los timers al mandar la app a segundo plano.
+    // Al volver, el retry puede no haber corrido nunca y el panel queda clavado
+    // en "Reconectando stream": forzamos la reconexión al recuperar foco.
+    const resume = () => {
+      if (disposed || document.visibilityState !== 'visible') return
+      const ws = wsRef.current
+      if (ws && ws.readyState === WebSocket.OPEN) return
+      clearTimeout(retryTimer)
+      if (ws && ws.readyState !== WebSocket.CLOSED) ws.close()
+      connect()
+    }
+
     connect()
-    return () => { clearTimeout(retryTimer); wsRef.current?.close() }
+    document.addEventListener('visibilitychange', resume)
+    window.addEventListener('online', resume)
+
+    return () => {
+      disposed = true
+      clearTimeout(retryTimer)
+      document.removeEventListener('visibilitychange', resume)
+      window.removeEventListener('online', resume)
+      wsRef.current?.close()
+    }
   }, [handleTrade])
 
   // Keep server usage low: cron/webhook update trades, dashboard only refreshes

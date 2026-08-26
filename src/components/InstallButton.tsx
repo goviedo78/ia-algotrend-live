@@ -10,10 +10,17 @@ interface BeforeInstallPromptEvent extends Event {
 export default function InstallButton() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [installed, setInstalled] = useState(false)
+  // iOS se detecta en un efecto, no durante el render: leer navigator en el
+  // render es una rama servidor/cliente y rompe la hidratación (React #418),
+  // que hace que React tire todo el árbol del servidor y lo rehaga en el
+  // cliente. Justo en iOS, que es donde el PWA ya venía siendo frágil.
+  const [isIOS, setIsIOS] = useState(false)
 
   /* eslint-disable react-hooks/set-state-in-effect -- One-time browser API check that must run client-side */
   useEffect(() => {
     // Check if already installed
+    setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent))
+
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setInstalled(true)
       return
@@ -59,7 +66,6 @@ export default function InstallButton() {
 
   if (!deferredPrompt) {
     // Show hint for iOS Safari (which doesn't support beforeinstallprompt)
-    const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent)
     if (isIOS) {
       return (
         <button
