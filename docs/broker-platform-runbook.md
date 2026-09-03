@@ -16,6 +16,29 @@ Estado de referencia: 2026-07-18. La ejecución vive dentro del backend de `gono
 
 El cron no se llama a sí mismo por HTTP. Tampoco depende de TradingView para transportar la señal. El endpoint firmado `/api/broker-signals` queda como entrada opcional para integraciones futuras, pero AlgoTrend BTC 1H usa una llamada interna.
 
+## Agendado
+
+Ningún paso del flujo se dispara solo. Vercel Hobby no permite crons sub-diarios, así que los dos agendadores viven fuera de la plataforma y cada uno se autentica con su propio secreto de header:
+
+| Qué | Quién lo dispara | Frecuencia | Llamada |
+| --- | --- | --- | --- |
+| Señal AlgoTrend BTC 1H | GitHub Actions, `.github/workflows/btc-cron.yml` | `2 * * * *` | `GET /api/cron/check` con `x-cron-secret` |
+| Drenaje de recuperación | cron-job.org | cada 1 minuto | `POST /api/cron/broker-jobs` con `x-broker-drain-secret` |
+
+El drenaje se agenda en cron-job.org así:
+
+- URL: `https://gonovi.app/api/cron/broker-jobs`
+- Método: `POST` (un `GET` devuelve 405)
+- Header: `x-broker-drain-secret: <valor de BROKER_DRAIN_SECRET en Vercel producción>`
+- Intervalo: cada minuto
+- Timeout: 30 s
+
+La latencia de este job es la que gobierna la corrección de la contabilidad, no un detalle de higiene: los reintentos usan backoff de 5 s·2^intentos hasta 300 s y las reconciliaciones se encolan a 2 s (`src/lib/brokers/worker.ts:49,59`). Como la propiedad de una posición se deriva de `broker_orders.filled_quantity` (`worker.ts:190`), que recién queda correcta después de reconciliar, un drenaje lento deja al motor creyendo que no tiene una posición que sí está viva en el broker.
+
+Solapar invocaciones es seguro: `claim_broker_execution_jobs` reclama con `for update skip locked`, y la ruta corta a los 25 s contra un `maxDuration` de 30 s.
+
+> La migración `20260718050013_enable_broker_drain_scheduler.sql` instala `pg_cron` y `pg_net` para un agendador dentro de Postgres que nunca se llegó a escribir. Con el drenaje en cron-job.org esas dos extensiones quedan sin uso. Se dejan instaladas a propósito: quitarlas no arregla nada y sí puede romper algo que dependa de ellas más adelante.
+
 ## Componentes
 
 - UI usuario: `/cuenta/seguridad` y `/cuenta/conexiones`.
