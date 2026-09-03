@@ -92,6 +92,8 @@ export type BrokerOpenPositionSummary = {
   key: string
   connectionId: string
   connectionLabel: string
+  broker: string
+  environment: string
   strategyCode: string
   strategyLabel: string
   timeframe: string
@@ -103,6 +105,31 @@ export type BrokerOpenPositionSummary = {
   notionalUsd: number
   entryFeesUsd: number
   openedAt: string
+  /**
+   * Valuación al precio de mercado del momento en que se cargó el panel. Todo queda en
+   * `null` cuando el precio no se pudo obtener: la posición se muestra igual, sin cifras
+   * inventadas. `unrealizedNetPnlUsd` descuenta la comisión de entrada ya pagada; la de
+   * salida todavía no existe y por eso no se estima.
+   */
+  markPrice: number | null
+  unrealizedGrossPnlUsd: number | null
+  unrealizedNetPnlUsd: number | null
+  unrealizedReturnPct: number | null
+  pricedAt: string | null
+}
+
+/**
+ * Una posición que la conexión abrió y que se cerró fuera de la plataforma: a mano en el
+ * broker, por liquidación o por otra herramienta. Deja de contar como abierta desde
+ * `settledAt`, sin precio de salida ni resultado inventado.
+ */
+export type BrokerPositionSettlement = {
+  intentId: string
+  connectionId: string
+  connectionLabel: string
+  symbol: string
+  direction: string
+  settledAt: string
 }
 
 /**
@@ -136,6 +163,7 @@ export type BrokerMissedOpportunity = {
 export type BrokerOrderHistoryResponse = {
   orders: BrokerOrderHistoryItem[]
   openPositions: BrokerOpenPositionSummary[]
+  externalSettlements: BrokerPositionSettlement[]
   totals: BrokerOrderHistoryTotals
   performance: BrokerPerformanceStats
   missedOpportunities: BrokerMissedOpportunity[]
@@ -144,6 +172,7 @@ export type BrokerOrderHistoryResponse = {
 export const EMPTY_BROKER_ORDER_HISTORY: BrokerOrderHistoryResponse = {
   orders: [],
   openPositions: [],
+  externalSettlements: [],
   missedOpportunities: [],
   totals: {
     realizedPnlUsd: 0,

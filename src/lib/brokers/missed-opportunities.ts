@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { normalizeSymbol } from './domain'
+import { normalizeSymbol, strategyTradeKey } from './domain'
 import { brokerStrategy } from './strategies'
 import type { BrokerMissedOpportunity } from './order-history-types'
 
@@ -42,6 +42,7 @@ export function rejectionReason(code: string | null) {
 
 type SignalRow = {
   id: string
+  external_signal_id: string | null
   strategy_code: string
   symbol: string
   action: string
@@ -109,12 +110,16 @@ export function buildMissedOpportunities(input: {
   connections: Map<string, { label: string; status: string; notionalUsd: number | null }>
 }): BrokerMissedOpportunity[] {
   const closesByKey = new Map<string, SignalRow[]>()
+  // Cierre indexado por la operación exacta que cierra, cuando el emisor la numera.
+  const closesByTrade = new Map<string, SignalRow>()
   for (const signal of input.laterSignals) {
     if (signal.action !== 'CLOSE') continue
     const key = `${signal.strategy_code}:${normalizeSymbol(signal.symbol)}:${signal.direction}`
     const bucket = closesByKey.get(key) ?? []
     bucket.push(signal)
     closesByKey.set(key, bucket)
+    const tradeKey = strategyTradeKey(signal.external_signal_id)
+    if (tradeKey) closesByTrade.set(`${signal.strategy_code}:${tradeKey}`, signal)
   }
   for (const bucket of closesByKey.values()) {
     bucket.sort((a, b) => new Date(a.signal_time).getTime() - new Date(b.signal_time).getTime())
@@ -135,9 +140,17 @@ export function buildMissedOpportunities(input: {
     if (intent.action === 'OPEN' && signal) {
       const key = `${strategyCode}:${normalizeSymbol(intent.symbol)}:${intent.direction}`
       const openedAt = new Date(signal.signal_time).getTime()
-      const close = (closesByKey.get(key) ?? []).find(
-        (candidate) => new Date(candidate.signal_time).getTime() > openedAt,
-      )
+      const tradeKey = strategyTradeKey(signal.external_signal_id)
+      // Un trade que abre y toca su stop dentro de la misma vela emite apertura y cierre con
+      // el mismo `signal_time`: buscar sólo cierres posteriores lo daría por vivo y ofrecería
+      // reenviar una operación que la estrategia ya cerró. La numeración del emisor lo resuelve
+      // sin ambigüedad; sin ella se cae en la regla conservadora (un cierre de la misma vela
+      // cuenta), porque ofrecer de más abre dinero real sin salida automática.
+      const close = tradeKey
+        ? closesByTrade.get(`${strategyCode}:${tradeKey}`) ?? null
+        : (closesByKey.get(key) ?? []).find(
+            (candidate) => new Date(candidate.signal_time).getTime() >= openedAt,
+          ) ?? null
       if (close) {
         exitPrice = numberOrNull(close.reference_price)
         closedAt = close.signal_time
@@ -197,7 +210,7 @@ export async function loadMissedOpportunities(filters: {
   const connectionIds = [...new Set(intents.map((intent) => intent.connection_id))]
   const [signalsResult, connectionsResult, policiesResult] = await Promise.all([
     admin.from('broker_signals')
-      .select('id, strategy_code, symbol, action, direction, signal_time, reference_price')
+      .select('id, external_signal_id, strategy_code, symbol, action, direction, signal_time, reference_price')
       .in('id', signalIds),
     admin.from('broker_connections').select('id, label, status').in('id', connectionIds),
     admin.from('broker_risk_policies')
@@ -219,7 +232,7 @@ export async function loadMissedOpportunities(filters: {
   const strategyCodes = [...new Set((signalsResult.data ?? []).map((signal) => signal.strategy_code))]
   const laterSignals = oldest && strategyCodes.length
     ? await admin.from('broker_signals')
-        .select('id, strategy_code, symbol, action, direction, signal_time, reference_price')
+        .select('id, external_signal_id, strategy_code, symbol, action, direction, signal_time, reference_price')
         .eq('action', 'CLOSE')
         .in('strategy_code', strategyCodes)
         .gte('signal_time', new Date(oldest).toISOString())

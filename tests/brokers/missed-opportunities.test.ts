@@ -51,6 +51,7 @@ test('insufficient margin is reported to the holder as "sin fondos"', () => {
 test('a rejected open is paired with the strategy close that followed it', () => {
   const signal = {
     id: 'sig-open',
+    external_signal_id: 'gold30-307-open',
     strategy_code: 'ALGOTREND_GOLD_30M',
     symbol: 'NCCOGOLD2USD-USDT',
     action: 'OPEN',
@@ -72,10 +73,10 @@ test('a rejected open is paired with the strategy close that followed it', () =>
     signalsById: new Map([['sig-open', signal]]),
     laterSignals: [
       // Un cierre ANTERIOR a la apertura no puede emparejarse con ella.
-      { ...signal, id: 'sig-stale', action: 'CLOSE', signal_time: '2026-08-01T09:00:00.000Z', reference_price: 1900 },
-      { ...signal, id: 'sig-close', action: 'CLOSE', signal_time: '2026-08-01T12:00:00.000Z', reference_price: 2040 },
+      { ...signal, id: 'sig-stale', external_signal_id: 'gold30-306-close', action: 'CLOSE', signal_time: '2026-08-01T09:00:00.000Z', reference_price: 1900 },
+      { ...signal, id: 'sig-close', external_signal_id: 'gold30-307-close', action: 'CLOSE', signal_time: '2026-08-01T12:00:00.000Z', reference_price: 2040 },
       // Un cierre posterior más lejano no debe ganarle al primero.
-      { ...signal, id: 'sig-later', action: 'CLOSE', signal_time: '2026-08-01T18:00:00.000Z', reference_price: 2500 },
+      { ...signal, id: 'sig-later', external_signal_id: 'gold30-308-close', action: 'CLOSE', signal_time: '2026-08-01T18:00:00.000Z', reference_price: 2500 },
     ],
     connections: new Map([['conn-1', { label: 'oro 30 prueba', status: 'ACTIVE', notionalUsd: 100 }]]),
   })
@@ -96,6 +97,7 @@ test('a rejected open is paired with the strategy close that followed it', () =>
 test('a rejected close never produces a phantom trade result', () => {
   const signal = {
     id: 'sig-close-intent',
+    external_signal_id: 'algotrend-btc-1h-300-close-1785000000',
     strategy_code: 'ALGOTREND_BTC_1H',
     symbol: 'BTC-USDT',
     action: 'CLOSE',
@@ -115,7 +117,7 @@ test('a rejected close never produces a phantom trade result', () => {
       created_at: '2026-08-01T10:00:05.000Z',
     }],
     signalsById: new Map([['sig-close-intent', signal]]),
-    laterSignals: [{ ...signal, id: 'other', signal_time: '2026-08-01T14:00:00.000Z', reference_price: 66000 }],
+    laterSignals: [{ ...signal, id: 'other', external_signal_id: 'algotrend-btc-1h-301-close-1785014400', signal_time: '2026-08-01T14:00:00.000Z', reference_price: 66000 }],
     connections: new Map([['conn-2', { label: 'Prueba conexion', status: 'ACTIVE', notionalUsd: 50 }]]),
   })
 
@@ -126,37 +128,71 @@ test('a rejected close never produces a phantom trade result', () => {
   assert.equal(missed.canRetry, false)
 })
 
-test('only a rejected open whose strategy operation is still active can be retried', () => {
-  const signal = {
-    id: 'sig-current-open',
-    strategy_code: 'ALGOTREND_BTC_1H',
-    symbol: 'BTC-USDT',
-    action: 'OPEN',
-    direction: 'LONG',
-    signal_time: '2026-08-06T05:00:00.000Z',
-    reference_price: 64844.16,
-  }
+const openSignal358 = {
+  id: 'sig-current-open',
+  external_signal_id: 'algotrend-btc-1h-358-open-1788444000',
+  strategy_code: 'ALGOTREND_BTC_1H',
+  symbol: 'BTC-USDT',
+  action: 'OPEN',
+  direction: 'LONG',
+  signal_time: '2026-09-03T14:00:00.000Z',
+  reference_price: 80538.84,
+}
+
+function retryabilityOf(laterSignals: Array<typeof openSignal358>) {
   const [missed] = buildMissedOpportunities({
     intents: [{
       id: 'intent-current-open',
       connection_id: 'conn-current',
-      signal_id: signal.id,
+      signal_id: openSignal358.id,
       action: 'OPEN',
       direction: 'LONG',
-      symbol: signal.symbol,
+      symbol: openSignal358.symbol,
       rejection_code: 'RISK_MARGIN_RESERVE',
-      created_at: '2026-08-06T05:00:05.000Z',
+      created_at: '2026-09-03T15:01:14.000Z',
     }],
-    signalsById: new Map([[signal.id, signal]]),
-    // Un cierre técnico de la misma vela puede pertenecer al trade anterior. Sólo un cierre
-    // posterior vuelve inelegible esta apertura.
-    laterSignals: [{ ...signal, id: 'same-candle-close', action: 'CLOSE' }],
-    connections: new Map([['conn-current', { label: 'BTC', status: 'ACTIVE', notionalUsd: 90 }]]),
+    signalsById: new Map([[openSignal358.id, openSignal358]]),
+    laterSignals,
+    connections: new Map([['conn-current', { label: 'BTC', status: 'ACTIVE', notionalUsd: 390 }]]),
   })
+  return missed
+}
 
-  assert.equal(missed.outcome, 'PENDING')
-  assert.equal(missed.closedAt, null)
+test('an operation that opened and stopped out inside the same candle is not offered for retry', () => {
+  // El caso real de BTC #358: entró y tocó su stop en la misma vela, así que apertura y cierre
+  // viajaron con idéntico `signal_time`. Emparejar por horario la daba por viva y ofrecía
+  // reenviar una operación ya perdida, abriendo dinero real que ninguna señal iba a cerrar.
+  const missed = retryabilityOf([{
+    ...openSignal358,
+    id: 'same-candle-close',
+    external_signal_id: 'algotrend-btc-1h-358-close-1788444000',
+    action: 'CLOSE',
+    reference_price: 78923.0632,
+  }])
+
+  assert.equal(missed.canRetry, false)
+  assert.equal(missed.closedAt, '2026-09-03T14:00:00.000Z')
+  assert.equal(missed.outcome, 'LOSS')
+})
+
+test('the technical close of the previous operation during a reversal keeps the new open retryable', () => {
+  // Mismo instante, pero es el cierre del trade anterior: otra numeración y otra dirección.
+  const missed = retryabilityOf([{
+    ...openSignal358,
+    id: 'previous-trade-close',
+    external_signal_id: 'algotrend-btc-1h-357-close-1788444000',
+    action: 'CLOSE',
+    direction: 'SHORT',
+    reference_price: 80538.84,
+  }])
+
   assert.equal(missed.canRetry, true)
+  assert.equal(missed.closedAt, null)
+  assert.equal(missed.outcome, 'PENDING')
+})
+
+test('a still-open operation stays retryable', () => {
+  assert.equal(retryabilityOf([]).canRetry, true)
 })
 
 test('rejected intents reach the holder even when the connection never executed an order', async () => {

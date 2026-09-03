@@ -2,13 +2,13 @@ import 'server-only'
 
 import { randomUUID } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { BrokerAdapter, BrokerOrderResult } from './adapters/types'
+import type { BrokerAdapter, BrokerOrderResult, BrokerPosition } from './adapters/types'
 import { loadBrokerAdapter } from './adapter-loader'
 import { writeBrokerAudit } from './audit'
 import { riskPolicyFromRow } from './dto'
 import { BrokerPlatformError } from './errors'
 import { evaluateRisk, type OwnedPosition } from './risk'
-import { normalizeSymbol } from './domain'
+import { normalizeSymbol, type TradeDirection } from './domain'
 import { brokerExecutionMode } from './runtime'
 
 type Job = {
@@ -188,20 +188,57 @@ async function persistPositionSnapshots(
 // Σ filled(apertura) − Σ filled(cierre) por (símbolo, lado). Base de la regla permanente de
 // ownership: el motor solo gestiona/cierra lo que la conexión abrió, nunca posiciones ajenas.
 async function computeOwnedPositions(connectionId: string): Promise<OwnedPosition[]> {
-  const { data, error } = await createAdminClient()
-    .from('broker_orders')
-    .select('symbol, position_side, reduce_only, filled_quantity')
-    .eq('connection_id', connectionId)
-  if (error) throw error
-  const totals = new Map<string, OwnedPosition>()
-  for (const row of data ?? []) {
-    const direction = row.position_side === 'SHORT' ? 'SHORT' : 'LONG'
+  const admin = createAdminClient()
+  const [orders, settlements] = await Promise.all([
+    admin.from('broker_orders')
+      .select('symbol, position_side, reduce_only, filled_quantity, created_at')
+      .eq('connection_id', connectionId),
+    // Una posición cerrada fuera de la plataforma dejó de ser nuestra en ese instante. Si no se
+    // descontara, el motor seguiría creyéndose dueño de ese (símbolo, lado) y podría cerrar una
+    // posición ajena que el titular abriera después a mano.
+    admin.from('broker_order_intents')
+      .select('symbol, direction, updated_at')
+      .eq('connection_id', connectionId)
+      .eq('status', 'SETTLED_EXTERNALLY'),
+  ])
+  if (orders.error) throw orders.error
+  if (settlements.error) throw settlements.error
+
+  const key = (symbol: string, direction: string) => `${normalizeSymbol(symbol)}:${direction}`
+  type OwnershipEvent = { at: number; key: string; symbol: string; direction: TradeDirection; delta: number | null }
+  const events: OwnershipEvent[] = []
+  for (const row of orders.data ?? []) {
+    const direction: TradeDirection = row.position_side === 'SHORT' ? 'SHORT' : 'LONG'
     const symbol = normalizeSymbol(String(row.symbol))
-    const key = `${symbol}:${direction}`
     const filled = Number(row.filled_quantity) || 0
-    const entry = totals.get(key) ?? { symbol, direction, quantity: 0 }
-    entry.quantity += row.reduce_only ? -filled : filled
-    totals.set(key, entry)
+    events.push({
+      at: new Date(row.created_at).getTime(),
+      key: key(symbol, direction),
+      symbol,
+      direction,
+      delta: row.reduce_only ? -filled : filled,
+    })
+  }
+  for (const row of settlements.data ?? []) {
+    const direction: TradeDirection = row.direction === 'SHORT' ? 'SHORT' : 'LONG'
+    const symbol = normalizeSymbol(String(row.symbol))
+    // `delta: null` es el asiento externo: no resta una cantidad, borra la tenencia entera.
+    events.push({ at: new Date(row.updated_at).getTime(), key: key(symbol, direction), symbol, direction, delta: null })
+  }
+  // Ante el mismo instante la orden va primero: un asiento externo cierra lo que ya existía.
+  events.sort((left, right) => (
+    left.at - right.at || (left.delta === null ? 1 : right.delta === null ? -1 : 0)
+  ))
+
+  const totals = new Map<string, OwnedPosition>()
+  for (const event of events) {
+    if (event.delta === null) {
+      totals.delete(event.key)
+      continue
+    }
+    const entry = totals.get(event.key) ?? { symbol: event.symbol, direction: event.direction, quantity: 0 }
+    entry.quantity += event.delta
+    totals.set(event.key, entry)
   }
   return Array.from(totals.values()).filter((entry) => entry.quantity > 1e-12)
 }
@@ -235,6 +272,46 @@ async function closeIsStillSettling(connectionId: string, symbol: string, intent
   if (inFlight.error) throw inFlight.error
   if (recentlyClosed.error) throw recentlyClosed.error
   return (inFlight.count ?? 0) > 0 || (recentlyClosed.count ?? 0) > 0
+}
+
+/**
+ * Cierra en libros una posición que la conexión abrió y que el broker ya no reporta.
+ * Devuelve `false` cuando la posición sigue viva: ahí el cierre manual tiene que ejecutarse
+ * de verdad contra el broker, por el camino normal.
+ */
+async function settleExternallyClosedPosition(input: {
+  intent: Record<string, unknown>
+  connectionId: string
+  positions: BrokerPosition[]
+  ownedPositions: OwnedPosition[]
+}) {
+  const symbol = normalizeSymbol(String(input.intent.symbol))
+  const direction = String(input.intent.direction)
+  const owned = input.ownedPositions.find(
+    (position) => normalizeSymbol(position.symbol) === symbol && position.direction === direction,
+  )
+  if (!owned || owned.quantity <= 0) return false
+  const liveQuantity = input.positions
+    .filter((position) => normalizeSymbol(position.symbol) === symbol && position.direction === direction)
+    .reduce((total, position) => total + Math.max(0, position.quantity), 0)
+  if (liveQuantity > 0) return false
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('broker_order_intents').update({
+    status: 'SETTLED_EXTERNALLY',
+    rejection_code: 'POSITION_CLOSED_OUTSIDE_PLATFORM',
+    updated_at: new Date().toISOString(),
+  }).eq('id', input.intent.id).eq('status', 'QUEUED')
+  if (error) throw error
+
+  await writeBrokerAudit({
+    userId: String(input.intent.user_id),
+    connectionId: input.connectionId,
+    eventType: 'POSITION_SETTLED_EXTERNALLY',
+    outcome: 'SUCCESS',
+    metadata: { intentId: String(input.intent.id), symbol, direction, quantity: owned.quantity },
+  })
+  return true
 }
 
 async function executeOrder(job: Job) {
@@ -297,6 +374,25 @@ async function executeOrder(job: Job) {
         503,
         true,
       )
+    }
+  }
+
+  // Un cierre que el titular pidió a mano sobre una posición que el broker ya no tiene: la
+  // cerró él mismo, la liquidó el broker o la movió otra herramienta. Nuestros libros son los
+  // que quedaron desfasados, así que se asienta el cierre externo en vez de dejar la posición
+  // colgada para siempre. No se inventa precio de salida ni resultado: el trade sale de las
+  // estadísticas de rendimiento, no entra con una cifra falsa. Un cierre automático que no
+  // encuentra la posición sigue fallando ruidoso: ahí nadie autorizó nada.
+  if (intent.action === 'CLOSE' && intent.origin === 'MANUAL') {
+    const settled = await settleExternallyClosedPosition({
+      intent,
+      connectionId: connection.id,
+      positions,
+      ownedPositions,
+    })
+    if (settled) {
+      await completeJob(job.id)
+      return
     }
   }
 

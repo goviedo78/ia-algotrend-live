@@ -116,3 +116,22 @@ export function normalizeSymbol(symbol: string) {
 export function isLiveEnvironment(value: BrokerEnvironment) {
   return value === 'LIVE'
 }
+
+/**
+ * Identidad del trade dentro de una estrategia, extraída del `external_signal_id`.
+ *
+ * Los dos emisores en producción numeran la operación y luego marcan el tramo:
+ * `algotrend-btc-1h-358-open-1788444000` / `algotrend-btc-1h-358-close-1788444000`,
+ * `gold30-309-open` / `gold30-309-close`. Esa numeración es el único dato que dice con
+ * certeza si un cierre corresponde a la MISMA operación que una apertura, porque el
+ * horario no alcanza: cuando un trade abre y toca su stop dentro de la misma vela, la
+ * apertura y su cierre viajan con idéntico `signal_time`.
+ *
+ * Devuelve `null` para un identificador con otra forma; quien lo use debe entonces caer
+ * en una regla conservadora, nunca en una permisiva.
+ */
+export function strategyTradeKey(externalSignalId: string | null | undefined) {
+  if (!externalSignalId) return null
+  const match = /^(.+)-(?:open|close)(?:-\d+)?$/i.exec(externalSignalId.trim())
+  return match ? match[1].toLowerCase() : null
+}

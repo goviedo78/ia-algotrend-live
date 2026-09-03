@@ -11,7 +11,11 @@ import { BrokerBrand } from './BrokerBrand'
 import { BrokerFieldLabel } from './BrokerFieldHelp'
 import { BrokerThemeToggle, useBrokerTheme } from './BrokerThemeToggle'
 import { BrokerOrderHistory } from './BrokerOrderHistory'
-import { EMPTY_BROKER_ORDER_HISTORY, type BrokerOrderHistoryResponse } from '@/lib/brokers/order-history-types'
+import {
+  EMPTY_BROKER_ORDER_HISTORY,
+  type BrokerOpenPositionSummary,
+  type BrokerOrderHistoryResponse,
+} from '@/lib/brokers/order-history-types'
 import { BrokerPrivacyToggle, BrokerSensitiveValue, redactText, useBrokerPrivacy } from './BrokerPrivacy'
 import { BROKER_STRATEGIES } from '@/lib/brokers/strategies'
 import { calculateOpeningFundingRequirement, DEFAULT_BINGX_TAKER_FEE_RATE } from '@/lib/brokers/funding-requirement'
@@ -81,6 +85,7 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [retryingIntentId, setRetryingIntentId] = useState<string | null>(null)
+  const [closingPositionKey, setClosingPositionKey] = useState<string | null>(null)
   const [environment, setEnvironment] = useState<'DEMO' | 'LIVE'>('DEMO')
   const [capitalUsd, setCapitalUsd] = useState(100)
   const [riskProfile, setRiskProfile] = useState<RiskProfile>('CONSERVATIVE')
@@ -228,6 +233,31 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
       setError(cause instanceof Error ? cause.message : 'No se pudo reenviar la operación.')
     } finally {
       setRetryingIntentId(null)
+    }
+  }
+
+  // Cerrar a mano una posición que la conexión abrió. Si el broker todavía la tiene, sale una
+  // orden reduce-only real; si el titular ya la cerró allá, el motor la da de baja en libros.
+  async function closeOpenPosition(position: BrokerOpenPositionSummary) {
+    if (closingPositionKey) return
+    const confirmed = window.confirm(
+      `Cerrar la posición ${position.direction} de ${position.symbol} en “${position.connectionLabel}”.\n\n`
+      + 'Si sigue abierta en el broker se envía su cierre a mercado ahora mismo. '
+      + 'Si ya la cerraste vos, deja de figurar como abierta.',
+    )
+    if (!confirmed) return
+    setClosingPositionKey(position.key)
+    setError('')
+    try {
+      await api(`/api/broker-connections/${position.connectionId}/positions/close`, {
+        method: 'POST',
+        body: JSON.stringify({ symbol: position.symbol, direction: position.direction }),
+      })
+      await load(true)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo cerrar la posición.')
+    } finally {
+      setClosingPositionKey(null)
     }
   }
 
@@ -458,6 +488,8 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
               privacyMode={privacyMode}
               onRetry={(intentId) => void retryMissedOpen(intentId)}
               retryingIntentId={retryingIntentId}
+              onClosePosition={(position) => void closeOpenPosition(position)}
+              closingPositionKey={closingPositionKey}
             />
           </>
         )}

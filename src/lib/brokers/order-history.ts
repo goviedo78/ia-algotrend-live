@@ -7,9 +7,14 @@ import {
   summarizeBrokerOrderHistory,
 } from './order-history-metrics'
 import { loadMissedOpportunities } from './missed-opportunities'
+import { valueOpenPositions } from './open-position-valuation'
 import { EMPTY_BROKER_ORDER_HISTORY } from './order-history-types'
 import { brokerStrategy } from './strategies'
-import type { BrokerOrderHistoryItem, BrokerOrderHistoryResponse } from './order-history-types'
+import type {
+  BrokerOrderHistoryItem,
+  BrokerOrderHistoryResponse,
+  BrokerPositionSettlement,
+} from './order-history-types'
 
 type HistoryFilters = {
   userId?: string
@@ -32,6 +37,34 @@ const EMPTY_AMOUNTS: LedgerAmounts = {
   adjustmentsUsd: 0,
 }
 
+/**
+ * Cierres que el titular pidió a mano sobre una posición que el broker ya no tenía. Viven en
+ * `broker_order_intents` porque no hay orden que registrar: nada llegó al broker.
+ */
+async function loadExternalSettlements(filters: {
+  userId?: string
+  connectionId?: string
+}): Promise<Array<Omit<BrokerPositionSettlement, 'connectionLabel'>>> {
+  const admin = createAdminClient()
+  let query = admin
+    .from('broker_order_intents')
+    .select('id, connection_id, symbol, direction, updated_at')
+    .eq('status', 'SETTLED_EXTERNALLY')
+    .order('updated_at', { ascending: true })
+    .limit(200)
+  if (filters.userId) query = query.eq('user_id', filters.userId)
+  if (filters.connectionId) query = query.eq('connection_id', filters.connectionId)
+  const { data, error } = await query
+  if (error) throw error
+  return (data ?? []).map((row) => ({
+    intentId: row.id,
+    connectionId: row.connection_id,
+    symbol: String(row.symbol),
+    direction: String(row.direction),
+    settledAt: row.updated_at,
+  }))
+}
+
 export async function loadBrokerOrderHistory(
   filters: HistoryFilters = {},
 ): Promise<BrokerOrderHistoryResponse> {
@@ -51,9 +84,10 @@ export async function loadBrokerOrderHistory(
 
   // Las oportunidades perdidas viven en `broker_order_intents`, no en `broker_orders`: una
   // conexión puede no haber ejecutado nunca y aun así tener rechazos que mostrar.
-  const [{ data: orders, error: ordersError }, missedOpportunities] = await Promise.all([
+  const [{ data: orders, error: ordersError }, missedOpportunities, settlements] = await Promise.all([
     ordersQuery,
     loadMissedOpportunities({ userId: filters.userId, connectionId: filters.connectionId }),
+    loadExternalSettlements({ userId: filters.userId, connectionId: filters.connectionId }),
   ])
   if (ordersError) throw ordersError
   if (!orders?.length) return { ...EMPTY_BROKER_ORDER_HISTORY, missedOpportunities }
@@ -186,11 +220,18 @@ export async function loadBrokerOrderHistory(
     }
   })
 
-  const ordersWithCycles = enrichBrokerTradeCycles(mappedOrders)
+  const externalSettlements = settlements.map((settlement): BrokerPositionSettlement => ({
+    ...settlement,
+    connectionLabel: connections.get(settlement.connectionId)?.label ?? settlement.connectionId,
+  }))
+  const ordersWithCycles = enrichBrokerTradeCycles(mappedOrders, externalSettlements)
   const result = ordersWithCycles.slice(0, displayLimit)
   return {
     orders: result,
-    openPositions: openBrokerPositionsFromOrders(ordersWithCycles),
+    openPositions: await valueOpenPositions(
+      openBrokerPositionsFromOrders(ordersWithCycles, externalSettlements),
+    ),
+    externalSettlements,
     ...summarizeBrokerOrderHistory(result),
     missedOpportunities,
   }

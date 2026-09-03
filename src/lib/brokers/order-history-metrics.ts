@@ -3,6 +3,7 @@ import type {
   BrokerOrderHistoryItem,
   BrokerOrderHistoryTotals,
   BrokerPerformanceStats,
+  BrokerPositionSettlement,
 } from './order-history-types'
 
 type OpenCostBasis = {
@@ -14,7 +15,10 @@ type OpenCostBasis = {
 }
 
 type OpenPositionAccumulator = OpenCostBasis & Omit<BrokerOpenPositionSummary,
-  'quantity' | 'notionalUsd' | 'entryFeesUsd' | 'averageEntryPrice'>
+  'quantity' | 'notionalUsd' | 'entryFeesUsd' | 'averageEntryPrice'
+  // La valuación a mercado se resuelve después, con una consulta de precio; acá sólo
+  // se acumula la base de costo, que es aritmética pura sobre los fills.
+  | 'markPrice' | 'unrealizedGrossPnlUsd' | 'unrealizedNetPnlUsd' | 'unrealizedReturnPct' | 'pricedAt'>
 
 function finite(value: number) {
   return Number.isFinite(value) ? value : 0
@@ -55,12 +59,50 @@ function estimatedGrossPnl(
 }
 
 /**
+ * Recorre órdenes y asientos externos en un solo orden cronológico. Un asiento externo
+ * ("la posición se cerró fuera de la plataforma") no tiene precio ni cantidad de salida:
+ * lo único que afirma es que a partir de ese instante la posición dejó de ser nuestra, así
+ * que borra la base de costo en lugar de consumirla parcialmente.
+ */
+type PositionEvent =
+  | { kind: 'order'; at: number; order: BrokerOrderHistoryItem }
+  | { kind: 'settlement'; at: number; key: string }
+
+function positionEvents(
+  orders: BrokerOrderHistoryItem[],
+  settlements: BrokerPositionSettlement[],
+): PositionEvent[] {
+  const events: PositionEvent[] = orders.map((order) => ({
+    kind: 'order',
+    at: new Date(effectiveTime(order)).getTime(),
+    order,
+  }))
+  for (const settlement of settlements) {
+    events.push({
+      kind: 'settlement',
+      at: new Date(settlement.settledAt).getTime(),
+      key: settlementKey(settlement),
+    })
+  }
+  // Ante el mismo instante, la orden va primero: un asiento externo cierra lo que existía
+  // hasta ese momento, nunca una entrada que se registra a la vez.
+  return events.sort((left, right) => (
+    left.at - right.at || (left.kind === right.kind ? 0 : left.kind === 'order' ? -1 : 1)
+  ))
+}
+
+function settlementKey(settlement: BrokerPositionSettlement) {
+  return `${settlement.connectionId}:${settlement.symbol.toUpperCase()}:${settlement.direction.toUpperCase()}`
+}
+
+/**
  * Pairs OPEN and CLOSE orders using an aggregate weighted cost basis per
  * connection, instrument and direction. Derived values are written only when
  * the complete closing quantity is covered by known opening orders.
  */
 export function enrichBrokerTradeCycles(
   orders: BrokerOrderHistoryItem[],
+  settlements: BrokerPositionSettlement[] = [],
 ): BrokerOrderHistoryItem[] {
   const enriched: BrokerOrderHistoryItem[] = orders.map((order): BrokerOrderHistoryItem => ({
     ...order,
@@ -69,12 +111,14 @@ export function enrichBrokerTradeCycles(
     entryNotionalUsd: null,
     netReturnPct: null,
   }))
-  const chronological = [...enriched].sort((left, right) => (
-    new Date(effectiveTime(left)).getTime() - new Date(effectiveTime(right)).getTime()
-  ))
   const openPositions = new Map<string, OpenCostBasis>()
 
-  for (const order of chronological) {
+  for (const event of positionEvents(enriched, settlements)) {
+    if (event.kind === 'settlement') {
+      openPositions.delete(event.key)
+      continue
+    }
+    const order = event.order
     const quantity = positive(order.filledQuantity)
     if (quantity <= 0) continue
     const key = positionKey(order)
@@ -150,13 +194,16 @@ export function enrichBrokerTradeCycles(
  */
 export function openBrokerPositionsFromOrders(
   orders: BrokerOrderHistoryItem[],
+  settlements: BrokerPositionSettlement[] = [],
 ): BrokerOpenPositionSummary[] {
-  const chronological = [...orders].sort((left, right) => (
-    new Date(effectiveTime(left)).getTime() - new Date(effectiveTime(right)).getTime()
-  ))
   const positions = new Map<string, OpenPositionAccumulator>()
 
-  for (const order of chronological) {
+  for (const event of positionEvents(orders, settlements)) {
+    if (event.kind === 'settlement') {
+      positions.delete(event.key)
+      continue
+    }
+    const order = event.order
     const quantity = positive(order.filledQuantity)
     if (quantity <= 0) continue
     const key = positionKey(order)
@@ -166,6 +213,8 @@ export function openBrokerPositionsFromOrders(
         key,
         connectionId: order.connectionId,
         connectionLabel: order.connectionLabel,
+        broker: order.broker,
+        environment: order.environment,
         strategyCode: order.strategyCode,
         strategyLabel: order.strategyLabel,
         timeframe: order.timeframe,
@@ -202,6 +251,8 @@ export function openBrokerPositionsFromOrders(
       key: position.key,
       connectionId: position.connectionId,
       connectionLabel: position.connectionLabel,
+      broker: position.broker,
+      environment: position.environment,
       strategyCode: position.strategyCode,
       strategyLabel: position.strategyLabel,
       timeframe: position.timeframe,
@@ -213,6 +264,11 @@ export function openBrokerPositionsFromOrders(
       notionalUsd: position.notionalUsd,
       entryFeesUsd: position.feesUsd,
       openedAt: position.openedAt,
+      markPrice: null,
+      unrealizedGrossPnlUsd: null,
+      unrealizedNetPnlUsd: null,
+      unrealizedReturnPct: null,
+      pricedAt: null,
     }))
     .sort((left, right) => new Date(right.openedAt).getTime() - new Date(left.openedAt).getTime())
 }

@@ -114,6 +114,44 @@ function sanitizeBingxError(payload: BingxPayload, status: number) {
   )
 }
 
+/**
+ * Precio de mercado de un símbolo. El ticker de BingX es público: no lleva firma ni
+ * API key, así que sirve para valuar posiciones sin tocar las credenciales del titular.
+ * `ttlMs` distingue los dos usos: la ejecución necesita el precio del instante (500 ms),
+ * mientras que valuar una posición en pantalla tolera unos segundos de antigüedad.
+ */
+export async function fetchBingxTickerPrice(
+  symbol: string,
+  environment: BrokerEnvironment,
+  options: { fetchImpl?: typeof fetch; ttlMs?: number } = {},
+): Promise<number> {
+  const normalized = normalizeSymbol(symbol)
+  const host = HOSTS[environment]
+  const fetchImpl = options.fetchImpl ?? fetch
+  const load = async () => {
+    let response: Response
+    try {
+      response = await fetchImpl(`${host}/openApi/swap/v1/ticker/price?symbol=${encodeURIComponent(normalized)}`, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(10_000),
+      })
+    } catch {
+      throw new BrokerPlatformError('BINGX_NETWORK_ERROR', 'No se pudo contactar a BingX.', 503, true)
+    }
+    const payload = await response.json().catch(() => ({})) as { code?: number; data?: { price?: string } }
+    if (!response.ok || Number(payload.code ?? 0) !== 0) throw sanitizeBingxError(payload, response.status)
+    const price = finiteNumber(payload.data?.price)
+    if (price <= 0) throw new BrokerPlatformError('INVALID_MARKET_PRICE', 'BingX devolvió un precio inválido.', 503, true)
+    return price
+  }
+  // Un fetch inyectado significa test o llamador con transporte propio: nunca compartimos cache.
+  if (options.fetchImpl) return load()
+  // El TTL entra en la clave: una valuación de pantalla tolerante a segundos no debe
+  // servirle un precio viejo a una ejecución, que exige el del instante.
+  const ttlMs = options.ttlMs ?? 500
+  return sharedCachedValue(tickerPriceCache, `${host}:${normalized}:${ttlMs}`, ttlMs, load)
+}
+
 function mapOrderStatus(rawStatus: string): BrokerOrderResult['status'] {
   const aliases: Record<string, BrokerOrderResult['status']> = {
     NEW: 'NEW',
@@ -299,21 +337,9 @@ export class BingxAdapter implements BrokerAdapter {
   }
 
   async getLastPrice(symbol: string) {
-    const normalized = normalizeSymbol(symbol)
-    const load = async () => {
-      const response = await this.fetchResponse(`${this.host}/openApi/swap/v1/ticker/price?symbol=${encodeURIComponent(normalized)}`, {
-        cache: 'no-store',
-        signal: AbortSignal.timeout(10_000),
-      })
-      const payload = await response.json().catch(() => ({})) as { code?: number; data?: { price?: string } }
-      if (!response.ok || Number(payload.code ?? 0) !== 0) throw sanitizeBingxError(payload, response.status)
-      const price = finiteNumber(payload.data?.price)
-      if (price <= 0) throw new BrokerPlatformError('INVALID_MARKET_PRICE', 'BingX devolvió un precio inválido.', 503, true)
-      return price
-    }
-    return this.useSharedMarketCache
-      ? sharedCachedValue(tickerPriceCache, `${this.host}:${normalized}`, 500, load)
-      : load()
+    return fetchBingxTickerPrice(symbol, this.input.environment, {
+      fetchImpl: this.useSharedMarketCache ? undefined : this.fetchImpl,
+    })
   }
 
   async setLeverage(symbol: string, direction: TradeDirection, leverage: number) {

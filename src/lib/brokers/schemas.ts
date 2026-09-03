@@ -53,6 +53,11 @@ export const riskChangeSchema = z.object({
   maxLeverage: z.number().min(1).max(20).optional(),
 }).strict()
 
+export const manualPositionCloseSchema = z.object({
+  symbol,
+  direction: z.enum(['LONG', 'SHORT']),
+}).strict()
+
 export const connectionActionSchema = z.object({
   action: z.enum(['SUSPEND', 'REVOKE']),
 }).strict()

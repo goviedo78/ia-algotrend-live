@@ -338,6 +338,16 @@
 .openPositionMetrics span { display: grid; gap: 4px; color: var(--broker-muted); font-size: 10px; text-transform: uppercase; }
 .openPositionMetrics strong { color: var(--broker-strong); font-size: 14px; text-transform: none; }
 .openPositionCard > small { color: var(--broker-muted); font-size: 10px; overflow-wrap: anywhere; }
+.openPositionPnl { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid var(--broker-border-soft); border-radius: 6px; background: var(--broker-surface); }
+.openPositionPnlLabel { color: var(--broker-muted); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+.openPositionPnlValue { color: var(--broker-strong); font-size: 26px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.openPositionPnlDetail { color: var(--broker-muted); font-size: 11px; overflow-wrap: anywhere; }
+.closePositionButton { justify-self: start; min-height: 34px; padding: 0 12px; border: 1px solid var(--broker-danger-border); border-radius: 5px; background: var(--broker-secondary); color: var(--broker-danger); display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.closePositionButton:hover { border-color: var(--broker-danger); }
+.closePositionButton:disabled { opacity: .45; cursor: not-allowed; }
+.closePositionButton:focus-visible { outline: 2px solid var(--broker-focus); outline-offset: 2px; }
+.resultCell { display: grid; gap: 2px; white-space: nowrap; }
+.resultPct { color: var(--broker-strong); font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .highlightValue {
   color: var(--broker-primary) !important;
 }

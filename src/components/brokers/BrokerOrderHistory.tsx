@@ -1,7 +1,8 @@
 'use client'
 
-import { Activity, AlertTriangle, DollarSign, ListOrdered, LoaderCircle, Percent, RotateCcw } from 'lucide-react'
+import { Activity, AlertTriangle, DollarSign, ListOrdered, LoaderCircle, Percent, RotateCcw, XCircle } from 'lucide-react'
 import type {
+  BrokerOpenPositionSummary,
   BrokerOrderHistoryItem,
   BrokerOrderHistoryResponse,
 } from '@/lib/brokers/order-history-types'
@@ -11,6 +12,11 @@ import styles from './brokers.module.css'
 function usd(value: number) {
   const absolute = Math.abs(value).toFixed(2)
   return `${value < 0 ? '-' : ''}$${absolute} USD`
+}
+
+/** Como `usd`, pero el signo se muestra siempre: en un resultado, "+" es información. */
+function signedUsd(value: number) {
+  return `${value > 0 ? '+' : ''}${usd(value)}`
 }
 
 function quantity(value: number) {
@@ -45,14 +51,25 @@ export function BrokerOrderHistory({
   privacyMode = false,
   onRetry,
   retryingIntentId = null,
+  onClosePosition,
+  closingPositionKey = null,
 }: {
   history: BrokerOrderHistoryResponse
   showUser?: boolean
   privacyMode?: boolean
   onRetry?: (intentId: string) => void
   retryingIntentId?: string | null
+  onClosePosition?: (position: BrokerOpenPositionSummary) => void
+  closingPositionKey?: string | null
 }) {
-  const { orders, openPositions = [], totals, performance, missedOpportunities } = history
+  const {
+    orders,
+    openPositions = [],
+    externalSettlements = [],
+    totals,
+    performance,
+    missedOpportunities,
+  } = history
   const missed = missedOpportunities ?? []
   const missedWithResult = missed.filter((item) => item.missedReturnPct != null)
   const missedNetUsd = missedWithResult.reduce((total, item) => total + (item.missedGrossPnlUsd ?? 0), 0)
@@ -81,6 +98,34 @@ export function BrokerOrderHistory({
                   <strong>{position.direction} · {position.symbol}</strong>
                   <span>Abierta</span>
                 </div>
+                <div className={styles.openPositionPnl}>
+                  <span className={styles.openPositionPnlLabel}>Resultado hasta ahora</span>
+                  {position.unrealizedNetPnlUsd == null ? (
+                    <>
+                      <strong className={styles.openPositionPnlValue}>—</strong>
+                      <small className={styles.openPositionPnlDetail}>
+                        No se pudo leer el precio de mercado de {position.symbol}. La posición sigue abierta y vinculada.
+                      </small>
+                    </>
+                  ) : (
+                    <>
+                      <strong className={`${styles.openPositionPnlValue} ${valueClass(position.unrealizedReturnPct) ?? ''}`}>
+                        <BrokerSensitiveValue hidden={privacyMode} fallback="••••">{pct(position.unrealizedReturnPct)}</BrokerSensitiveValue>
+                      </strong>
+                      <small className={styles.openPositionPnlDetail}>
+                        <BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{signedUsd(position.unrealizedNetPnlUsd)}</BrokerSensitiveValue>
+                        {' neto · '}
+                        <BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{signedUsd(position.unrealizedGrossPnlUsd ?? 0)}</BrokerSensitiveValue>
+                        {' bruto · precio '}
+                        <BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{position.markPrice == null ? '—' : usd(position.markPrice)}</BrokerSensitiveValue>
+                        {position.pricedAt ? ` · ${date(position.pricedAt)}` : ''}
+                      </small>
+                      <small className={styles.openPositionPnlDetail}>
+                        Sin realizar: descuenta la comisión de entrada, no la de salida. Se recalcula con cada refresco del panel.
+                      </small>
+                    </>
+                  )}
+                </div>
                 <div className={styles.openPositionMetrics}>
                   <span>Capital realmente usado <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(position.notionalUsd)}</BrokerSensitiveValue></strong></span>
                   <span>Cantidad <strong>{quantity(position.quantity)}</strong></span>
@@ -89,10 +134,32 @@ export function BrokerOrderHistory({
                 </div>
                 <small>{redactText(privacyMode, position.connectionLabel)} · {position.strategyLabel} · abierta {date(position.openedAt)}</small>
                 <small>Señal vinculada: {position.externalSignalId ?? '—'}</small>
+                {onClosePosition && (
+                  <button
+                    type="button"
+                    className={styles.closePositionButton}
+                    disabled={closingPositionKey != null}
+                    onClick={() => onClosePosition(position)}
+                  >
+                    {closingPositionKey === position.key
+                      ? <LoaderCircle size={14} className={styles.spin} />
+                      : <XCircle size={14} />}
+                    {closingPositionKey === position.key ? 'Cerrando…' : 'Cerrar ahora'}
+                  </button>
+                )}
               </article>
             ))}
           </div>
         </div>
+      )}
+
+      {externalSettlements.length > 0 && (
+        <p className={styles.notice} role="status">
+          {externalSettlements.length} posición(es) se cerraron fuera de la plataforma
+          ({externalSettlements.map((settlement) => `${settlement.direction} ${settlement.symbol}`).join(', ')}).
+          Dejaron de contar como abiertas, y como su salida no pasó por acá, su resultado no
+          entra en las estadísticas de rendimiento.
+        </p>
       )}
 
       {performance.unmatchedCloseCount > 0 && (
@@ -194,12 +261,29 @@ export function BrokerOrderHistory({
       {!orders.length ? <p className={styles.muted}>Todavía no hay órdenes reconciliadas.</p> : (
         <div className={styles.tableWrap}>
           <table className={styles.orderTable}>
-            <thead><tr>{showUser && <th>Usuario</th>}<th>Fecha efectiva</th><th>Conexión</th><th>Operación</th><th>Lotaje</th><th>Precio</th><th>Capital usado</th><th>Comisión</th><th>Neto</th><th>Detalle</th></tr></thead>
+            <thead><tr>{showUser && <th>Usuario</th>}<th>Resultado</th><th>Fecha efectiva</th><th>Conexión</th><th>Operación</th><th>Lotaje</th><th>Precio</th><th>Capital usado</th><th>Comisión</th><th>Detalle</th></tr></thead>
             <tbody>{orders.map((order) => {
               const netPnlUsd = displayedNetPnl(order)
               return (
                 <tr key={order.id}>
                   {showUser && <td>{redactText(privacyMode, order.userEmail ?? order.userId, 'Usuario oculto')}</td>}
+                  <td className={styles.resultCell}>
+                    {order.netReturnPct == null ? (
+                      <>
+                        <strong className={styles.resultPct}>—</strong>
+                        <small>{order.action === 'OPEN' ? 'entrada · sin cerrar' : 'sin apertura emparejada'}</small>
+                      </>
+                    ) : (
+                      <>
+                        <strong className={`${styles.resultPct} ${valueClass(order.netReturnPct) ?? ''}`}>
+                          <BrokerSensitiveValue hidden={privacyMode} fallback="••••">{pct(order.netReturnPct)}</BrokerSensitiveValue>
+                        </strong>
+                        <small className={valueClass(netPnlUsd)}>
+                          <BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{signedUsd(netPnlUsd)}</BrokerSensitiveValue>
+                        </small>
+                      </>
+                    )}
+                  </td>
                   <td>{date(order.lastFillAt ?? order.submittedAt ?? order.createdAt)}</td>
                   <td><strong>{order.connectionLabel}</strong><small>{order.strategyLabel} · {order.environment}</small></td>
                   <td><strong>{order.action === 'OPEN' ? 'Entrada' : 'Salida'} {order.direction}</strong><small>{order.side} · {order.status}</small></td>
@@ -207,10 +291,6 @@ export function BrokerOrderHistory({
                   <td><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{order.averagePrice == null ? '—' : usd(order.averagePrice)}</BrokerSensitiveValue></td>
                   <td><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(order.notionalUsd)}</BrokerSensitiveValue></td>
                   <td><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(order.feesUsd)}</BrokerSensitiveValue></td>
-                  <td className={netPnlUsd < 0 ? styles.negative : netPnlUsd > 0 ? styles.positive : undefined}>
-                    <BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(netPnlUsd)}</BrokerSensitiveValue>
-                    <small>{pct(order.netReturnPct, 4)}</small>
-                  </td>
                   <td>
                     <details className={styles.orderDetails}>
                       <summary>Ver</summary>
@@ -225,6 +305,7 @@ export function BrokerOrderHistory({
                         <span>Reconciliada <strong>{date(order.reconciledAt)}</strong></span>
                         <span>PnL informado por broker <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(order.realizedPnlUsd)}</BrokerSensitiveValue></strong></span>
                         <span>Neto del ciclo <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{order.tradeNetPnlUsd == null ? '—' : usd(order.tradeNetPnlUsd)}</BrokerSensitiveValue></strong></span>
+                        <span>Retorno neto <strong className={valueClass(order.netReturnPct) ?? undefined}><BrokerSensitiveValue hidden={privacyMode} fallback="••••">{pct(order.netReturnPct, 4)}</BrokerSensitiveValue></strong></span>
                         <span>Financiación / ajustes <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(order.fundingUsd + order.adjustmentsUsd)}</BrokerSensitiveValue></strong></span>
                         <span>Order ID GONOVI <strong>{redactShortId(privacyMode, order.clientOrderId)}</strong></span>
                         <span>Order ID broker <strong>{redactShortId(privacyMode, order.brokerOrderId)}</strong></span>
