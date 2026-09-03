@@ -23,21 +23,23 @@ Ningún paso del flujo se dispara solo. Vercel Hobby no permite crons sub-diario
 | Qué | Quién lo dispara | Frecuencia | Llamada |
 | --- | --- | --- | --- |
 | Señal AlgoTrend BTC 1H | GitHub Actions, `.github/workflows/btc-cron.yml` | `2 * * * *` | `GET /api/cron/check` con `x-cron-secret` |
-| Drenaje de recuperación | cron-job.org | cada 1 minuto | `POST /api/cron/broker-jobs` con `x-broker-drain-secret` |
+| Drenaje de recuperación | pg_cron en Supabase, `jobid=1` | `* * * * *` | `POST /api/cron/broker-jobs` con `x-broker-drain-secret` |
 
-El drenaje se agenda en cron-job.org así:
+El drenaje **no** se agenda desde este repo ni desde Vercel: lo dispara `pg_cron` dentro del propio Postgres de Supabase, con `net.http_post` y el secreto leído del Vault. Es el `jobid=1` de `cron.job`, hermano de los `jobid=2` y `jobid=3` que disparan las señales de oro300 y oro15.
 
-- URL: `https://gonovi.app/api/cron/broker-jobs`
-- Método: `POST` (un `GET` devuelve 405)
-- Header: `x-broker-drain-secret: <valor de BROKER_DRAIN_SECRET en Vercel producción>`
-- Intervalo: cada minuto
-- Timeout: 30 s
+Para auditarlo hay que entrar a la base; no alcanza con leer el repo:
 
-La latencia de este job es la que gobierna la corrección de la contabilidad, no un detalle de higiene: los reintentos usan backoff de 5 s·2^intentos hasta 300 s y las reconciliaciones se encolan a 2 s (`src/lib/brokers/worker.ts:49,59`). Como la propiedad de una posición se deriva de `broker_orders.filled_quantity` (`worker.ts:190`), que recién queda correcta después de reconciliar, un drenaje lento deja al motor creyendo que no tiene una posición que sí está viva en el broker.
+```sql
+select jobid, jobname, schedule, active from cron.job order by jobid;
+-- el resultado HTTP real de cada corrida, no sólo si se encoló:
+select status_code, content, created from net._http_response order by created desc limit 10;
+```
+
+`cron.job_run_details` **no** sirve para saber si la llamada funcionó: su `succeeded` sólo dice que `net.http_post` se encoló correctamente.
 
 Solapar invocaciones es seguro: `claim_broker_execution_jobs` reclama con `for update skip locked`, y la ruta corta a los 25 s contra un `maxDuration` de 30 s.
 
-> La migración `20260718050013_enable_broker_drain_scheduler.sql` instala `pg_cron` y `pg_net` para un agendador dentro de Postgres que nunca se llegó a escribir. Con el drenaje en cron-job.org esas dos extensiones quedan sin uso. Se dejan instaladas a propósito: quitarlas no arregla nada y sí puede romper algo que dependa de ellas más adelante.
+> La migración `20260718050013_enable_broker_drain_scheduler.sql` instala `pg_cron` y `pg_net` pero no agenda nada: el `cron.schedule` se corrió a mano contra la base el 2026-08-29 y nunca se versionó. Por eso el agendador es invisible desde el repo, y una lectura que sólo mire `vercel.json` y `supabase/migrations/` concluye —erróneamente— que el drenaje no corre. Si alguna vez hay que reconstruir el proyecto desde cero, estos tres `cron.schedule` no van a estar.
 
 ## Componentes
 
