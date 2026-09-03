@@ -5,6 +5,7 @@ import { notifyOpen, notifyClose } from '@/lib/telegram'
 import { emailOpen, emailClose } from '@/lib/email'
 import { logEvent } from '@/lib/analytics'
 import { latestAtrPercent } from '@/lib/atr'
+import { evaluateOpenTradeAgainstCandle } from '@/lib/trade-management'
 import { sendPushNotification } from '@/lib/push'
 import {
   isLegacyBingxEnabled,
@@ -306,34 +307,16 @@ export async function GET(req: NextRequest) {
     // ── 1. Check if there's an open trade that needs SL/TP management ──
     const existingTrade = await getOpenTrade()
     if (existingTrade) {
-      const o = lastCandle.open
-      const h = lastCandle.high
-      const l = lastCandle.low
-      const price = lastCandle.close
+      const decision = evaluateOpenTradeAgainstCandle({
+        direction: existingTrade.direction,
+        signalTime: existingTrade.signal_time,
+        openPrice: existingTrade.open_price,
+        stopLoss: existingTrade.stop_loss,
+        takeProfit: existingTrade.take_profit,
+      }, lastCandle)
 
-      const trailTriggerPct = 1.0
-      const trailOffsetPct = 0.3
-
-      let stopLoss = existingTrade.stop_loss
-      let takeProfit: number | null = existingTrade.take_profit
-
-      const path: ('high' | 'low')[] = Math.abs(o - h) < Math.abs(o - l) ? ['high', 'low'] : ['low', 'high']
-
-      const hitPath = (leg: 'high' | 'low') => {
-        if (existingTrade.direction === 'LONG') {
-          if (leg === 'low' && l <= stopLoss) return { hit: 'SL' as const, closePrice: stopLoss }
-          if (leg === 'high' && takeProfit !== null && h >= takeProfit) return { hit: 'TP' as const, closePrice: takeProfit }
-          return null
-        }
-        if (leg === 'high' && h >= stopLoss) return { hit: 'SL' as const, closePrice: stopLoss }
-        if (leg === 'low' && takeProfit !== null && l <= takeProfit) return { hit: 'TP' as const, closePrice: takeProfit }
-        return null
-      }
-
-      let closed = false
-      const firstHit = hitPath(path[0])
-      if (firstHit) {
-        const trade = await closeTrade(existingTrade.id, last.time, firstHit.closePrice, firstHit.hit)
+      if (decision.kind === 'CLOSE') {
+        const trade = await closeTrade(existingTrade.id, last.time, decision.closePrice, decision.reason)
         await closeTradeEverywhere(trade, actions)
         await notifyClose(trade)
         await sendPushDirect({
@@ -342,68 +325,16 @@ export async function GET(req: NextRequest) {
           tag: `close-${trade.id}`
         })
         await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
-        closed = true
         existingTradeClosedThisRun = true
-        actions.push(`closed_${firstHit.hit}`)
+        actions.push(`closed_${decision.reason}`)
       } else {
-        const secondHit = hitPath(path[1])
-        if (secondHit) {
-          const trade = await closeTrade(existingTrade.id, last.time, secondHit.closePrice, secondHit.hit)
-          await closeTradeEverywhere(trade, actions)
-          await notifyClose(trade)
-          await sendPushDirect({
-            title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
-            body: `Precio: $${trade.close_price?.toLocaleString('es-MX')} | Resultado: ${trade.pnl_pct?.toFixed(2)}% (${closeReasonLabel(trade.close_reason)})`,
-            tag: `close-${trade.id}`
-          })
-          await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
-          closed = true
-          existingTradeClosedThisRun = true
-          actions.push(`closed_${secondHit.hit}`)
-        } else {
-          // Trailing stop update
-          if (existingTrade.direction === 'LONG') {
-            const gainPct = ((h - existingTrade.open_price) / existingTrade.open_price) * 100
-            if (gainPct >= trailTriggerPct) {
-              const trail = h * (1 - trailOffsetPct / 100)
-              stopLoss = Math.max(existingTrade.open_price, stopLoss, trail)
-              takeProfit = null
-            }
-          } else {
-            const gainPct = ((existingTrade.open_price - l) / existingTrade.open_price) * 100
-            if (gainPct >= trailTriggerPct) {
-              const trail = l * (1 + trailOffsetPct / 100)
-              stopLoss = Math.min(existingTrade.open_price, stopLoss, trail)
-              takeProfit = null
-            }
-          }
-
-          // Close-bar confirmation
-          const closeHit = existingTrade.direction === 'LONG'
-            ? (price <= stopLoss ? 'SL' : (takeProfit !== null && price >= takeProfit ? 'TP' : null))
-            : (price >= stopLoss ? 'SL' : (takeProfit !== null && price <= takeProfit ? 'TP' : null))
-
-          if (closeHit) {
-            const trade = await closeTrade(existingTrade.id, last.time, price, closeHit)
-            await closeTradeEverywhere(trade, actions)
-            await notifyClose(trade)
-            await sendPushDirect({
-              title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
-              body: `Precio: $${trade.close_price?.toLocaleString('es-MX')} | Resultado: ${trade.pnl_pct?.toFixed(2)}% (${closeReasonLabel(trade.close_reason)})`,
-              tag: `close-${trade.id}`
-            })
-            await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
-            closed = true
-            existingTradeClosedThisRun = true
-            actions.push(`closed_${closeHit}`)
-          } else if (stopLoss !== existingTrade.stop_loss || takeProfit !== existingTrade.take_profit) {
-            await updateOpenTradeRisk(existingTrade.id, stopLoss, takeProfit)
-            actions.push('trailing_updated')
-          }
+        if (decision.kind === 'TRAIL') {
+          await updateOpenTradeRisk(existingTrade.id, decision.stopLoss, decision.takeProfit)
+          actions.push('trailing_updated')
+        } else if (decision.kind === 'BEFORE_ENTRY') {
+          // La vela de la señal es la de la entrada: su recorrido ocurrió antes del trade.
+          actions.push(`entry_candle_not_managed_${lastCandle.time}`)
         }
-      }
-
-      if (!closed) {
         actions.push('trade_monitored')
       }
     }
