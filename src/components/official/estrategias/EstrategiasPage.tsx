@@ -9,6 +9,7 @@ import { InfoTooltip } from '../InfoTooltip'
 
 import { createClient } from '@/lib/supabase/client'
 import type { Trade } from '@/lib/db'
+import type { StrategySnapshot, StrategySnapshotEntry } from '@/lib/public-cache'
 
 const TIPS = {
   trades: {
@@ -149,17 +150,10 @@ function groupTradesByMonth(trades: Trade[]) {
     })
 }
 
-interface StrategyData {
-  all: Trade[]
-  open: Trade | null
-}
+type StrategyData = StrategySnapshotEntry
 
 interface EstrategiasPageProps {
-  initialData: {
-    algotrend_trades: StrategyData
-    gold15_trades: StrategyData
-    gold30_trades: StrategyData
-  }
+  initialData: StrategySnapshot
   // Optional navigation chrome; the public page keeps it hidden by default.
   isAdmin?: boolean
 }
@@ -226,6 +220,37 @@ export function EstrategiasPage({ initialData, isAdmin = false }: EstrategiasPag
     tick()
     const id = setInterval(tick, 10_000)
     return () => clearInterval(id)
+  }, [])
+
+  // The server snapshot can be stale (ISR serves the previous copy while it
+  // revalidates) and the realtime channel never fires for anonymous visitors,
+  // so the page asks for the shared snapshot itself: on mount, every 30s and
+  // whenever the tab comes back into view.
+  useEffect(() => {
+    let cancelled = false
+    const fetchSnapshot = () => {
+      fetch('/api/estrategias')
+        .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+        .then((snapshot: StrategySnapshot) => {
+          if (cancelled || !snapshot?.gold30_trades) return
+          setDataBTC(snapshot.algotrend_trades)
+          setDataOro15(snapshot.gold15_trades)
+          setDataOro30(snapshot.gold30_trades)
+        })
+        .catch(() => { /* keep whatever we already have */ })
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchSnapshot()
+    }
+
+    fetchSnapshot()
+    const id = setInterval(fetchSnapshot, 30_000)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [])
 
   useEffect(() => {
