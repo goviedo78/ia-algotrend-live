@@ -153,6 +153,9 @@ export default function Dashboard() {
 
     try {
       const res = await fetch('/api/trades')
+      // A 500 here means the database is unreachable, not that the history is
+      // empty. Keep whatever the panel already shows; the next poll retries.
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const raw = await res.json()
       const data = normalizeTradesResponse(raw)
       setTrades(data.trades)
@@ -160,9 +163,6 @@ export default function Dashboard() {
       setStats(data.stats)
     } catch (err) {
       console.error('[refreshTrades]', err)
-      setTrades([])
-      setOpenTrade(null)
-      setStats(DEFAULT_STATS)
     } finally {
       tradesRefreshInFlightRef.current = false
     }

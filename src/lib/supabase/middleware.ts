@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
+import { AUTH_TIMEOUT_MS, fetchWithTimeout } from '@/lib/supabase/fetch-timeout'
 
 function getSupabaseEnv() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -19,6 +20,7 @@ export async function refreshSession(request: NextRequest): Promise<NextResponse
   if (!env) return response
 
   const supabase = createServerClient(env.url, env.anonKey, {
+    global: { fetch: fetchWithTimeout(AUTH_TIMEOUT_MS) },
     cookies: {
       getAll() {
         return request.cookies.getAll()

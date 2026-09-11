@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 import { revalidateTag } from 'next/cache'
+import { DATA_TIMEOUT_MS, fetchWithTimeout } from '@/lib/supabase/fetch-timeout'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { global: { fetch: fetchWithTimeout(DATA_TIMEOUT_MS) } }
 )
 
 export type TradeStatus    = 'OPEN' | 'CLOSED'
@@ -46,8 +48,12 @@ export async function getSetting(key: string): Promise<string | null> {
 const TABLE = 'algotrend_trades'
 const PUBLIC_TRADES_TAG = 'algotrend-trades'
 
+// 'max' marks the snapshot stale instead of deleting it: the next poll still
+// gets the previous copy while a fresh one is fetched behind it. Deleting the
+// entry left the public routes with nothing to serve when the database died
+// right after a trade was written, so they blocked on it for minutes.
 function revalidatePublicTradeSnapshot() {
-  revalidateTag(PUBLIC_TRADES_TAG, { expire: 0 })
+  revalidateTag(PUBLIC_TRADES_TAG, 'max')
 }
 
 // Returns the inserted trade, or null if a trade for this signal_time already exists.
