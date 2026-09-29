@@ -1,10 +1,10 @@
 import { timingSafeEqual } from 'node:crypto'
-import { NextRequest, NextResponse } from 'next/server'
-import { PROBE_TIMEOUT_MS, runDbWatchdog, supabaseProjectRef } from '@/lib/db-watchdog'
+import { after, NextRequest, NextResponse } from 'next/server'
+import { PROBE_TIMEOUT_MS, runDbWatchdog, supabaseProjectRef, type WatchdogDeps } from '@/lib/db-watchdog'
 import { sendTelegramAlert } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
-// La ventana de confirmación dura 4 min; el resto es margen para el reinicio y el aviso.
+// La ventana de confirmación dura 3 min; el resto es margen para el reinicio y el aviso.
 export const maxDuration = 300
 
 const MANAGEMENT_API = 'https://api.supabase.com/v1/projects'
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
   }
   const management = { Authorization: `Bearer ${accessToken}` }
 
-  const outcome = await runDbWatchdog({
+  const deps: WatchdogDeps = {
     // Una consulta real contra una tabla, no el endpoint raíz: PostgREST puede contestar su
     // esquema en caché con la base colgada.
     probe: async () => {
@@ -75,9 +75,19 @@ export async function GET(request: NextRequest) {
       if (!response.ok) throw new Error(`Management API ${response.status}`)
     },
     alert: sendTelegramAlert,
-  })
+  }
 
-  console.log('[db-watchdog]', outcome)
+  // Caso normal: la base contesta y termina acá, en un segundo.
+  if (await deps.probe()) {
+    return NextResponse.json({ ok: true, status: 'HEALTHY', probes: 1 })
+  }
+
+  // La confirmación dura 3 min y cron-job.org corta la conexión a los 60 s: se sigue después de
+  // responder, para que el corte del cliente no cancele el reinicio.
+  after(async () => {
+    const outcome = await runDbWatchdog(deps)
+    console.log('[db-watchdog]', outcome)
+  })
   // Siempre 200: el resultado va en el cuerpo, y un 5xx haría que cron-job.org apague el job.
-  return NextResponse.json({ ok: true, ...outcome })
+  return NextResponse.json({ ok: true, status: 'CONFIRMING' })
 }

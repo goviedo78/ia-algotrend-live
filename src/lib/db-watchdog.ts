@@ -11,7 +11,7 @@
 
 export const PROBE_TIMEOUT_MS = 10_000
 export const PROBE_INTERVAL_MS = 20_000
-export const CONFIRM_WINDOW_MS = 4 * 60_000
+export const CONFIRM_WINDOW_MS = 3 * 60_000
 
 export type WatchdogOutcome =
   | { status: 'HEALTHY'; probes: number }
@@ -44,7 +44,14 @@ export async function runDbWatchdog(deps: WatchdogDeps): Promise<WatchdogOutcome
 
   // Si ya está reiniciando (o en cualquier estado que no sea el normal), un segundo reinicio
   // sólo lo demoraría.
-  const projectStatus = await deps.projectStatus()
+  let projectStatus: string
+  try {
+    projectStatus = await deps.projectStatus()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    await deps.alert(`🔴 Supabase no responde y no pude consultar su estado para reiniciarla: ${message}. Revisar a mano.`)
+    return { status: 'RESTART_FAILED', probes, projectStatus: 'UNKNOWN', error: message }
+  }
   if (projectStatus !== 'ACTIVE_HEALTHY') {
     return { status: 'ALREADY_RESTARTING', probes, projectStatus }
   }

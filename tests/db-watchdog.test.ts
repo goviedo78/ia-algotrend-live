@@ -55,3 +55,11 @@ test('the project ref comes from the Supabase URL', () => {
   assert.equal(supabaseProjectRef('https://izxtkbdrgpxxtmtssygt.supabase.co'), 'izxtkbdrgpxxtmtssygt')
   assert.equal(supabaseProjectRef('https://example.com'), null)
 })
+
+test('a Management API failure while checking status is reported', async () => {
+  const { deps, calls } = harness([])
+  deps.projectStatus = async () => { throw new Error('Management API 503') }
+  assert.equal((await runDbWatchdog(deps)).status, 'RESTART_FAILED')
+  assert.equal(calls.restart, 0)
+  assert.equal(calls.alerts.length, 1)
+})
