@@ -85,3 +85,45 @@ export function evaluateOpenTradeAgainstCandle(
   }
   return { kind: 'HOLD' }
 }
+
+export type OpenTradeReplay =
+  | { kind: 'NOTHING_NEW' }
+  | { kind: 'CLOSE'; candleTime: number; reason: CloseReason; closePrice: number }
+  | { kind: 'MANAGED'; stopLoss: number; takeProfit: number | null; lastManagedTime: number }
+
+/**
+ * Aplica a una operación abierta TODAS las velas cerradas que todavía no vio, una sola vez
+ * cada una y en orden, igual que TradingView barra por barra.
+ *
+ * `lastManagedTime` es la última vela ya aplicada. Mirar sólo la última vela cerrada fallaba
+ * de dos maneras: el cron la reevaluaba en cada corrida de la hora, y con el trailing ya
+ * movido la misma mecha "tocaba" el stop nuevo (#355, #356, #358 cerraron antes de tiempo);
+ * y las velas de las horas en que el cron no corrió nunca se evaluaban (#363 tocó su stop el
+ * 2026-09-24 09:00 y siguió abierto hasta el 28). Con `null` (operación previa al marcador)
+ * se conserva la regla vieja: sólo la última vela.
+ */
+export function replayOpenTrade(
+  trade: ManagedTrade,
+  lastManagedTime: number | null,
+  closedCandles: Candle[],
+): OpenTradeReplay {
+  const lastCandle = closedCandles[closedCandles.length - 1]
+  if (!lastCandle) return { kind: 'NOTHING_NEW' }
+  const since = Math.max(trade.signalTime, lastManagedTime ?? lastCandle.time - 1)
+  const pending = closedCandles.filter((candle) => candle.time > since)
+  if (pending.length === 0) return { kind: 'NOTHING_NEW' }
+
+  let stopLoss = trade.stopLoss
+  let takeProfit = trade.takeProfit
+  for (const candle of pending) {
+    const decision = evaluateOpenTradeAgainstCandle({ ...trade, stopLoss, takeProfit }, candle)
+    if (decision.kind === 'CLOSE') {
+      return { kind: 'CLOSE', candleTime: candle.time, reason: decision.reason, closePrice: decision.closePrice }
+    }
+    if (decision.kind === 'TRAIL') {
+      stopLoss = decision.stopLoss
+      takeProfit = decision.takeProfit
+    }
+  }
+  return { kind: 'MANAGED', stopLoss, takeProfit, lastManagedTime: pending[pending.length - 1].time }
+}

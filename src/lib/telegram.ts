@@ -17,6 +17,11 @@ async function send(text: string) {
   }).catch(() => null)
 }
 
+// Aviso operativo (caídas de infraestructura), fuera del formato de señales.
+export async function sendTelegramAlert(text: string) {
+  await send(text)
+}
+
 export async function notifyOpen(trade: Trade) {
   const dir   = trade.direction === 'LONG' ? '🟢 LARGO' : '🔴 CORTO'
   const emoji = trade.direction === 'LONG' ? '📈' : '📉'

@@ -5,7 +5,7 @@ import { notifyOpen, notifyClose } from '@/lib/telegram'
 import { emailOpen, emailClose } from '@/lib/email'
 import { logEvent } from '@/lib/analytics'
 import { latestAtrPercent } from '@/lib/atr'
-import { evaluateOpenTradeAgainstCandle } from '@/lib/trade-management'
+import { replayOpenTrade } from '@/lib/trade-management'
 import { sendPushNotification } from '@/lib/push'
 import {
   isLegacyBingxEnabled,
@@ -31,6 +31,8 @@ type ActionableSignal = {
   result: AlgoTrendResult
   candle: Candle
   source: 'latest' | 'catch_up'
+  // Señal de un hueco cuyo trade ya habría muerto: cierra el trade vivo pero no abre otro.
+  closeOnly?: boolean
 }
 
 function directionLabel(direction: TradeDirection) {
@@ -307,17 +309,44 @@ export async function GET(req: NextRequest) {
 
     // ── 1. Check if there's an open trade that needs SL/TP management ──
     const existingTrade = await getOpenTrade()
+    // Señal aparecida en una vela que el cron salteó (anterior a la última, que la maneja el
+    // paso 2). En TradingView esa señal cierra la operación en su vela y abre la nueva.
+    let gapSignal: ActionableSignal | null = null
     if (existingTrade) {
-      const decision = evaluateOpenTradeAgainstCandle({
+      const managedSince = Math.max(existingTrade.signal_time, existingTrade.last_managed_time ?? last.time)
+      const gapIndex = results.findIndex((result) => (
+        result.time > managedSince && result.time < last.time && signalFromResult(result) !== null
+      ))
+      const gapResult = gapIndex >= 0 ? results[gapIndex] : null
+      // Hasta la vela de esa señal inclusive: el SL/TP de la vela se mira antes que la señal,
+      // igual que en una corrida normal.
+      const replayCandles = gapResult ? candles.filter((candle) => candle.time <= gapResult.time) : candles
+      const decision = replayOpenTrade({
         direction: existingTrade.direction,
         signalTime: existingTrade.signal_time,
         openPrice: existingTrade.open_price,
         stopLoss: existingTrade.stop_loss,
         takeProfit: existingTrade.take_profit,
-      }, lastCandle)
+      }, existingTrade.last_managed_time ?? null, replayCandles)
 
-      if (decision.kind === 'CLOSE') {
-        const trade = await closeTrade(existingTrade.id, last.time, decision.closePrice, decision.reason)
+      // La señal del hueco se procesa en el paso 2, por el mismo camino que una señal normal
+      // (cierre del trade vivo por SIGNAL, filtro ATR, apertura). Si la operación nueva ya habría
+      // tocado su SL/TP dentro del hueco, sólo se cierra la vieja: no se abre dinero muerto.
+      if (gapResult) {
+        const gapDirection = signalFromResult(gapResult)!
+        const stillOpen = isSignalStillOpen(gapDirection, gapResult, candles.slice(gapIndex + 1))
+        gapSignal = { signal: gapDirection, result: gapResult, candle: candles[gapIndex], source: 'catch_up', closeOnly: !stillOpen }
+        actions.push(stillOpen
+          ? `catch_up_${gapDirection}_${gapResult.time}`
+          : `missed_${gapDirection}_already_closed_${gapResult.time}`)
+      }
+
+      const closeAt = decision.kind === 'CLOSE'
+        ? { time: decision.candleTime, price: decision.closePrice, reason: decision.reason }
+        : null
+
+      if (closeAt) {
+        const trade = await closeTrade(existingTrade.id, closeAt.time, closeAt.price, closeAt.reason)
         await closeTradeEverywhere(trade, actions)
         await notifyClose(trade)
         await sendPushDirect({
@@ -327,21 +356,26 @@ export async function GET(req: NextRequest) {
         })
         await emailClose(trade.direction, trade.open_price, trade.close_price ?? 0, trade.pnl_pct, trade.close_reason ?? 'SL')
         existingTradeClosedThisRun = true
-        actions.push(`closed_${decision.reason}`)
+        actions.push(`closed_${closeAt.reason}`)
       } else {
-        if (decision.kind === 'TRAIL') {
-          await updateOpenTradeRisk(existingTrade.id, decision.stopLoss, decision.takeProfit)
-          actions.push('trailing_updated')
-        } else if (decision.kind === 'BEFORE_ENTRY') {
-          // La vela de la señal es la de la entrada: su recorrido ocurrió antes del trade.
-          actions.push(`entry_candle_not_managed_${lastCandle.time}`)
+        if (decision.kind === 'MANAGED') {
+          await updateOpenTradeRisk(existingTrade.id, decision.stopLoss, decision.takeProfit, decision.lastManagedTime)
+          if (decision.stopLoss !== existingTrade.stop_loss || decision.takeProfit !== existingTrade.take_profit) {
+            actions.push('trailing_updated')
+          }
+          actions.push(`managed_until_${decision.lastManagedTime}`)
+        } else {
+          // Ninguna vela cerrada nueva desde la última corrida (o sólo la de entrada).
+          actions.push('no_new_candle')
         }
         actions.push('trade_monitored')
       }
     }
 
     // ── 2. Open new trade if signal detected ──
-    const actionableSignal = await findActionableSignal(results, candles, last, lastCandle, existingTrade, actions)
+    // La señal del hueco va primero: es anterior. Si además hay una en la última vela, la
+    // próxima corrida la ve como señal nueva sobre el trade que abrió la del hueco.
+    const actionableSignal = gapSignal ?? await findActionableSignal(results, candles, last, lastCandle, existingTrade, actions)
     if (actionableSignal) {
       const { signal, result: signalResult } = actionableSignal
       const ATR_PERIOD = 14
@@ -382,7 +416,7 @@ export async function GET(req: NextRequest) {
           existingTradeClosedThisRun = true
         }
 
-        const trade = await openTrade(
+        const trade = actionableSignal.closeOnly ? null : await openTrade(
           signal,
           signalResult.time,
           signalResult.time,

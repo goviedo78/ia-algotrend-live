@@ -27,6 +27,8 @@ export interface Trade {
   pnl_pct: number | null
   atr_pct: number | null
   status: TradeStatus
+  // Última vela cerrada ya aplicada a la operación abierta; null en operaciones previas al marcador.
+  last_managed_time?: number | null
 }
 
 // Settings are stored as the LATEST event of type 'setting_change' for each key
@@ -79,6 +81,8 @@ export async function openTrade(
       take_profit: takeProfit,
       atr_pct: atrPct,
       status: 'OPEN',
+      // La vela de la señal es la de la entrada: la primera a gestionar es la siguiente.
+      last_managed_time: signalTime,
     })
     .select()
     .single()
@@ -109,11 +113,12 @@ export async function updateOpenTradeRisk(
   id: number,
   stopLoss: number,
   takeProfit: number | null,
+  lastManagedTime: number,
   tableName: string = TABLE
 ): Promise<Trade> {
   const { data, error } = await supabase
     .from(tableName)
-    .update({ stop_loss: stopLoss, take_profit: takeProfit })
+    .update({ stop_loss: stopLoss, take_profit: takeProfit, last_managed_time: lastManagedTime })
     .eq('id', id)
     .eq('status', 'OPEN')
     .select()
