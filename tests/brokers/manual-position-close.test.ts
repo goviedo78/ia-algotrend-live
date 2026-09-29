@@ -123,15 +123,18 @@ test('the settled entry never contaminates the cost basis of the next operation'
   assert.equal(stillOpen[0].averageEntryPrice, 4500)
 })
 
-test('only a close the holder asked for can settle a position the broker no longer has', async () => {
+test('any close settles an owned position the broker no longer has', async () => {
   const [worker, migration, route] = await Promise.all([
     readFile(path.join(root, 'src/lib/brokers/worker.ts'), 'utf8'),
     readFile(path.join(root, 'supabase/migrations/20260903180000_manual_position_close_and_trade_pairing.sql'), 'utf8'),
     readFile(path.join(root, 'src/app/api/broker-connections/[id]/positions/close/route.ts'), 'utf8'),
   ])
 
-  // Un cierre automático que no encuentra la posición tiene que seguir fallando ruidoso.
-  assert.match(worker, /intent\.action === 'CLOSE' && intent\.origin === 'MANUAL'/)
+  // Manual o de la estrategia: si la posición propia ya no está en el broker, se asienta.
+  // Sin tenencia propia `settleExternallyClosedPosition` devuelve false y el cierre sigue
+  // fallando ruidoso con RISK_POSITION_NOT_FOUND.
+  assert.match(worker, /if \(intent\.action === 'CLOSE'\) \{\n\s*const settled = await settleExternallyClosedPosition/)
+  assert.match(worker, /if \(!owned \|\| owned\.quantity <= 0\) return false/)
   // El asiento externo nunca inventa una orden ni un resultado.
   assert.match(worker, /status: 'SETTLED_EXTERNALLY'/)
   assert.doesNotMatch(worker, /SETTLED_EXTERNALLY[\s\S]{0,400}?persistOrder/)

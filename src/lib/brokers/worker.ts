@@ -377,13 +377,15 @@ async function executeOrder(job: Job) {
     }
   }
 
-  // Un cierre que el titular pidió a mano sobre una posición que el broker ya no tiene: la
-  // cerró él mismo, la liquidó el broker o la movió otra herramienta. Nuestros libros son los
-  // que quedaron desfasados, así que se asienta el cierre externo en vez de dejar la posición
-  // colgada para siempre. No se inventa precio de salida ni resultado: el trade sale de las
-  // estadísticas de rendimiento, no entra con una cifra falsa. Un cierre automático que no
-  // encuentra la posición sigue fallando ruidoso: ahí nadie autorizó nada.
-  if (intent.action === 'CLOSE' && intent.origin === 'MANUAL') {
+  // Un cierre (manual o de la estrategia) sobre una posición PROPIA que el broker ya no tiene:
+  // el titular la cerró en el exchange sin pasar por la plataforma, la liquidó el broker o la
+  // movió otra herramienta. Nuestros libros son los que quedaron desfasados, así que se asienta
+  // el cierre externo en vez de dejar la apertura huérfana y la tenencia fantasma para siempre.
+  // No se inventa precio de salida ni resultado: el trade sale de las estadísticas de
+  // rendimiento, no entra con una cifra falsa. Si la conexión no tenía nada propio (la apertura
+  // nunca se ejecutó), `settleExternallyClosedPosition` no asienta y el cierre sigue fallando
+  // ruidoso con RISK_POSITION_NOT_FOUND.
+  if (intent.action === 'CLOSE') {
     const settled = await settleExternallyClosedPosition({
       intent,
       connectionId: connection.id,

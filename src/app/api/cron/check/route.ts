@@ -15,6 +15,7 @@ import {
 } from '@/lib/bingx'
 import { dispatchBrokerSignal } from '@/lib/brokers/signals'
 import { safeProcessBrokerJobsInApp } from '@/lib/brokers/worker'
+import { isTransientUpstreamError } from '@/lib/cron-errors'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -430,6 +431,12 @@ export async function GET(req: NextRequest) {
     })
   } catch (err) {
     console.error('[cron/check]', err)
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    // Un corte transitorio responde 200 con ok:false para que el scheduler no se apague;
+    // el fallo sigue visible en el cuerpo. Cualquier otro error sigue dando 500.
+    const transient = isTransientUpstreamError(err)
+    return NextResponse.json(
+      { ok: false, transient, error: String(err) },
+      { status: transient ? 200 : 500 },
+    )
   }
 }
