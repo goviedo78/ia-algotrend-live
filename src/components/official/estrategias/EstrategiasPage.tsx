@@ -62,6 +62,11 @@ const TIPS = {
     body: 'Precio al que la operación se cierra automáticamente si el mercado va a tu favor, para asegurar la ganancia. Define el objetivo de beneficio del trade.',
     example: 'Ej: LONG entrada $67k, Objetivo $70k → si BTC sube a $70k, se cierra ganando $3k (~4.5%). El ratio R:R es 3:1 (ganás 3x lo que arriesgás).',
   },
+  ultimoAnio: {
+    title: 'Rendimiento del último año',
+    body: 'Crecimiento compuesto de las operaciones cerradas en los últimos 12 meses, contados hasta hoy. La ventana avanza un día cada día: entra el día nuevo y sale el más viejo, así el número refleja siempre el último año real.',
+    example: 'Ej: hoy 1 oct 2026 → cuenta lo cerrado entre el 1 oct 2025 y el 1 oct 2026. Mañana la ventana pasa a 2 oct 2025 – 2 oct 2026.',
+  },
   longsShorts: {
     title: 'Longs vs Shorts',
     body: 'Cuántos trades del mes fueron al alza (LONG: comprás esperando que suba) vs a la baja (SHORT: vendés esperando que baje). El balance L/S indica si la estrategia favoreció una dirección.',
@@ -104,6 +109,27 @@ function compoundPct(trades: Trade[]) {
   const closed = trades.filter((t) => t.status === 'CLOSED' && t.pnl_pct !== null)
   if (closed.length === 0) return 0
   return (closed.reduce((acc, t) => acc * (1 + (t.pnl_pct ?? 0) / 100), 1) - 1) * 100
+}
+
+const shortDate = new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+
+// Rolling 12-month window ending now. A trade belongs to the window by the
+// moment its result was realized (close_time), not when it was opened.
+function lastYearStats(trades: Trade[], now: number) {
+  const end = new Date(now)
+  const start = new Date(now)
+  start.setFullYear(start.getFullYear() - 1)
+  const startSec = start.getTime() / 1000
+  const closed = trades.filter(
+    (t) => t.status === 'CLOSED' && t.pnl_pct !== null && (t.close_time ?? t.open_time) >= startSec,
+  )
+  const wins = closed.filter((t) => (t.pnl_pct ?? 0) > 0).length
+  return {
+    range: `${shortDate.format(start)} – ${shortDate.format(end)}`.replace(/\./g, ''),
+    netPct: compoundPct(closed),
+    closed: closed.length,
+    winRate: closed.length > 0 ? (wins / closed.length) * 100 : 0,
+  }
 }
 
 function groupTradesByMonth(trades: Trade[]) {
@@ -292,15 +318,6 @@ export function EstrategiasPage({ initialData, isAdmin = false }: EstrategiasPag
       data: dataBTC
     },
     {
-      name: 'Oro 15M',
-      type: 'Scalping',
-      pair: 'XAU/USD · 15M',
-      currentPrice: goldPrice,
-      priceSource: goldSource,
-      priceDigits: 3,
-      data: dataOro15
-    },
-    {
       name: 'Oro 30M',
       type: 'Swing Intradía',
       pair: 'XAU/USD · 30M',
@@ -308,6 +325,16 @@ export function EstrategiasPage({ initialData, isAdmin = false }: EstrategiasPag
       priceSource: goldSource,
       priceDigits: 3,
       data: dataOro30
+    },
+    {
+      name: 'Oro 15M',
+      type: 'Scalping',
+      pair: 'XAU/USD · 15M',
+      currentPrice: goldPrice,
+      priceSource: goldSource,
+      priceDigits: 3,
+      data: dataOro15,
+      paused: true,
     }
   ]
 
@@ -392,17 +419,48 @@ export function EstrategiasPage({ initialData, isAdmin = false }: EstrategiasPag
               globalPnl = compoundPct(closedTrades)
               const winRate = totalClosed > 0 ? ((winCount / totalClosed) * 100).toFixed(1) : '0.0'
               const currentMonth = months.length > 0 ? months[0] : null
+              // now is 0 until mount, so the server render never bakes in a stale date.
+              const lastYear = now > 0 ? lastYearStats(strategy.data.all, now) : null
+              const paused = 'paused' in strategy && strategy.paused
               
               return (
                 <article key={strategy.name} className={styles.strategyPanel}>
                   <header className={styles.panelHeader}>
                     <div className={styles.panelTitleGroup}>
-                      <span className={styles.badge}>{strategy.type}</span>
+                      <span className={styles.badge}>
+                        {strategy.type}
+                        {paused && <span className={styles.pausedBadge}>En pausa</span>}
+                      </span>
                       <h2 className={styles.panelTitle}>{strategy.name}</h2>
                       <span className={styles.marketPair}>{strategy.pair}</span>
                     </div>
                     
                     <div className={styles.headerStatsRow}>
+                      <div className={`${styles.statsBlock} ${styles.statsBlockHighlight}`}>
+                        <div className={styles.statsBlockTitle}>
+                          Último año{lastYear ? ` (${lastYear.range})` : ''}
+                        </div>
+                        <div className={styles.statsBlockData}>
+                          <div className={styles.globalStatItem}>
+                            <span className={styles.globalStatLabel}>
+                              Neto 12M
+                              <InfoTooltip {...TIPS.ultimoAnio} align="left" />
+                            </span>
+                            <span className={`${styles.globalStatValue} ${(lastYear?.netPct ?? 0) >= 0 ? styles.tdPnlPositive : styles.tdPnlNegative}`}>
+                              {lastYear ? formatPct(lastYear.netPct) : '—'}
+                            </span>
+                          </div>
+                          <div className={styles.globalStatItem}>
+                            <span className={styles.globalStatLabel}>Cerradas</span>
+                            <span className={styles.globalStatValue}>{lastYear ? lastYear.closed : '—'}</span>
+                          </div>
+                          <div className={styles.globalStatItem}>
+                            <span className={styles.globalStatLabel}>Win Rate</span>
+                            <span className={styles.globalStatValue}>{lastYear ? `${lastYear.winRate.toFixed(1)}%` : '—'}</span>
+                          </div>
+                        </div>
+                      </div>
+
                       {currentMonth && (
                         <div className={styles.statsBlock}>
                           <div className={styles.statsBlockTitle}>Mes en Curso ({currentMonth.label})</div>
@@ -519,6 +577,21 @@ export function EstrategiasPage({ initialData, isAdmin = false }: EstrategiasPag
                             </span>
                             <strong>{formatPrice(openT.take_profit, strategy.priceDigits)}</strong>
                           </div>
+                        </div>
+                      </div>
+                    ) : paused ? (
+                      <div className={`${styles.noTradeCard} ${styles.noTradeCardPaused}`}>
+                        <div className={styles.noTradeIcon}>
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="6" y="4" width="4" height="16" rx="1" />
+                            <rect x="14" y="4" width="4" height="16" rx="1" />
+                          </svg>
+                        </div>
+                        <div className={styles.noTradeText}>
+                          <span className={`${styles.noTradeTitle} ${styles.noTradeTitlePaused}`}>STANDBY MOMENTÁNEO</span>
+                          <span className={styles.noTradeSubtitle}>
+                            Esta estrategia está en pausa y no está abriendo operaciones por ahora. Conserva sus <strong>{strategy.data.all.length}</strong> operaciones históricas como referencia.
+                          </span>
                         </div>
                       </div>
                     ) : (
