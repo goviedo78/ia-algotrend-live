@@ -438,7 +438,8 @@ export function EstrategiasPage({ initialData, isAdmin = false }: EstrategiasPag
                     <div className={styles.headerStatsRow}>
                       <div className={`${styles.statsBlock} ${styles.statsBlockHighlight}`}>
                         <div className={styles.statsBlockTitle}>
-                          Último año{lastYear ? ` (${lastYear.range})` : ''}
+                          Último año
+                          {lastYear && <span className={styles.statsBlockRange}>{lastYear.range}</span>}
                         </div>
                         <div className={styles.statsBlockData}>
                           <div className={styles.globalStatItem}>
@@ -492,7 +493,7 @@ export function EstrategiasPage({ initialData, isAdmin = false }: EstrategiasPag
                         </div>
                       )}
                       
-                      <div className={styles.statsBlock}>
+                      <div className={`${styles.statsBlock} ${styles.statsBlockWide}`}>
                         <div className={styles.statsBlockTitle}>Histórico Global</div>
                         <div className={styles.statsBlockData}>
                           <div className={styles.globalStatItem}>

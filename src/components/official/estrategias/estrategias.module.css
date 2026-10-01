@@ -77,9 +77,9 @@
 
 @media (min-width: 768px) {
   .panelHeader {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-end;
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    align-items: end;
   }
 }
 
@@ -125,9 +125,13 @@
 }
 
 .headerStatsRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.statsBlockWide {
+  grid-column: 1 / -1;
 }
 
 .statsBlock {
@@ -157,8 +161,17 @@
   padding-bottom: 0.5rem;
 }
 
+.statsBlockRange {
+  margin-left: 0.5rem;
+  color: rgba(229, 212, 182, 0.5);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
 .statsBlockData {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.5rem;
 }
 
@@ -692,6 +705,10 @@
     padding-inline: 1rem;
   }
 
+  .headerStatsRow {
+    grid-template-columns: 1fr;
+  }
+
   .headerStatsRow,
   .statsBlock,
   .statsBlockData {
@@ -717,6 +734,11 @@
 
   .statsBlockData {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .statsBlockRange {
+    display: block;
+    margin: 0.3rem 0 0;
   }
 
   .noTradeCard,
