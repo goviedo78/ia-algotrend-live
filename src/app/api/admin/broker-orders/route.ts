@@ -21,7 +21,6 @@ export async function GET(request: NextRequest) {
       connectionId: connectionId ?? undefined,
       userId: userId ?? undefined,
       includeUserEmails: true,
-      limit: 200,
     })
     return NextResponse.json(history, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {

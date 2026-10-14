@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { readAllHistoryRows, readHistoryByIds } from './history-pagination'
+
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizeSymbol, strategyTradeKey } from './domain'
 import { brokerStrategy } from './strategies'
@@ -191,31 +193,29 @@ export async function loadMissedOpportunities(filters: {
   limit?: number
 }): Promise<BrokerMissedOpportunity[]> {
   const admin = createAdminClient()
-  const limit = Math.min(100, Math.max(1, filters.limit ?? 40))
 
   let intentsQuery = admin
     .from('broker_order_intents')
     .select('id, connection_id, signal_id, action, direction, symbol, rejection_code, created_at')
     .eq('status', 'RISK_REJECTED')
-    .order('created_at', { ascending: false })
-    .limit(limit)
+    .order('created_at', { ascending: false }).order('id', { ascending: false })
   if (filters.userId) intentsQuery = intentsQuery.eq('user_id', filters.userId)
   if (filters.connectionId) intentsQuery = intentsQuery.eq('connection_id', filters.connectionId)
 
-  const { data: intents, error: intentsError } = await intentsQuery
-  if (intentsError) throw intentsError
+  const allIntents = await readAllHistoryRows(intentsQuery)
+  const intents = filters.limit ? allIntents.slice(0, filters.limit) : allIntents
   if (!intents?.length) return []
 
   const signalIds = [...new Set(intents.map((intent) => intent.signal_id))]
   const connectionIds = [...new Set(intents.map((intent) => intent.connection_id))]
   const [signalsResult, connectionsResult, policiesResult] = await Promise.all([
-    admin.from('broker_signals')
+    readHistoryByIds(signalIds, ids => admin.from('broker_signals')
       .select('id, external_signal_id, strategy_code, symbol, action, direction, signal_time, reference_price')
-      .in('id', signalIds),
-    admin.from('broker_connections').select('id, label, status').in('id', connectionIds),
-    admin.from('broker_risk_policies')
+      .in('id', ids).order('id')),
+    readHistoryByIds(connectionIds, ids => admin.from('broker_connections').select('id, label, status').in('id', ids).order('id')),
+    readHistoryByIds(connectionIds, ids => admin.from('broker_risk_policies')
       .select('connection_id, fixed_notional_usd, suggested_notional_per_order_usd')
-      .in('connection_id', connectionIds),
+      .in('connection_id', ids).order('connection_id')),
   ])
   const firstError = signalsResult.error || connectionsResult.error || policiesResult.error
   if (firstError) throw firstError
@@ -230,14 +230,13 @@ export async function loadMissedOpportunities(filters: {
     .filter((time) => Number.isFinite(time))
     .sort((a, b) => a - b)[0]
   const strategyCodes = [...new Set((signalsResult.data ?? []).map((signal) => signal.strategy_code))]
-  const laterSignals = oldest && strategyCodes.length
-    ? await admin.from('broker_signals')
+  const laterSignals = oldest != null && strategyCodes.length
+    ? { data: await readAllHistoryRows(admin.from('broker_signals')
         .select('id, external_signal_id, strategy_code, symbol, action, direction, signal_time, reference_price')
         .eq('action', 'CLOSE')
         .in('strategy_code', strategyCodes)
         .gte('signal_time', new Date(oldest).toISOString())
-        .order('signal_time', { ascending: true })
-        .limit(1_000)
+        .order('signal_time', { ascending: true }).order('id')), error: null }
     : { data: [], error: null }
   if (laterSignals.error) throw laterSignals.error
 

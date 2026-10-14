@@ -377,3 +377,12 @@
   .orderDetailGrid { grid-template-columns: 1fr; width: 78vw; }
   .fillList { width: 78vw; }
 }
+
+.historyFilters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 16px 0; }
+.historyFilters label { display: grid; gap: 6px; min-width: 150px; max-width: 100%; color: var(--broker-label); font-size: 12px; font-weight: 600; }
+.historyFilters select, .historyFilters input { width: 100%; min-height: 42px; max-width: 100%; padding: 8px 12px; border: 1px solid var(--broker-border-strong); border-radius: 6px; color: var(--broker-text); background: var(--broker-input); font: inherit; }
+.historyFilters select:focus-visible, .historyFilters input:focus-visible, .historyChart:focus-visible { outline: 2px solid var(--broker-focus); outline-offset: 2px; }
+.historyChart { overflow-x: auto; margin: 18px 0; }
+.chartGrid { stroke: var(--broker-border); stroke-width: 1; }
+.chartLabel { fill: var(--broker-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+@media (max-width: 600px) { .historyFilters label { width: 100%; min-width: 0; } }

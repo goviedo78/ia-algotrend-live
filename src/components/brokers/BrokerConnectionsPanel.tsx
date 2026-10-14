@@ -485,6 +485,7 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
             </section>
             <BrokerOrderHistory
               history={orderHistory}
+              connections={connections}
               privacyMode={privacyMode}
               onRetry={(intentId) => void retryMissedOpen(intentId)}
               retryingIntentId={retryingIntentId}

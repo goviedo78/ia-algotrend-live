@@ -28,9 +28,10 @@ function positive(value: number) {
   return Math.max(0, finite(value))
 }
 
-function effectiveTime(order: BrokerOrderHistoryItem) {
+// Reconciliation is bookkeeping, not execution: a delayed sync must never
+// move a trade to another reporting day. Submission is the explicit fallback.
+export function effectiveTime(order: BrokerOrderHistoryItem) {
   return order.lastFillAt
-    ?? order.reconciledAt
     ?? order.submittedAt
     ?? order.createdAt
 }

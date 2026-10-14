@@ -1,6 +1,6 @@
 # Runbook de conexiones a brokers
 
-Estado de referencia: 2026-07-18. La ejecución vive dentro del backend de `gonovi.app`; no requiere VPS, worker externo ni webhooks para AlgoTrend BTC 1H. Las cuentas reales sólo operan después de la aprobación administrativa y de habilitar los interruptores globales.
+Estado de referencia: 2026-10-14. La ejecución vive dentro del backend de `gonovi.app`; no requiere VPS, worker externo ni webhooks para AlgoTrend BTC 1H. Las cuentas reales sólo operan después de la aprobación administrativa y de habilitar los interruptores globales.
 
 ## Flujo operativo
 
@@ -18,16 +18,17 @@ El cron no se llama a sí mismo por HTTP. Tampoco depende de TradingView para tr
 
 ## Agendado
 
-Ningún paso del flujo se dispara solo. Vercel Hobby no permite crons sub-diarios, así que los dos agendadores viven fuera de la plataforma y cada uno se autentica con su propio secreto de header:
+Ningún paso del flujo se dispara solo. Vercel Hobby no permite crons sub-diarios, así que los agendadores viven fuera de la plataforma y cada uno se autentica con su propio secreto de header:
 
 | Qué | Quién lo dispara | Frecuencia | Llamada |
 | --- | --- | --- | --- |
-| Señal AlgoTrend BTC 1H | GitHub Actions, `.github/workflows/btc-cron.yml` | `2 * * * *` | `GET /api/cron/check` con `x-cron-secret` |
+| Señal AlgoTrend BTC 1H (principal) | cron-job.org, job `7501566` | minutos UTC `2,7,17,32,47` de cada hora | `GET https://gonovi.app/api/cron/check` con `Authorization: Bearer` |
+| Señal AlgoTrend BTC 1H (respaldo) | GitHub Actions, `.github/workflows/btc-cron.yml` | `2 * * * *`, con retrasos externos posibles | `GET /api/cron/check` con `x-cron-secret` |
 | Drenaje de recuperación | pg_cron en Supabase, `jobid=1` | `* * * * *` | `POST /api/cron/broker-jobs` con `x-broker-drain-secret` |
 
 El drenaje **no** se agenda desde este repo ni desde Vercel: lo dispara `pg_cron` dentro del propio Postgres de Supabase, con `net.http_post` y el secreto leído del Vault. Es el `jobid=1` de `cron.job`, hermano de los `jobid=2` y `jobid=3` que disparan las señales de oro300 y oro15.
 
-Para auditarlo hay que entrar a la base; no alcanza con leer el repo:
+Para auditar el drenaje hay que entrar a la base; no alcanza con leer el repo:
 
 ```sql
 select jobid, jobname, schedule, active from cron.job order by jobid;
@@ -206,3 +207,31 @@ npm audit --omit=dev
 ```
 
 El piloto comienza en Preview y Demo. Publicar código no habilita operaciones: los dos interruptores server-side y la aprobación por conexión son controles independientes.
+
+## Filtros de historial y evolución (2026-10-14)
+
+El panel del titular y el administrativo comparten la selección por ID de conexión. General incluye todas las conexiones autorizadas; elegir una aísla órdenes, posiciones actuales, cierres externos, rechazos, volumen y rendimiento. La lista incluye las conexiones actuales incluso si todavía no tienen órdenes.
+
+El cargador pagina toda la historia y también fills, ledger, señales y asientos externos, con orden estable y filtros del titular aplicados antes de leer órdenes. No se presenta una ventana de 100 órdenes como toda la historia. El botón «Mostrar más» sólo limita filas visibles, nunca métricas o gráfico.
+
+Los ciclos se emparejan con toda su historia antes de filtrar fechas. Un cierre de una posición abierta más de 50 horas antes conserva el notional y la proporción de comisiones de entrada. El resultado y su retorno ponderado (neto dividido por notional de entrada cerrado) pertenecen al periodo de cierre; no son un retorno sobre todo el saldo de la cuenta. Los cierres parciales reparten coste sin duplicarlo. Los asientos externos siguen eliminando la base anterior y no inventan resultados.
+
+Las fechas del rango son inclusivas en la zona horaria del navegador. La fecha efectiva usa el último fill, o envío y creación como respaldo; reconciliar tarde nunca desplaza la operación de día. Últimos 7/30 días incluyen el día actual. El volumen suma notional de órdenes de entrada y salida cuya fecha efectiva cae dentro del rango. Las posiciones abiertas son actuales, se aíslan por conexión y no se reconstruyen como una falsa fotografía de un periodo pasado.
+
+El gráfico agrupa por día, semana (lunes) o mes, incluye intervalos sin actividad y ofrece resultado neto, porcentaje ponderado, volumen o cantidad de cierres completos, más una tabla accesible. El modo privacidad oculta el gráfico. Los cierres sin apertura conocida no generan porcentajes inventados y mantienen su aviso.
+
+Validación: `npm run test:brokers`, `npm run typecheck`, lint de archivos afectados y build. Las pruebas `history-filters.test.ts` cubren una operación de 74 horas, zona horaria, límites inclusivos, reconciliación tardía, cierres parciales y asientos externos. `history-pagination.test.ts` recorre el cargador real con 1.204 órdenes y un límite simulado de servidor de 211 filas: el cargador anterior devolvía 100 órdenes; el nuevo conserva los 602 ciclos. La validación visual utiliza datos de prueba en escritorio y móvil. También se verificó en lectura la base conectada: 76 órdenes, 2 conexiones y 37 ciclos cerrados; la suma de las selecciones aisladas coincide con el total general. La entrega a producción requiere el protocolo de despliegue vigente.
+
+
+## Disparador BTC reproducible (2026-10-14)
+
+GitHub es un respaldo, no el reloj principal: sus huecos de varias horas no describen la frecuencia real del bot. El job existente de cron-job.org estaba activo cada 15 minutos y apuntaba a `algotrend.gonovi.app`. Se corrigió al endpoint canónico de `gonovi.app`, con chequeos a los minutos UTC 2, 17, 32 y 47, más un segundo chequeo al minuto 7 después de la primera vela cerrada. Se conservan el mismo job, sus ajustes ajenos y la autenticación; no se crea otro agendador. El timeout es de 60 s y se guardan las respuestas para auditar tanto HTTP como `ok` y la hora de vela procesada. Las notificaciones de correo del servicio conservan su configuración anterior.
+
+La configuración está versionada en `scripts/configure-btc-cron.mjs`. El modo de lectura falla si el job está deshabilitado, apunta a otro endpoint, tiene otra frecuencia, perdió la autenticación o dejó de guardar respuestas. `--apply` sólo cambia el job BTC conocido, comprueba el estado guardado y es idempotente. Necesita `CRONJOB_API_KEY` y el `CRON_SECRET` vigente en producción; no imprime claves ni headers privados. Ejemplo local con los env existentes:
+
+```bash
+node --env-file=.env.local --env-file=.env.real.prod scripts/configure-btc-cron.mjs --check
+node --env-file=.env.local --env-file=.env.real.prod scripts/configure-btc-cron.mjs --apply
+```
+
+Al auditar, revisar también `/jobs/7501566/history` y el detalle de la última respuesta en cron-job.org. Un HTTP 200 por error transitorio mantiene el job vivo, pero sólo `ok: true` con la vela cerrada esperada confirma que el análisis terminó. La protección anterior ante fallos transitorios y la deduplicación de señales/órdenes permanecen vigentes. La prueba `tests/btc-cron-config.test.ts` verifica detección de desvíos, aislamiento del job, conservación de ajustes ajenos y reaplicación sin otra escritura.

@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { readAllHistoryRows, readHistoryByIds } from './history-pagination'
+
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
   enrichBrokerTradeCycles,
@@ -50,12 +52,10 @@ async function loadExternalSettlements(filters: {
     .from('broker_order_intents')
     .select('id, connection_id, symbol, direction, updated_at')
     .eq('status', 'SETTLED_EXTERNALLY')
-    .order('updated_at', { ascending: true })
-    .limit(200)
+    .order('updated_at', { ascending: true }).order('id', { ascending: true })
   if (filters.userId) query = query.eq('user_id', filters.userId)
   if (filters.connectionId) query = query.eq('connection_id', filters.connectionId)
-  const { data, error } = await query
-  if (error) throw error
+  const data = await readAllHistoryRows(query)
   return (data ?? []).map((row) => ({
     intentId: row.id,
     connectionId: row.connection_id,
@@ -69,27 +69,22 @@ export async function loadBrokerOrderHistory(
   filters: HistoryFilters = {},
 ): Promise<BrokerOrderHistoryResponse> {
   const admin = createAdminClient()
-  const displayLimit = Math.min(250, Math.max(1, filters.limit ?? 100))
-  // Older orders are cost-basis context for OPEN/CLOSE pairing only and never
-  // leave the server in the response.
-  const contextLimit = Math.min(1_000, Math.max(300, displayLimit * 3))
   let ordersQuery = admin.from('broker_orders').select(`
     id, user_id, connection_id, intent_id, client_order_id, broker_order_id,
     symbol, side, position_side, reduce_only, requested_quantity,
     filled_quantity, average_price, notional_usd, fee_usd, status,
     submitted_at, reconciled_at, created_at, updated_at
-  `).order('created_at', { ascending: false }).limit(contextLimit)
+  `).order('created_at', { ascending: false }).order('id', { ascending: false })
   if (filters.userId) ordersQuery = ordersQuery.eq('user_id', filters.userId)
   if (filters.connectionId) ordersQuery = ordersQuery.eq('connection_id', filters.connectionId)
 
   // Las oportunidades perdidas viven en `broker_order_intents`, no en `broker_orders`: una
   // conexión puede no haber ejecutado nunca y aun así tener rechazos que mostrar.
-  const [{ data: orders, error: ordersError }, missedOpportunities, settlements] = await Promise.all([
-    ordersQuery,
+  const [orders, missedOpportunities, settlements] = await Promise.all([
+    readAllHistoryRows(ordersQuery),
     loadMissedOpportunities({ userId: filters.userId, connectionId: filters.connectionId }),
     loadExternalSettlements({ userId: filters.userId, connectionId: filters.connectionId }),
   ])
-  if (ordersError) throw ordersError
   if (!orders?.length) return { ...EMPTY_BROKER_ORDER_HISTORY, missedOpportunities }
 
   const orderIds = orders.map((order) => order.id)
@@ -97,20 +92,19 @@ export async function loadBrokerOrderHistory(
   const connectionIds = [...new Set(orders.map((order) => order.connection_id))]
   const userIds = [...new Set(orders.map((order) => order.user_id))]
   const [intentsResult, fillsResult, ledgerResult, connectionsResult, profilesResult] = await Promise.all([
-    admin.from('broker_order_intents').select('id, action, direction, signal_id').in('id', intentIds),
-    admin.from('broker_fills')
+    readHistoryByIds(intentIds, ids => admin.from('broker_order_intents').select('id, action, direction, signal_id').in('id', ids).order('id')),
+    readHistoryByIds(orderIds, ids => admin.from('broker_fills')
       .select('id, order_id, broker_fill_id, quantity, price, fee, fee_asset, filled_at')
-      .in('order_id', orderIds)
-      .order('filled_at', { ascending: true }),
-    admin.from('broker_ledger_entries')
+      .in('order_id', ids)
+      .order('filled_at', { ascending: true }).order('id')),
+    readHistoryByIds(orderIds, ids => admin.from('broker_ledger_entries')
       .select('order_id, entry_type, amount_usd')
-      .in('order_id', orderIds)
-      .limit(10_000),
-    admin.from('broker_connections')
+      .in('order_id', ids).order('id')),
+    readHistoryByIds(connectionIds, ids => admin.from('broker_connections')
       .select('id, label, broker, environment, requested_strategy_code, requested_symbol, requested_timeframe')
-      .in('id', connectionIds),
+      .in('id', ids).order('id')),
     filters.includeUserEmails
-      ? admin.from('profiles').select('id, email').in('id', userIds)
+      ? readHistoryByIds(userIds, ids => admin.from('profiles').select('id, email').in('id', ids).order('id'))
       : Promise.resolve({ data: [], error: null }),
   ])
   const firstError = intentsResult.error
@@ -122,9 +116,9 @@ export async function loadBrokerOrderHistory(
 
   const signalIds = [...new Set((intentsResult.data ?? []).map((intent) => intent.signal_id))]
   const signalsResult = signalIds.length
-    ? await admin.from('broker_signals')
+    ? await readHistoryByIds(signalIds, ids => admin.from('broker_signals')
         .select('id, external_signal_id, strategy_code, timeframe, signal_time')
-        .in('id', signalIds)
+        .in('id', ids).order('id'))
     : { data: [], error: null }
   if (signalsResult.error) throw signalsResult.error
 
@@ -225,7 +219,7 @@ export async function loadBrokerOrderHistory(
     connectionLabel: connections.get(settlement.connectionId)?.label ?? settlement.connectionId,
   }))
   const ordersWithCycles = enrichBrokerTradeCycles(mappedOrders, externalSettlements)
-  const result = ordersWithCycles.slice(0, displayLimit)
+  const result = filters.limit ? ordersWithCycles.slice(0, Math.max(1, filters.limit)) : ordersWithCycles
   return {
     orders: result,
     openPositions: await valueOpenPositions(

@@ -1,5 +1,10 @@
 'use client'
 
+import { useMemo, useState } from 'react'
+import { effectiveTime } from '@/lib/brokers/order-history-metrics'
+import { selectBrokerHistory, historyDateRange, validHistoryRange } from '@/lib/brokers/history-filters'
+import { BrokerHistoryChart } from './BrokerHistoryChart'
+
 import { Activity, AlertTriangle, DollarSign, ListOrdered, LoaderCircle, Percent, RotateCcw, XCircle } from 'lucide-react'
 import type {
   BrokerOpenPositionSummary,
@@ -47,6 +52,7 @@ function displayedNetPnl(order: BrokerOrderHistoryItem) {
 
 export function BrokerOrderHistory({
   history,
+  connections = [],
   showUser = false,
   privacyMode = false,
   onRetry,
@@ -55,6 +61,7 @@ export function BrokerOrderHistory({
   closingPositionKey = null,
 }: {
   history: BrokerOrderHistoryResponse
+  connections?: Array<{ id: string; label: string; environment: string; requestedStrategy: { code: string; symbol: string; timeframe: string } }>
   showUser?: boolean
   privacyMode?: boolean
   onRetry?: (intentId: string) => void
@@ -62,14 +69,23 @@ export function BrokerOrderHistory({
   onClosePosition?: (position: BrokerOpenPositionSummary) => void
   closingPositionKey?: string | null
 }) {
-  const {
-    orders,
-    openPositions = [],
-    externalSettlements = [],
-    totals,
-    performance,
-    missedOpportunities,
-  } = history
+  const [connectionId, setConnectionId] = useState('')
+  const [period, setPeriod] = useState<'all' | 'week' | 'month' | 'custom'>('all')
+  const [start, setStart] = useState('')
+  const [end, setEnd] = useState('')
+  const [visibleCount, setVisibleCount] = useState(50)
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const range = period === 'custom' ? { start, end } : historyDateRange(period, new Date(), timeZone)
+  const { start: rangeStart, end: rangeEnd } = range
+  const rangeValid = validHistoryRange(rangeStart, rangeEnd)
+  const selection = useMemo(() => selectBrokerHistory(history, { connectionId, start: rangeStart, end: rangeEnd, timeZone }), [history, connectionId, rangeStart, rangeEnd, timeZone])
+  const { orders, openPositions, externalSettlements, totals, performance, missedOpportunities } = selection
+  const options = new Map<string, string>()
+  for (const connection of connections) options.set(connection.id, `${connection.label} · ${connection.requestedStrategy.code} · ${connection.requestedStrategy.symbol} · ${connection.environment}`)
+  for (const item of [...history.orders, ...history.openPositions, ...(history.missedOpportunities ?? [])]) {
+    if (!options.has(item.connectionId)) options.set(item.connectionId, `${item.connectionLabel} · ${item.strategyLabel} · ${item.symbol}${'environment' in item ? ` · ${item.environment}` : ''}`)
+  }
+  if (connectionId && !options.has(connectionId)) options.set(connectionId, 'Conexión sin datos disponibles')
   const missed = missedOpportunities ?? []
   const missedWithResult = missed.filter((item) => item.missedReturnPct != null)
   const missedNetUsd = missedWithResult.reduce((total, item) => total + (item.missedGrossPnlUsd ?? 0), 0)
@@ -81,6 +97,30 @@ export function BrokerOrderHistory({
         <h2>Órdenes, ejecuciones y resultado neto</h2>
       </div>
 
+      <div className={styles.historyFilters}>
+        <label>Conexión / bot / activo
+          <select value={connectionId} onChange={event => { setConnectionId(event.target.value); setVisibleCount(50) }}>
+            <option value="">General · todas las conexiones</option>
+            {[...options].map(([id, label]) => <option key={id} value={id}>{redactText(privacyMode, label, 'Conexión oculta')}{showUser ? ` · ${id.slice(0, 8)}` : ''}</option>)}
+          </select>
+        </label>
+        <label>Periodo
+          <select value={period} onChange={event => { setPeriod(event.target.value as typeof period); setVisibleCount(50) }}>
+            <option value="all">Toda la historia</option><option value="week">Últimos 7 días</option><option value="month">Últimos 30 días</option><option value="custom">Rango de fechas</option>
+          </select>
+        </label>
+        {period === 'custom' && <>
+          <label>Desde<input type="date" value={start} max={end || undefined} onChange={event => { setStart(event.target.value); setVisibleCount(50) }}/></label>
+          <label>Hasta<input type="date" value={end} min={start || undefined} onChange={event => { setEnd(event.target.value); setVisibleCount(50) }}/></label>
+        </>}
+      </div>
+      {!rangeValid && <p className={styles.notice} role="alert">Revisa el rango: la fecha inicial debe ser anterior o igual a la final.</p>}
+      <p className={styles.notice}>
+        Fechas inclusivas en {timeZone}, usando el último fill o la fecha de envío si no consta. El resultado se atribuye al cierre, aunque la entrada sea de días anteriores, con sus comisiones completas.
+        El volumen suma entradas y salidas ejecutadas dentro del periodo. Las posiciones abiertas son actuales y se muestran aparte del rango histórico.
+      </p>
+      <BrokerHistoryChart orders={orders} timeZone={timeZone} privacyMode={privacyMode} />
+
       {openPositions.length > 0 && (
         <div className={styles.statsCard}>
           <div className={styles.cardHeader}>
@@ -88,7 +128,7 @@ export function BrokerOrderHistory({
             <h3>Posiciones abiertas y vinculadas ({openPositions.length})</h3>
           </div>
           <p className={styles.notice} role="status">
-            Estas entradas sí fueron ejecutadas. Permanecen ligadas a su conexión y la próxima
+            Posiciones actuales de la conexión seleccionada, independientes del rango de fechas. Estas entradas sí fueron ejecutadas. Permanecen ligadas a su conexión y la próxima
             señal de salida de la misma estrategia, símbolo y dirección enviará su cierre.
           </p>
           <div className={styles.openPositionGrid}>
@@ -249,6 +289,11 @@ export function BrokerOrderHistory({
             <small>Promedio por trade cerrado</small>
           </div>
           <div className={styles.metricBlock}>
+            <span className={styles.metricLabel}>Volumen ejecutado</span>
+            <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(totals.notionalUsd)}</BrokerSensitiveValue></strong>
+            <small>Entradas + salidas del periodo seleccionado</small>
+          </div>
+          <div className={styles.metricBlock}>
             <span className={styles.metricLabel}>Notional de entrada</span>
             <strong>
               <BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{usd(performance.closedEntryNotionalUsd)}</BrokerSensitiveValue>
@@ -258,11 +303,11 @@ export function BrokerOrderHistory({
         </div>
       </div>
 
-      {!orders.length ? <p className={styles.muted}>Todavía no hay órdenes reconciliadas.</p> : (
+      {!orders.length ? <p className={styles.muted}>No hay órdenes para esta conexión y periodo.</p> : (
         <div className={styles.tableWrap}>
           <table className={styles.orderTable}>
             <thead><tr>{showUser && <th>Usuario</th>}<th>Resultado</th><th>Fecha efectiva</th><th>Conexión</th><th>Operación</th><th>Lotaje</th><th>Precio</th><th>Capital usado</th><th>Comisión</th><th>Detalle</th></tr></thead>
-            <tbody>{orders.map((order) => {
+            <tbody>{orders.slice(0, visibleCount).map((order) => {
               const netPnlUsd = displayedNetPnl(order)
               return (
                 <tr key={order.id}>
@@ -284,8 +329,8 @@ export function BrokerOrderHistory({
                       </>
                     )}
                   </td>
-                  <td>{date(order.lastFillAt ?? order.submittedAt ?? order.createdAt)}</td>
-                  <td><strong>{order.connectionLabel}</strong><small>{order.strategyLabel} · {order.environment}</small></td>
+                  <td>{date(effectiveTime(order))}</td>
+                  <td><strong>{redactText(privacyMode, order.connectionLabel)}</strong><small>{order.strategyLabel} · {order.environment}</small></td>
                   <td><strong>{order.action === 'OPEN' ? 'Entrada' : 'Salida'} {order.direction}</strong><small>{order.side} · {order.status}</small></td>
                   <td>{quantity(order.filledQuantity)}<small>solicitado {quantity(order.requestedQuantity)}</small></td>
                   <td><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{order.averagePrice == null ? '—' : usd(order.averagePrice)}</BrokerSensitiveValue></td>
@@ -322,6 +367,9 @@ export function BrokerOrderHistory({
           </table>
         </div>
       )}
+
+      {orders.length > visibleCount && <button type="button" className={styles.closePositionButton} onClick={() => setVisibleCount(count => count + 50)}>Mostrar más órdenes ({visibleCount} de {orders.length})</button>}
+      <p className={styles.muted}>{orders.length} órdenes seleccionadas. Las métricas y el gráfico usan toda la selección.</p>
 
       {missed.length > 0 && (
         <div className={`${styles.statsCard} ${styles.missedOperationsCard}`}>
