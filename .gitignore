@@ -65,3 +65,6 @@ test-bingx-postfix.mjs
 
 # scratch local, no forma parte del producto
 scratch/
+
+# Local exchange credentials must never be committed
+/[Bb][Ii][Tt][Uu][Nn][Ii][Xx].txt

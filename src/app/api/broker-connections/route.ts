@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     await enforceBrokerRateLimit('connection_write', requestIdentifier(request, user.id))
     const parsed = connectionCreateSchema.safeParse(await readBrokerJson(request))
     if (!parsed.success) throw new BrokerPlatformError('INVALID_CONNECTION', 'Los datos de la conexión no son válidos.', 400)
-    if (parsed.data.broker !== 'BINGX') throw new BrokerPlatformError('BROKER_NOT_IMPLEMENTED', 'Este broker todavía no está habilitado.', 422)
+    if (!['BINGX', 'BITUNIX'].includes(parsed.data.broker)) throw new BrokerPlatformError('BROKER_NOT_IMPLEMENTED', 'Este broker todavía no está habilitado.', 422)
     const strategy = brokerStrategy(parsed.data.strategyCode)
     if (!strategy) throw new BrokerPlatformError('STRATEGY_NOT_SUPPORTED', 'La estrategia seleccionada no está habilitada.', 422)
     connectionId = randomUUID()

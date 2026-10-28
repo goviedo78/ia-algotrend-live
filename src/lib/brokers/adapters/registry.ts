@@ -1,12 +1,14 @@
 import type { BrokerCode } from '../domain'
 import { BrokerPlatformError } from '../errors'
 import { BingxAdapter } from './bingx'
+import { BitunixAdapter } from './bitunix'
 import type { BrokerAdapter, BrokerAdapterFactoryInput } from './types'
 
 type AdapterFactory = (input: BrokerAdapterFactoryInput) => BrokerAdapter
 
 const factories: Partial<Record<BrokerCode, AdapterFactory>> = {
   BINGX: (input) => new BingxAdapter(input),
+  BITUNIX: (input) => new BitunixAdapter(input),
 }
 
 export function createBrokerAdapter(broker: BrokerCode, input: BrokerAdapterFactoryInput) {
