@@ -13,6 +13,8 @@ import { BrokerOrderHistory } from './BrokerOrderHistory'
 import { EMPTY_BROKER_ORDER_HISTORY, type BrokerOrderHistoryResponse } from '@/lib/brokers/order-history-types'
 import { BrokerPrivacyToggle, BrokerSensitiveValue, redactText, useBrokerPrivacy } from './BrokerPrivacy'
 import { BROKER_STRATEGIES } from '@/lib/brokers/strategies'
+import { sizingChoiceOf } from '@/lib/brokers/sizing'
+import { sizingSummary } from './BrokerSizingChoice'
 import styles from './brokers.module.css'
 
 type AdminConnection = BrokerConnectionDto & { userId: string; email: string | null }
@@ -87,8 +89,15 @@ function ApprovalForm({
 
   return (
     <form className={styles.approvalGrid} onSubmit={approve}>
-      {connection.riskPolicy && <div className={`${styles.metrics} ${styles.fullWidth}`}><span>Capital autorizado <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{connection.riskPolicy.declaredCapitalUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Perfil <strong>{connection.riskPolicy.riskProfile}</strong></span><span>Máximo sugerido / orden <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{connection.riskPolicy.suggestedNotionalPerOrderUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Reserva mínima <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{connection.riskPolicy.suggestedMinAvailableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span></div>}
+      {connection.riskPolicy && (() => {
+        const policy = connection.riskPolicy
+        const choice = sizingChoiceOf(policy)
+        return <div className={`${styles.metrics} ${styles.fullWidth}`}><span>Pidió <strong><BrokerSensitiveValue hidden={privacyMode && choice === 'FIXED'} fallback="•••• USD">{sizingSummary(choice, { percent: policy.exposurePerOrderPct, fixedUsd: policy.suggestedNotionalPerOrderUsd }, policy.maxLeverage)}</BrokerSensitiveValue></strong></span><span>Corte diario <strong>{choice === 'FIXED' ? `${policy.suggestedDailyLossLimitUsd.toFixed(2)} USD` : policy.dailyLossLimitPct >= 100 ? 'Sin corte' : `${policy.dailyLossLimitPct}%`}</strong></span><span>Saldo que queda libre <strong>{policy.marginReservePct}%</strong></span></div>
+      })()}
       <div className={`${styles.strategyLock} ${styles.fullWidth}`}><span>Estrategia solicitada</span><strong>{BROKER_STRATEGIES[connection.requestedStrategy.code]?.label ?? connection.requestedStrategy.code}</strong><small>{connection.requestedStrategy.symbol} · {connection.requestedStrategy.timeframe} · una API exclusiva</small></div>
+      <details className={`${styles.advancedRisk} ${styles.fullWidth}`}>
+        <summary>Ajustar antes de aprobar <span>Opcional</span></summary>
+        <div className={styles.advancedRiskGrid}>
       <label className={styles.field}><BrokerFieldLabel label="Modo de tamaño" tooltip="Debe respetar la elección del usuario. Compuesto usa el equity de esta cuenta en cada apertura." example={compoundSizing ? 'Ejemplo: equity actual × porcentaje.' : 'Ejemplo: mismo monto en cada entrada.'} /><select name="sizingMode" defaultValue={connection.riskPolicy?.sizingMode ?? 'FIXED_NOTIONAL'}><option value={connection.riskPolicy?.sizingMode ?? 'FIXED_NOTIONAL'}>{compoundSizing ? 'Compuesto por equity' : 'Monto fijo'}</option></select></label>
       <label className={styles.field}><BrokerFieldLabel label="Capital por operación (%)" tooltip="Control de la aprobación inicial. El administrador puede reducir la solicitud inicial, nunca aumentarla; después el titular administra su capital." example="Ejemplo: hasta 100% si el usuario lo solicitó." /><input name="exposurePerOrderPct" type="number" min="1" max={connection.riskPolicy?.exposurePerOrderPct ?? 100} step="0.1" defaultValue={connection.riskPolicy?.exposurePerOrderPct ?? 100} required /></label>
       <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label={compoundSizing ? 'Referencia inicial USD' : 'Notional fijo USD'} tooltip={compoundSizing ? 'Valor inicial informativo y límite de aprobación; la ejecución se recalcula por equity.' : 'Tamaño constante de cada nueva posición.'} example={`Ejemplo: ${connection.riskPolicy?.suggestedNotionalPerOrderUsd ?? 1} USD.`} /><input name="fixedNotionalUsd" type="number" min="1" step="0.01" defaultValue={connection.riskPolicy && connection.riskPolicy.fixedNotionalUsd > 0 ? connection.riskPolicy.fixedNotionalUsd : connection.riskPolicy?.suggestedNotionalPerOrderUsd ?? 1} required /></label>
@@ -99,7 +108,9 @@ function ApprovalForm({
       <label className={styles.field}><BrokerFieldLabel label="Órdenes por minuto" tooltip="Protección contra señales repetidas o ráfagas accidentales." example="Ejemplo: 2 órdenes permite cerrar y abrir." /><input name="maxOrdersPerMinute" type="number" min="1" step="1" defaultValue={connection.riskPolicy && connection.riskPolicy.maxOrdersPerMinute > 0 ? connection.riskPolicy.maxOrdersPerMinute : 2} required /></label>
       <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label="Pérdida diaria USD" tooltip="Bloquea nuevas aperturas al alcanzar esta pérdida realizada. Los cierres siguen permitidos." example={`Ejemplo: ${connection.riskPolicy?.suggestedDailyLossLimitUsd ?? 1} USD.`} /><input name="dailyLossLimitUsd" type="number" min="0.01" step="0.01" defaultValue={connection.riskPolicy && connection.riskPolicy.dailyLossLimitUsd > 0 ? connection.riskPolicy.dailyLossLimitUsd : connection.riskPolicy?.suggestedDailyLossLimitUsd ?? 1} required /></label>
       <label className={`${styles.field} ${privacyMode ? styles.sensitiveInput : ''}`}><BrokerFieldLabel label="Margen disponible mínimo" tooltip="Reserva que debe permanecer libre después de calcular la orden." example={`Ejemplo: ${connection.riskPolicy?.suggestedMinAvailableMarginUsd ?? 0} USD.`} /><input name="minAvailableMarginUsd" type="number" min="0" step="0.01" defaultValue={connection.riskPolicy && connection.riskPolicy.minAvailableMarginUsd > 0 ? connection.riskPolicy.minAvailableMarginUsd : connection.riskPolicy?.suggestedMinAvailableMarginUsd ?? 0} required /></label>
-      <button className={styles.primaryButton} disabled={busy || submitting} type="submit">{submitting ? <LoaderCircle className={styles.spin} size={16} /> : <Check size={16} />} Aprobar y activar</button>
+        </div>
+      </details>
+      <button className={styles.primaryButton} disabled={busy || submitting} type="submit">{submitting ? <LoaderCircle className={styles.spin} size={16} /> : <Check size={16} />} Aprobar como lo pidió</button>
       {error && <p className={styles.error} role="alert">{error}</p>}
     </form>
   )

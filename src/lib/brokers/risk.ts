@@ -2,7 +2,7 @@ import type { BrokerPosition, InstrumentRules } from './adapters/types'
 import type { RiskPolicy, SignalAction, TradeDirection } from './domain'
 import { normalizeSymbol } from './domain'
 import { BrokerPlatformError } from './errors'
-import { calculateOpeningFundingRequirement } from './funding-requirement'
+import { planOpeningNotional } from './sizing'
 
 // Posición abierta por ESTA conexión (cantidad neta propia), derivada de su historial
 // de órdenes filled. Base de la regla permanente de ownership.
@@ -144,19 +144,22 @@ export function evaluateRisk(input: RiskEvaluationInput): ApprovedOrder {
     : input.rules.maximumShortLeverage
   if (policy.maxLeverage > instrumentLeverageLimit) reject('RISK_LEVERAGE_UNSUPPORTED', 'El apalancamiento supera el máximo del instrumento.')
   if (input.ordersLastMinute >= policy.maxOrdersPerMinute) reject('RISK_RATE_LIMIT', 'Límite de órdenes por minuto alcanzado.')
-  const configuredOrderNotionalUsd = compoundSizing
-    ? input.sizingCapitalUsd * policy.exposurePerOrderPct / 100
-    : policy.fixedNotionalUsd
+  if (!Number.isFinite(input.openingFeeRate) || input.openingFeeRate < 0) {
+    reject('RISK_COMMISSION_RATE_INVALID', 'No se pudo calcular la comisión de apertura.')
+  }
+  const plan = planOpeningNotional({
+    policy,
+    sizingCapitalUsd: input.sizingCapitalUsd,
+    availableMarginUsd: input.availableMargin,
+    takerFeeRate: input.openingFeeRate,
+  })
   const maxTotalExposureUsd = compoundSizing
     ? input.sizingCapitalUsd * policy.maxTotalExposurePct / 100
     : policy.maxTotalExposureUsd
   const dailyLossLimitUsd = compoundSizing
     ? input.sizingCapitalUsd * policy.dailyLossLimitPct / 100
     : policy.dailyLossLimitUsd
-  const configuredMinAvailableMarginUsd = compoundSizing
-    ? input.sizingCapitalUsd * policy.marginReservePct / 100
-    : policy.minAvailableMarginUsd
-  if (configuredOrderNotionalUsd <= 0 || maxTotalExposureUsd <= 0 || dailyLossLimitUsd <= 0 || configuredMinAvailableMarginUsd < 0) {
+  if (plan.targetNotionalUsd <= 0 || maxTotalExposureUsd <= 0 || dailyLossLimitUsd <= 0 || plan.reserveUsd < 0) {
     reject('RISK_LIMITS_NOT_CONFIGURED', 'Los límites de riesgo no están configurados.')
   }
   if (input.realizedPnlTodayUsd <= -dailyLossLimitUsd) {
@@ -167,9 +170,10 @@ export function evaluateRisk(input: RiskEvaluationInput): ApprovedOrder {
   }
   // En modo fijo el importe configurado manda: nunca se reduce silenciosamente para adaptar
   // la orden al saldo libre. Si no alcanza para orden + reserva, se rechaza con un motivo claro.
+  // En modo porcentaje ("Todo el saldo" incluido) el objetivo se recorta al saldo libre real.
   // BingX recibe este importe como quoteOrderQty, por lo que 90 USD configurados son 90 USD
   // de exposición objetivo aunque la cantidad base resultante tenga decimales distintos.
-  const orderNotionalUsd = Number(configuredOrderNotionalUsd.toFixed(8))
+  const orderNotionalUsd = plan.notionalUsd
   // Ownership en apertura: no abrir si hay una posición AJENA en la dirección opuesta del
   // mismo símbolo. En modo one-way una apertura opuesta reduciría esa posición ajena; lo
   // evitamos para nunca afectar posiciones de otra conexión o manuales.
@@ -188,19 +192,14 @@ export function evaluateRisk(input: RiskEvaluationInput): ApprovedOrder {
   if (currentExposure + orderNotionalUsd > maxTotalExposureUsd) reject('RISK_TOTAL_EXPOSURE_LIMIT', 'La exposición total superaría el máximo.')
 
   const quantity = floorToStep(orderNotionalUsd / input.price, input.rules.quantityStep, input.rules.quantityPrecision)
+  if (plan.limitedByBalance && (quantity < input.rules.minimumQuantity || orderNotionalUsd < input.rules.minimumNotional)) {
+    reject('RISK_MARGIN_RESERVE', `Saldo libre insuficiente: con ${input.availableMargin.toFixed(2)} USD libres no alcanza para el lote mínimo del instrumento.`)
+  }
   if (quantity < input.rules.minimumQuantity || quantity > input.rules.maximumQuantity) {
     reject('RISK_QUANTITY_OUT_OF_RANGE', 'La cantidad no cumple las reglas del instrumento.')
   }
   if (orderNotionalUsd < input.rules.minimumNotional) reject('RISK_MINIMUM_NOTIONAL', 'El tamaño no alcanza el mínimo del instrumento.')
-  if (!Number.isFinite(input.openingFeeRate) || input.openingFeeRate < 0) {
-    reject('RISK_COMMISSION_RATE_INVALID', 'No se pudo calcular la comisión de apertura.')
-  }
-  const funding = calculateOpeningFundingRequirement({
-    notionalUsd: orderNotionalUsd,
-    leverage: policy.maxLeverage,
-    reserveUsd: configuredMinAvailableMarginUsd,
-    takerFeeRate: input.openingFeeRate,
-  })
+  const funding = plan
   if (input.availableMargin < funding.requiredAvailableMarginUsd) {
     reject(
       'RISK_MARGIN_RESERVE',

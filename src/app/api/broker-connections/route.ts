@@ -64,7 +64,20 @@ export async function POST(request: NextRequest) {
       { connectionId, userId: user.id, broker: parsed.data.broker, environment: parsed.data.environment, version: 1 },
     )
     const admin = createAdminClient()
-    const suggestion = deriveRiskSuggestion(parsed.data.capitalUsd, parsed.data.riskProfile, parsed.data.allocationPct)
+    const derived = deriveRiskSuggestion(parsed.data.capitalUsd, parsed.data.riskProfile, parsed.data.allocationPct)
+    const marginReservePct = parsed.data.marginReservePct ?? derived.marginReservePct
+    const fixedNotionalUsd = parsed.data.sizingMode === 'FIXED_NOTIONAL' ? parsed.data.fixedNotionalUsd : undefined
+    const suggestion = {
+      ...derived,
+      marginReservePct,
+      dailyLossLimitPct: parsed.data.dailyLossLimitPct ?? derived.dailyLossLimitPct,
+      suggestedDailyLossLimitUsd: parsed.data.dailyLossLimitPct
+        ? Math.min(1_000_000, Math.floor(parsed.data.capitalUsd * parsed.data.dailyLossLimitPct) / 100)
+        : derived.suggestedDailyLossLimitUsd,
+      suggestedNotionalPerOrderUsd: fixedNotionalUsd ?? derived.suggestedNotionalPerOrderUsd,
+      suggestedMaxTotalExposureUsd: Math.max(derived.suggestedMaxTotalExposureUsd, fixedNotionalUsd ?? 0),
+      suggestedMinAvailableMarginUsd: Math.floor(parsed.data.capitalUsd * marginReservePct) / 100,
+    }
     const { error: connectionError } = await admin.from('broker_connections').insert({
       id: connectionId,
       user_id: user.id,

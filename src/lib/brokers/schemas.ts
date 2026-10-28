@@ -15,6 +15,10 @@ export const connectionCreateSchema = z.object({
   riskProfile: z.enum(['ULTRA_CONSERVATIVE', 'CONSERVATIVE', 'MODERATE']),
   sizingMode: z.enum(['FIXED_NOTIONAL', 'EQUITY_PERCENT']).default('FIXED_NOTIONAL'),
   allocationPct: z.number().min(1).max(100).default(DEFAULT_BROKER_ALLOCATION_PCT),
+  // Opcionales: "Todo el saldo" manda reserva 0 y sin corte diario; monto fijo manda su USD.
+  fixedNotionalUsd: z.number().positive().max(1_000_000).optional(),
+  marginReservePct: z.number().min(0).max(10).optional(),
+  dailyLossLimitPct: z.number().positive().max(100).optional(),
   apiKey: apiSecret,
   secretKey: apiSecret,
   permissions: z.object({
@@ -47,6 +51,7 @@ export const riskChangeSchema = z.object({
   // acompaña al del capital para que ningún valor expresable en capital quede inalcanzable.
   fixedNotionalUsd: z.number().positive().max(10_000_000).optional(),
   dailyLossLimitUsd: z.number().positive().max(10_000_000).optional(),
+  dailyLossLimitPct: z.number().positive().max(100).optional(),
   // El resto de la política también es del titular. Omitir un campo conserva su valor actual;
   // los rangos son los que la base y el motor aceptan, no criterios de producto.
   maxTotalExposureUsd: z.number().positive().max(10_000_000).optional(),

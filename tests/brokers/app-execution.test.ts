@@ -192,10 +192,11 @@ test('self-service lot and daily loss are uncapped by the platform and never sta
   assert.match(schemas, /riskProfile: z\.enum\(\['ULTRA_CONSERVATIVE', 'CONSERVATIVE', 'MODERATE'\]\),/)
   assert.match(schemas, /allocationPct: z\.number\(\)\.min\(1\)\.max\(100\),/)
   assert.doesNotMatch(schemas, /allocationPct: z\.number\(\)\.min\(1\)\.max\(100\)\.optional\(\)/)
-  // En compuesto el motor dimensiona por equity: el resumen no puede mostrar el monto fijo.
-  assert.match(panel, /const effectiveNotionalUsd = riskEdit\.compoundEnabled \? editSuggestion\.suggestedNotionalPerOrderUsd : riskEdit\.fixedNotionalUsd/)
-  assert.match(panel, /const effectiveDailyLossUsd = riskEdit\.compoundEnabled \? editSuggestion\.suggestedDailyLossLimitUsd : riskEdit\.dailyLossLimitUsd/)
-  assert.match(panel, /% del equity real/)
+  // Por saldo el motor dimensiona con el saldo real: la vista previa usa su mismo cálculo y
+  // el corte diario en USD sólo se manda en monto fijo.
+  assert.match(panel, /const preview = planOpeningNotional\(\{/)
+  assert.match(panel, /sizingMode: fixed \? 'FIXED_NOTIONAL' : 'EQUITY_PERCENT'/)
+  assert.match(panel, /\? \{ fixedNotionalUsd: riskEdit\.fixedNotionalUsd, dailyLossLimitUsd: riskEdit\.dailyLossLimitUsd, maxTotalExposureUsd: riskEdit\.maxTotalExposureUsd \}/)
 })
 
 test('broker recovery drain is secret-authenticated and bounded', async () => {

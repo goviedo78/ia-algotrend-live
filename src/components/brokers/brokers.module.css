@@ -155,6 +155,13 @@
 .automaticRisk { display: flex; align-items: center; gap: 7px; margin: 0 0 12px !important; color: var(--broker-label) !important; font-size: 13px !important; font-weight: 700; }
 .automaticRisk svg { flex: 0 0 auto; color: var(--broker-primary); }
 .fullWidth { grid-column: 1 / -1; }
+.sizingChoices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.sizingChoice { position: relative; display: grid; gap: 4px; align-content: start; padding: 12px 14px; border: 1px solid var(--broker-border-strong); border-radius: 5px; background: var(--broker-input); cursor: pointer; }
+.sizingChoice input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.sizingChoice:has(input:checked) { border-color: var(--broker-primary); box-shadow: inset 0 0 0 1px var(--broker-primary); }
+.sizingChoice:has(input:focus-visible) { outline: 2px solid var(--broker-focus); outline-offset: 2px; }
+.sizingChoice strong { font-size: 13px; color: var(--broker-text); }
+.sizingChoice span { font-size: 12px; font-weight: 500 !important; line-height: 1.4; color: var(--broker-muted) !important; }
 .check { display: flex; align-items: flex-start; gap: 9px; color: var(--broker-label); font-size: 13px; line-height: 1.45; }
 .check input { margin-top: 2px; accent-color: var(--broker-primary); }
 .permissionText { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 10px; color: var(--broker-label) !important; }
@@ -368,7 +375,7 @@
   .topbar { padding: 10px 16px; align-items: flex-start; }
   .topbar nav { align-items: flex-end; flex-direction: column; gap: 5px; }
   .content, .narrow { width: min(100% - 28px, 1120px); padding-top: 26px; }
-  .formGrid, .approvalGrid, .advancedRiskGrid { grid-template-columns: 1fr; }
+  .formGrid, .approvalGrid, .advancedRiskGrid, .sizingChoices { grid-template-columns: 1fr; }
   .fullWidth { grid-column: auto; }
   .systemStrip, .connectionSummary, .metrics, .performanceGrid, .pctGrid, .usdGrid, .openPositionMetrics, .fundingEstimateGrid, .fundingEstimateCard > div { grid-template-columns: 1fr; gap: 12px; }
   .titleRow h1 { font-size: 20px; }

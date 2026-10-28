@@ -321,3 +321,49 @@ test('compound sizing recalculates from the equity of each account', () => {
   assert.equal(evaluate(1_000).notionalUsd, 50)
   assert.equal(evaluate(1_030).notionalUsd, 51.5)
 })
+
+test('full balance sizing opens with what the account has instead of rejecting for cents', () => {
+  const fullBalance: RiskPolicy = {
+    ...policy, sizingMode: 'EQUITY_PERCENT', exposurePerOrderPct: 100, maxTotalExposurePct: 100,
+    marginReservePct: 0, dailyLossLimitPct: 100, declaredCapitalUsd: 1_000_000,
+  }
+  // 10 USD en Bitunix (taker 0,06%) a 1x con BTC a 81.192,5: entra 0,0001 BTC.
+  const bitunix = evaluateRisk({
+    action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 81_192.5,
+    sizingCapitalUsd: 10, availableMargin: 10, positions: [], ownedPositions: [],
+    rules, policy: fullBalance, openingFeeRate: 0.0006,
+    ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+  })
+  assert.equal(bitunix.quantity, 0.0001)
+  assert.ok(bitunix.notionalUsd <= 10 && bitunix.notionalUsd > 9.9)
+  // El mismo modo en BingX (taker 0,05%): la exposición es el saldo; 2x sólo reduce el margen.
+  const bingx = evaluateRisk({
+    action: 'OPEN', direction: 'SHORT', symbol: 'BTC-USDT', price: 81_192.5,
+    sizingCapitalUsd: 250, availableMargin: 250, positions: [], ownedPositions: [],
+    rules: { ...rules, maximumShortLeverage: 125 }, policy: { ...fullBalance, maxLeverage: 2 }, openingFeeRate: 0.0005,
+    ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+  })
+  assert.equal(bingx.notionalUsd, 250)
+  assert.equal(bingx.leverage, 2)
+})
+
+test('full balance sizing below the instrument lot rejects as insufficient funds', () => {
+  assert.throws(() => evaluateRisk({
+    action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 81_192.5,
+    sizingCapitalUsd: 7, availableMargin: 7, positions: [], ownedPositions: [], rules,
+    policy: { ...policy, sizingMode: 'EQUITY_PERCENT', exposurePerOrderPct: 100, maxTotalExposurePct: 100, marginReservePct: 0, dailyLossLimitPct: 100 },
+    openingFeeRate: 0.0006, ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+  }), { code: 'RISK_MARGIN_RESERVE' })
+})
+
+test('percent sizing keeps its reserve when the balance trims the entry', () => {
+  const result = evaluateRisk({
+    action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 100,
+    sizingCapitalUsd: 110, availableMargin: 110, positions: [], ownedPositions: [],
+    rules: { ...rules, quantityStep: 0.001, quantityPrecision: 3 },
+    policy: { ...policy, sizingMode: 'EQUITY_PERCENT', exposurePerOrderPct: 90, maxTotalExposurePct: 100, marginReservePct: 10, dailyLossLimitPct: 2 },
+    openingFeeRate: 0.0005, ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+  })
+  // 90% de 110 = 99 USD no entra con 11 USD de reserva y la comisión: se recorta sin tocar la reserva.
+  assert.ok(result.notionalUsd < 99 && result.notionalUsd >= 98.9)
+})

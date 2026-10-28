@@ -3,7 +3,7 @@ import { loadBrokerAdapter } from '@/lib/brokers/adapter-loader'
 import { requireBrokerMember } from '@/lib/brokers/auth'
 import { riskPolicyFromRow } from '@/lib/brokers/dto'
 import { BrokerPlatformError, publicError } from '@/lib/brokers/errors'
-import { calculateOpeningFundingRequirement } from '@/lib/brokers/funding-requirement'
+import { planOpeningNotional } from '@/lib/brokers/sizing'
 import { requireOwnedConnection } from '@/lib/brokers/ownership'
 import { enforceBrokerRateLimit, requestIdentifier } from '@/lib/brokers/rate-limit'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -39,23 +39,20 @@ export async function GET(request: NextRequest, context: Context) {
       balance.equity,
       Number(runtime?.compound_capital_usd ?? policy.declaredCapitalUsd),
     ))
-    const targetNotionalUsd = policy.sizingMode === 'EQUITY_PERCENT'
-      ? sizingCapitalUsd * policy.exposurePerOrderPct / 100
-      : policy.fixedNotionalUsd
-    const reserveUsd = policy.sizingMode === 'EQUITY_PERCENT'
-      ? sizingCapitalUsd * policy.marginReservePct / 100
-      : policy.minAvailableMarginUsd
-    const funding = calculateOpeningFundingRequirement({
-      notionalUsd: targetNotionalUsd,
-      leverage: policy.maxLeverage,
-      reserveUsd,
+    // Mismo cálculo que el motor: en modo porcentaje la entrada se recorta al saldo libre.
+    const { targetNotionalUsd, notionalUsd, limitedByBalance, ...funding } = planOpeningNotional({
+      policy,
+      sizingCapitalUsd,
+      availableMarginUsd: balance.availableMargin,
       takerFeeRate: commissionRates.taker,
     })
 
     return NextResponse.json({
       connectionId: id,
       sizingMode: policy.sizingMode,
-      targetNotionalUsd,
+      targetNotionalUsd: notionalUsd,
+      configuredNotionalUsd: targetNotionalUsd,
+      limitedByBalance,
       leverage: policy.maxLeverage,
       takerFeeRate: commissionRates.taker,
       availableMarginUsd: balance.availableMargin,

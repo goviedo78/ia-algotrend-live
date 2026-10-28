@@ -60,7 +60,8 @@ test('the route forwards the new parameters and falls back to the stored policy'
   // Omitir un campo conserva el valor guardado, no lo resetea a un default.
   assert.match(route, /const maxOpenPositions = parsed\.data\.maxOpenPositions \?\? Math\.max\(1, currentPolicy\.maxOpenPositions\)/)
   assert.match(route, /const maxLeverage = parsed\.data\.maxLeverage \?\? Math\.max\(1, currentPolicy\.maxLeverage\)/)
-  assert.match(route, /select\('max_open_positions, max_orders_per_minute, max_leverage, margin_reserve_pct'\)/)
+  assert.match(route, /select\('max_open_positions, max_orders_per_minute, max_leverage, margin_reserve_pct, daily_loss_limit_pct'\)/)
+  assert.match(route, /const dailyLossLimitPct = parsed\.data\.dailyLossLimitPct \?\? currentPolicy\.dailyLossLimitPct \?\? suggestion\.dailyLossLimitPct/)
   // La exposición y la reserva ahora son del titular, con el derivado sólo como respaldo.
   assert.match(route, /const maxTotalExposureUsd = parsed\.data\.maxTotalExposureUsd\s*\?\?/)
   assert.match(route, /const minAvailableMarginUsd = parsed\.data\.minAvailableMarginUsd\s*\?\?/)
@@ -98,18 +99,17 @@ test('the panel exposes every parameter and warns before an unusable combination
   ])
 
   assert.match(panel, /Exposición total máxima \(USD\)/)
-  assert.match(panel, /Reserva de margen \(%\)/)
+  assert.match(panel, /Saldo que queda libre \(%\)/)
   assert.match(panel, /Posiciones simultáneas/)
   assert.match(panel, /Órdenes por minuto/)
   assert.match(panel, /label="Apalancamiento"/)
   // El resumen muestra lo que el titular puso, no un derivado del perfil.
-  assert.match(panel, /const effectiveMaxExposureUsd = riskEdit\.maxTotalExposureUsd/)
-  assert.match(panel, /const effectiveMarginUsd = Math\.floor\(riskEdit\.capitalUsd \* riskEdit\.marginReservePct\) \/ 100/)
+  assert.match(panel, /minAvailableMarginUsd: Math\.floor\(riskEdit\.capitalUsd \* riskEdit\.marginReservePct\) \/ 100/)
   // Exposición por debajo del lotaje: se avisa y se bloquea el submit antes del 400.
-  assert.match(panel, /const exposicionInsuficiente = effectiveMaxExposureUsd < effectiveNotionalUsd/)
+  assert.match(panel, /const exposicionInsuficiente = fixed && riskEdit\.maxTotalExposureUsd < riskEdit\.fixedNotionalUsd/)
   assert.match(panel, /disabled=\{submitting \|\| riskEdit\.capitalUsd < 100 \|\| exposicionInsuficiente\}/)
   // El umbral visible y el motor comparten el cálculo que incluye comisión y redondea hacia arriba.
-  assert.match(panel, /calculateOpeningFundingRequirement/)
+  assert.match(panel, /planOpeningNotional/)
   assert.match(panel, /requiredAvailableMarginUsd/)
   assert.match(panel, /requiredCapitalBox/)
   // Las operaciones fallidas son contexto secundario: aparecen después de la tabla del historial.
@@ -156,9 +156,11 @@ test('la exposición ajustada nunca queda por debajo de lo que exige el servidor
 test('el panel acompaña la exposición en vez de dejar el guardado trabado', async () => {
   const panel = await readFile(path.join(root, 'src/components/brokers/BrokerConnectionsPanel.tsx'), 'utf8')
   // Cada campo que mueve el lotaje efectivo recalcula la exposición coherente.
-  for (const field of ['capitalUsd', 'fixedNotionalUsd', 'compoundEnabled', 'riskProfile', 'allocationPct', 'maxOpenPositions']) {
-    assert.match(panel, new RegExp(`withCoherentExposure\\(\\{ \\.\\.\\.current, ${field}:`))
+  for (const field of ['capitalUsd', 'fixedNotionalUsd', 'allocationPct', 'maxOpenPositions']) {
+    assert.match(panel, new RegExp(`update\\(\\{ ${field}: [^}]+\\}, true\\)`))
   }
+  // Cambiar de modo también recalcula la exposición.
+  assert.match(panel, /return withCoherentExposure\(\{\s*\.\.\.current, choice, capitalUsd, allocationPct, compoundEnabled: choice !== 'FIXED'/)
   // Abrir el editor con una política vieja tampoco puede arrancar bloqueado.
   assert.match(panel, /setRiskEdit\(withCoherentExposure\(\{/)
   // El aviso que queda es el del servidor y trae el arreglo en un clic.

@@ -16,13 +16,14 @@ type Context = { params: Promise<{ id: string }> }
 async function loadCurrentRiskPolicy(connectionId: string) {
   const { data } = await createAdminClient()
     .from('broker_risk_policies')
-    .select('max_open_positions, max_orders_per_minute, max_leverage, margin_reserve_pct')
+    .select('max_open_positions, max_orders_per_minute, max_leverage, margin_reserve_pct, daily_loss_limit_pct')
     .eq('connection_id', connectionId)
     .maybeSingle()
   return {
     maxOpenPositions: Number(data?.max_open_positions) || 1,
     maxOrdersPerMinute: Number(data?.max_orders_per_minute) || 2,
     maxLeverage: Number(data?.max_leverage) || 1,
+    dailyLossLimitPct: Number(data?.daily_loss_limit_pct) > 0 ? Number(data?.daily_loss_limit_pct) : null,
     marginReservePct: Number.isFinite(Number(data?.margin_reserve_pct))
       ? Math.min(DEFAULT_BROKER_MARGIN_RESERVE_PCT, Math.max(0, Number(data?.margin_reserve_pct)))
       : DEFAULT_BROKER_MARGIN_RESERVE_PCT,
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest, context: Context) {
     const maxOpenPositions = parsed.data.maxOpenPositions ?? Math.max(1, currentPolicy.maxOpenPositions)
     const maxOrdersPerMinute = parsed.data.maxOrdersPerMinute ?? Math.max(1, currentPolicy.maxOrdersPerMinute)
     const maxLeverage = parsed.data.maxLeverage ?? Math.max(1, currentPolicy.maxLeverage)
+    const dailyLossLimitPct = parsed.data.dailyLossLimitPct ?? currentPolicy.dailyLossLimitPct ?? suggestion.dailyLossLimitPct
     // Tope global de apalancamiento: es configuración del dueño de la plataforma
     // (BROKER_MAX_ALLOWED_LEVERAGE), la misma que ya aplica la ruta de administración.
     const globalMaxLeverage = Math.max(1, Number(process.env.BROKER_MAX_ALLOWED_LEVERAGE ?? 1))
@@ -87,7 +89,7 @@ export async function POST(request: NextRequest, context: Context) {
       proposal_risk_profile: suggestion.riskProfile,
       proposal_exposure_per_order_pct: suggestion.exposurePerOrderPct,
       proposal_max_total_exposure_pct: suggestion.maxTotalExposurePct,
-      proposal_daily_loss_limit_pct: suggestion.dailyLossLimitPct,
+      proposal_daily_loss_limit_pct: dailyLossLimitPct,
       proposal_margin_reserve_pct: marginReservePct,
       proposal_notional_per_order_usd: fixedNotionalUsd,
       proposal_max_total_exposure_usd: maxTotalExposureUsd,
