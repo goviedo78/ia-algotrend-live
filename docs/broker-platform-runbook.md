@@ -235,3 +235,13 @@ node --env-file=.env.local --env-file=.env.real.prod scripts/configure-btc-cron.
 ```
 
 Al auditar, revisar también `/jobs/7501566/history` y el detalle de la última respuesta en cron-job.org. Un HTTP 200 por error transitorio mantiene el job vivo, pero sólo `ok: true` con la vela cerrada esperada confirma que el análisis terminó. La protección anterior ante fallos transitorios y la deduplicación de señales/órdenes permanecen vigentes. La prueba `tests/btc-cron-config.test.ts` verifica detección de desvíos, aislamiento del job, conservación de ajustes ajenos y reaplicación sin otra escritura.
+
+## Aperturas compuestas: comisión, reserva y precisión (2026-10-28)
+
+El porcentaje compuesto es un máximo de exposición, no una garantía de gastar ese importe. `planOpeningFunding` es compartido por el motor de riesgo, el endpoint de saldo requerido y las estimaciones del panel en escritorio y móvil. Acota el presupuesto por capital gestionado y margen libre real; conserva la reserva configurada y descuenta la comisión taker consultada al broker. Si el objetivo no cabe, busca el mayor importe en centavos que cubra margen, comisión y reserva con los mismos redondeos conservadores de ejecución. Ejemplo: capital y margen libre de USD 100, asignación 90%, reserva USD 10 y comisión 0,05% permiten una entrada objetivo de USD 89,95.
+
+Las órdenes fijas conservan el importe exacto elegido: si faltan fondos siguen rechazándose, y el panel informa el mínimo requerido. No se modifican políticas guardadas, posiciones abiertas, credenciales, interruptores ni señales pendientes. Las reglas de cantidad y notional mínimos, pérdida diaria, ownership y exposición siguen vigentes; un saldo demasiado pequeño puede impedir abrir incluso después del ajuste. El broker aún puede rechazar una orden si cambian sus condiciones o el saldo entre validación y envío. No se agregan reintentos automáticos por fondos.
+
+El límite de exposición y la suma de posiciones más nueva orden se comparan con la misma precisión de ocho decimales. Esto evita rechazos artificiales por residuos binarios cuando el porcentaje por orden coincide con el porcentaje máximo total. El caso observado de capital USD 197,008219 al 90% se comparaba como 177,3073971 frente a 177,30739709999997. No se elevan los límites autorizados.
+
+Regresiones: `tests/brokers/risk.test.ts` reproduce ambos rechazos y conserva cierres reduce-only/ownership; `tests/brokers/funding-requirement.test.ts` cubre presupuestos independientes, saldo real, comisión, reserva, apalancamiento y datos inválidos. El estado de publicación debe comprobarse en el registro de release; este documento describe el código.

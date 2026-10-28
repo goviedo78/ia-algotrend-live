@@ -3,7 +3,7 @@ import { loadBrokerAdapter } from '@/lib/brokers/adapter-loader'
 import { requireBrokerMember } from '@/lib/brokers/auth'
 import { riskPolicyFromRow } from '@/lib/brokers/dto'
 import { BrokerPlatformError, publicError } from '@/lib/brokers/errors'
-import { calculateOpeningFundingRequirement } from '@/lib/brokers/funding-requirement'
+import { planOpeningFunding } from '@/lib/brokers/funding-requirement'
 import { requireOwnedConnection } from '@/lib/brokers/ownership'
 import { enforceBrokerRateLimit, requestIdentifier } from '@/lib/brokers/rate-limit'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -45,8 +45,10 @@ export async function GET(request: NextRequest, context: Context) {
     const reserveUsd = policy.sizingMode === 'EQUITY_PERCENT'
       ? sizingCapitalUsd * policy.marginReservePct / 100
       : policy.minAvailableMarginUsd
-    const funding = calculateOpeningFundingRequirement({
-      notionalUsd: targetNotionalUsd,
+    const funding = planOpeningFunding({
+      targetNotionalUsd,
+      compoundCapitalUsd: policy.sizingMode === 'EQUITY_PERCENT' ? sizingCapitalUsd : undefined,
+      availableMarginUsd: balance.availableMargin,
       leverage: policy.maxLeverage,
       reserveUsd,
       takerFeeRate: commissionRates.taker,
@@ -55,7 +57,6 @@ export async function GET(request: NextRequest, context: Context) {
     return NextResponse.json({
       connectionId: id,
       sizingMode: policy.sizingMode,
-      targetNotionalUsd,
       leverage: policy.maxLeverage,
       takerFeeRate: commissionRates.taker,
       availableMarginUsd: balance.availableMargin,

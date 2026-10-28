@@ -18,7 +18,7 @@ import {
 } from '@/lib/brokers/order-history-types'
 import { BrokerPrivacyToggle, BrokerSensitiveValue, redactText, useBrokerPrivacy } from './BrokerPrivacy'
 import { BROKER_STRATEGIES } from '@/lib/brokers/strategies'
-import { calculateOpeningFundingRequirement, DEFAULT_BINGX_TAKER_FEE_RATE } from '@/lib/brokers/funding-requirement'
+import { planOpeningFunding, DEFAULT_BINGX_TAKER_FEE_RATE } from '@/lib/brokers/funding-requirement'
 import styles from './brokers.module.css'
 
 type Membership = { status: string; requested_at?: string } | null
@@ -41,6 +41,8 @@ type FundingRequirement = {
   connectionId: string
   sizingMode: 'FIXED_NOTIONAL' | 'EQUITY_PERCENT'
   targetNotionalUsd: number
+  configuredNotionalUsd: number
+  adjustedForFunding: boolean
   leverage: number
   takerFeeRate: number
   availableMarginUsd: number
@@ -58,10 +60,10 @@ function fundingEstimate(policy: RiskPolicy, takerFeeRate = DEFAULT_BINGX_TAKER_
     ? policy.declaredCapitalUsd * policy.marginReservePct / 100
     : policy.minAvailableMarginUsd
   return {
-    targetNotionalUsd,
     takerFeeRate,
-    ...calculateOpeningFundingRequirement({
-      notionalUsd: targetNotionalUsd,
+    ...planOpeningFunding({
+      targetNotionalUsd,
+      compoundCapitalUsd: policy.sizingMode === 'EQUITY_PERCENT' ? policy.declaredCapitalUsd : undefined,
       leverage: policy.maxLeverage,
       reserveUsd,
       takerFeeRate,
@@ -262,10 +264,11 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
   }
 
   const suggestion = deriveRiskSuggestion(capitalUsd, riskProfile, allocationPct)
-  const newConnectionFunding = calculateOpeningFundingRequirement({
-    notionalUsd: suggestion.suggestedNotionalPerOrderUsd,
+  const newConnectionFunding = planOpeningFunding({
+    targetNotionalUsd: Math.max(0, suggestion.suggestedNotionalPerOrderUsd),
+    compoundCapitalUsd: compoundEnabled ? Math.max(0, capitalUsd) : undefined,
     leverage: 1,
-    reserveUsd: suggestion.suggestedMinAvailableMarginUsd,
+    reserveUsd: Math.max(0, suggestion.suggestedMinAvailableMarginUsd),
     takerFeeRate: DEFAULT_BINGX_TAKER_FEE_RATE,
   })
 
@@ -375,7 +378,7 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
                 </label>
                 <div className={styles.fullWidth}>
                   <p className={styles.automaticRisk}><ShieldCheck size={16} /> El motor calcula el lotaje automáticamente. No necesitás estimar movimientos, comisiones ni ganancias objetivo.</p>
-                  <div className={styles.metrics}><span>Capital objetivo por entrada <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{suggestion.suggestedNotionalPerOrderUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Saldo libre mínimo <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{newConnectionFunding.requiredAvailableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Comisión de apertura cubierta <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{newConnectionFunding.openingFeeUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Exposición total máxima <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{suggestion.suggestedMaxTotalExposureUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Corte de pérdida diaria <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{suggestion.suggestedDailyLossLimitUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Margen protegido <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{suggestion.suggestedMinAvailableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span></div>
+                  <div className={styles.metrics}><span>Capital objetivo por entrada <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{newConnectionFunding.targetNotionalUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Saldo libre mínimo <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{newConnectionFunding.requiredAvailableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Comisión de apertura cubierta <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{newConnectionFunding.openingFeeUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Exposición total máxima <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{suggestion.suggestedMaxTotalExposureUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Corte de pérdida diaria <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{suggestion.suggestedDailyLossLimitUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Margen protegido <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{suggestion.suggestedMinAvailableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span></div>
                   <p className={styles.permissionText}><KeyRound size={16} /> Permitido: lectura y futuros perpetuos. Prohibido: Spot, retiros, transferencias, subcuentas y P2P.</p>
                   <BrokerFieldLabel label="Confirmación de permisos" tooltip="Esta confirmación debe coincidir con los permisos reales de la API. GONOVI no necesita retiros ni transferencias." example="Ejemplo: sólo Leer y Trading con Futuros Perpetuos." />
                   <label className={styles.check}><input type="checkbox" required /><span>Confirmo que la clave sólo permite lectura y trading de futuros perpetuos.</span></label>
@@ -404,10 +407,12 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
               const exposicionAcotaPosiciones = !exposicionInsuficiente && posicionesQueEntran < riskEdit.maxOpenPositions
               // Aviso de margen: para abrir hacen falta lotaje + reserva libres en el broker.
               const takerFeeRate = fundingRequirements[connection.id]?.takerFeeRate ?? DEFAULT_BINGX_TAKER_FEE_RATE
-              const editFunding = calculateOpeningFundingRequirement({
-                notionalUsd: effectiveNotionalUsd,
-                leverage: riskEdit.maxLeverage,
-                reserveUsd: effectiveMarginUsd,
+              const editFunding = planOpeningFunding({
+                targetNotionalUsd: Math.max(0, effectiveNotionalUsd),
+                compoundCapitalUsd: riskEdit.compoundEnabled ? Math.max(0, riskEdit.capitalUsd) : undefined,
+                availableMarginUsd: fundingRequirements[connection.id]?.availableMarginUsd,
+                leverage: Math.max(1, riskEdit.maxLeverage),
+                reserveUsd: Math.max(0, effectiveMarginUsd),
                 takerFeeRate,
               })
               // El único límite real es el margen que el titular tenga en el broker. Mostrarlo
@@ -437,7 +442,8 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
                     </div>
                   </details>
                   <div className={`${styles.metrics} ${styles.fullWidth}`}><span>{riskEdit.compoundEnabled ? 'Entrada estimada (compuesto)' : 'Capital fijo por entrada'} <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{effectiveNotionalUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Saldo libre mínimo <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editFunding.requiredAvailableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span>{typeof availableMarginUsd === 'number' && <span>Saldo libre en {connection.broker} <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{availableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span>}<span>Comisión de apertura cubierta <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editFunding.openingFeeUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Margen protegido <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{effectiveMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Exposición total máxima <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{effectiveMaxExposureUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Corte de pérdida diaria <strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{effectiveDailyLossUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span></div>
-                  {riskEdit.compoundEnabled && <p className={styles.fullWidth}><small>Con interés compuesto activado el motor dimensiona cada entrada como <strong>{riskEdit.allocationPct}% del equity real</strong> de la cuenta; el lotaje y la pérdida en USD de arriba quedan como referencia y no se aplican. Apagá el compuesto para que el monto fijo mande.</small></p>}
+                  {riskEdit.compoundEnabled && <p className={styles.fullWidth}><small>Con interés compuesto activado el motor dimensiona cada entrada hasta <strong>{riskEdit.allocationPct}% del equity real</strong> de la cuenta; el lotaje y la pérdida en USD de arriba quedan como referencia y no se aplican. Apagá el compuesto para que el monto fijo mande.</small></p>}
+                  {editFunding.adjustedForFunding && <p className={`${styles.notice} ${styles.noticeWrap} ${styles.fullWidth}`}>Con interés compuesto, la entrada estimada se ajusta a <BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{editFunding.targetNotionalUsd.toFixed(2)} USD</BrokerSensitiveValue> para cubrir comisión y conservar la reserva.</p>}
                   {margenFaltanteUsd > 0 && <p className={`${styles.notice} ${styles.noticeWrap} ${styles.fullWidth}`} role="alert">Con este lotaje hacen falta <strong>{editFunding.requiredAvailableMarginUsd.toFixed(2)} USD libres</strong> y en {connection.broker} tenés <strong>{(availableMarginUsd ?? 0).toFixed(2)} USD</strong>: faltan {margenFaltanteUsd.toFixed(2)} USD. Podés guardarlo igual, pero hasta transferir margen o bajar el capital fijo por entrada la orden se va a rechazar por fondos.</p>}
                   {exposicionAcotaPosiciones && <p className={styles.fullWidth}><small>Tu exposición total ({effectiveMaxExposureUsd.toFixed(2)} USD) da para {posicionesQueEntran} {posicionesQueEntran === 1 ? 'posición abierta' : 'posiciones abiertas'} de {effectiveNotionalUsd.toFixed(2)} USD, aunque permitís {riskEdit.maxOpenPositions} simultáneas. Se guarda igual; si querés cubrirlas todas, subila a {exposicionRequeridaUsd.toFixed(2)} USD en Ajustes avanzados.</small></p>}
                   {exposicionInsuficiente && <p className={`${styles.notice} ${styles.noticeWrap} ${styles.fullWidth}`} role="alert">En <strong>Ajustes avanzados de perfil</strong> bajaste la exposición total a {effectiveMaxExposureUsd.toFixed(2)} USD y no alcanza ni para una entrada de {effectiveNotionalUsd.toFixed(2)} USD. <button className={styles.linkButton} type="button" onClick={() => setRiskEdit((current) => current ? { ...current, maxTotalExposureUsd: requiredMaxExposureUsd(current) } : current)}>Ajustar a {exposicionRequeridaUsd.toFixed(2)} USD</button></p>}
@@ -471,8 +477,9 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
                       <small>{BROKER_STRATEGIES[connection.requestedStrategy.code]?.label ?? connection.requestedStrategy.code} · {policy.maxLeverage}x</small>
                       <div className={styles.requiredCapitalBox}><span>Saldo libre mínimo para abrir</span><strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate.requiredAvailableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong><small>Umbral estricto contra falta de fondos</small></div>
                       <div><span>{policy.sizingMode === 'EQUITY_PERCENT' ? 'Entrada estimada' : 'Capital fijo por entrada'}<strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate.targetNotionalUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Margen de la orden<strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate.orderMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Comisión cubierta<strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate.openingFeeUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Reserva protegida<strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate.reserveUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span></div>
+                      {estimate.adjustedForFunding && <small>Entrada ajustada de <BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate.configuredNotionalUsd.toFixed(2)} USD</BrokerSensitiveValue> a <BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate.targetNotionalUsd.toFixed(2)} USD</BrokerSensitiveValue> para cubrir comisión y reserva con el saldo disponible.</small>}
                       <small>Tasa taker usada: {(estimate.takerFeeRate * 100).toFixed(4)}% {liveRequirement ? '· consultada en BingX' : '· estimación conservadora'}</small>
-                      {policy.sizingMode === 'EQUITY_PERCENT' && <small>El importe final varía con el equity porque el interés compuesto está activo.</small>}
+                      {policy.sizingMode === 'EQUITY_PERCENT' && <small>El porcentaje es un máximo: la entrada se ajusta al saldo libre para cubrir comisión y conservar la reserva. Si no alcanza el mínimo del broker, no se abre.</small>}
                     </article>
                   })}
                 </div>

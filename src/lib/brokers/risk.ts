@@ -2,7 +2,7 @@ import type { BrokerPosition, InstrumentRules } from './adapters/types'
 import type { RiskPolicy, SignalAction, TradeDirection } from './domain'
 import { normalizeSymbol } from './domain'
 import { BrokerPlatformError } from './errors'
-import { calculateOpeningFundingRequirement } from './funding-requirement'
+import { planOpeningFunding } from './funding-requirement'
 
 // Posición abierta por ESTA conexión (cantidad neta propia), derivada de su historial
 // de órdenes filled. Base de la regla permanente de ownership.
@@ -169,7 +169,18 @@ export function evaluateRisk(input: RiskEvaluationInput): ApprovedOrder {
   // la orden al saldo libre. Si no alcanza para orden + reserva, se rechaza con un motivo claro.
   // BingX recibe este importe como quoteOrderQty, por lo que 90 USD configurados son 90 USD
   // de exposición objetivo aunque la cantidad base resultante tenga decimales distintos.
-  const orderNotionalUsd = Number(configuredOrderNotionalUsd.toFixed(8))
+  if (!Number.isFinite(input.openingFeeRate) || input.openingFeeRate < 0) {
+    reject('RISK_COMMISSION_RATE_INVALID', 'No se pudo calcular la comisión de apertura.')
+  }
+  const funding = planOpeningFunding({
+    targetNotionalUsd: configuredOrderNotionalUsd,
+    leverage: policy.maxLeverage,
+    reserveUsd: configuredMinAvailableMarginUsd,
+    takerFeeRate: input.openingFeeRate,
+    compoundCapitalUsd: compoundSizing ? input.sizingCapitalUsd : undefined,
+    availableMarginUsd: input.availableMargin,
+  })
+  const orderNotionalUsd = funding.targetNotionalUsd
   // Ownership en apertura: no abrir si hay una posición AJENA en la dirección opuesta del
   // mismo símbolo. En modo one-way una apertura opuesta reduciría esa posición ajena; lo
   // evitamos para nunca afectar posiciones de otra conexión o manuales.
@@ -185,22 +196,15 @@ export function evaluateRisk(input: RiskEvaluationInput): ApprovedOrder {
 
   const currentExposure = ownedPolicyPositions.reduce((total, position) => total + Math.abs(position.quantity * position.markPrice), 0)
   if (!compoundSizing && orderNotionalUsd > policy.maxNotionalPerOrderUsd) reject('RISK_ORDER_NOTIONAL_LIMIT', 'El tamaño supera el máximo por orden.')
-  if (currentExposure + orderNotionalUsd > maxTotalExposureUsd) reject('RISK_TOTAL_EXPOSURE_LIMIT', 'La exposición total superaría el máximo.')
+  // Compare both amounts at the same quote precision; binary tails must not reject equality.
+  if (Number((currentExposure + orderNotionalUsd).toFixed(8)) > Number(maxTotalExposureUsd.toFixed(8))) reject('RISK_TOTAL_EXPOSURE_LIMIT', 'La exposición total superaría el máximo.')
 
+  if (orderNotionalUsd <= 0) reject('RISK_MARGIN_RESERVE', 'El saldo libre no alcanza para abrir conservando la reserva y la comisión.')
   const quantity = floorToStep(orderNotionalUsd / input.price, input.rules.quantityStep, input.rules.quantityPrecision)
   if (quantity < input.rules.minimumQuantity || quantity > input.rules.maximumQuantity) {
     reject('RISK_QUANTITY_OUT_OF_RANGE', 'La cantidad no cumple las reglas del instrumento.')
   }
   if (orderNotionalUsd < input.rules.minimumNotional) reject('RISK_MINIMUM_NOTIONAL', 'El tamaño no alcanza el mínimo del instrumento.')
-  if (!Number.isFinite(input.openingFeeRate) || input.openingFeeRate < 0) {
-    reject('RISK_COMMISSION_RATE_INVALID', 'No se pudo calcular la comisión de apertura.')
-  }
-  const funding = calculateOpeningFundingRequirement({
-    notionalUsd: orderNotionalUsd,
-    leverage: policy.maxLeverage,
-    reserveUsd: configuredMinAvailableMarginUsd,
-    takerFeeRate: input.openingFeeRate,
-  })
   if (input.availableMargin < funding.requiredAvailableMarginUsd) {
     reject(
       'RISK_MARGIN_RESERVE',

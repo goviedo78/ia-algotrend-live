@@ -321,3 +321,67 @@ test('compound sizing recalculates from the equity of each account', () => {
   assert.equal(evaluate(1_000).notionalUsd, 50)
   assert.equal(evaluate(1_030).notionalUsd, 51.5)
 })
+
+test('compound opening leaves room for the fee when allocation plus reserve is 100 percent', () => {
+  const result = evaluateRisk({
+    action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 80_000,
+    sizingCapitalUsd: 100, availableMargin: 100, positions: [], ownedPositions: [], rules,
+    policy: { ...policy, sizingMode: 'EQUITY_PERCENT', exposurePerOrderPct: 90,
+      maxTotalExposurePct: 90, marginReservePct: 10 },
+    openingFeeRate: 0.0005, ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+  })
+  assert.equal(result.notionalUsd, 89.95)
+})
+
+test('Leo compound capital does not exceed its identical exposure limit through rounding', () => {
+  for (const sizingCapitalUsd of [197.008219, 192.008219, 187.008219]) {
+    const result = evaluateRisk({
+      action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 80_000,
+      sizingCapitalUsd, availableMargin: 300, positions: [], ownedPositions: [], rules,
+      policy: { ...policy, sizingMode: 'EQUITY_PERCENT', exposurePerOrderPct: 90,
+        maxTotalExposurePct: 90, marginReservePct: 0 },
+      openingFeeRate: 0.0005, ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+    })
+    assert.equal(result.notionalUsd, Number((sizingCapitalUsd * 0.9).toFixed(8)))
+  }
+})
+
+test('compound funding never bypasses minimum lots, daily loss or a real exposure limit', () => {
+  const input: RiskEvaluationInput = {
+    action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 80_000,
+    sizingCapitalUsd: 197.008219, availableMargin: 197.008219, positions: [], ownedPositions: [], rules,
+    policy: { ...policy, sizingMode: 'EQUITY_PERCENT', exposurePerOrderPct: 90,
+      maxTotalExposurePct: 90, marginReservePct: 10 },
+    openingFeeRate: 0.0005, ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+  }
+  assert.throws(() => evaluateRisk({ ...input, availableMargin: 19 }), { code: 'RISK_MARGIN_RESERVE' })
+  assert.throws(() => evaluateRisk({ ...input, availableMargin: 20 }), { code: 'RISK_QUANTITY_OUT_OF_RANGE' })
+  assert.throws(() => evaluateRisk({ ...input, realizedPnlTodayUsd: -10 }), { code: 'RISK_DAILY_LOSS_LIMIT' })
+  assert.throws(() => evaluateRisk({ ...input, policy: { ...input.policy, maxTotalExposurePct: 89 } }), { code: 'RISK_TOTAL_EXPOSURE_LIMIT' })
+})
+
+test('the approved net compound amount is what the BingX adapter sends for each account', async () => {
+  const { BingxAdapter } = await import('../../src/lib/brokers/adapters/bingx')
+  for (const sizingCapitalUsd of [100, 197.008219]) {
+    const order = evaluateRisk({
+      action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 80_000,
+      sizingCapitalUsd, availableMargin: sizingCapitalUsd, positions: [], ownedPositions: [], rules,
+      policy: { ...policy, sizingMode: 'EQUITY_PERCENT', exposurePerOrderPct: 90,
+        maxTotalExposurePct: 90, marginReservePct: 10 },
+      openingFeeRate: 0.0005, ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+    })
+    let sentAmount = 0
+    const adapter = new BingxAdapter({
+      environment: 'DEMO', credentials: { apiKey: 'test', secretKey: 'test' },
+      fetchImpl: async (input) => {
+        const url = new URL(String(input))
+        if (url.pathname.endsWith('/positionSide/dual')) return Response.json({ code: 0, data: { dualSidePosition: false } })
+        sentAmount = Number(url.searchParams.get('quoteOrderQty'))
+        return Response.json({ code: 0, data: { orderId: 'test', status: 'NEW' } })
+      },
+    })
+    await adapter.placeMarketOrder({ ...order, clientOrderId: `test-${sizingCapitalUsd}` })
+    assert.equal(sentAmount, order.notionalUsd)
+    assert.ok(sentAmount < sizingCapitalUsd * 0.9)
+  }
+})

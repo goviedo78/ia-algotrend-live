@@ -109,7 +109,7 @@ test('the panel exposes every parameter and warns before an unusable combination
   assert.match(panel, /const exposicionInsuficiente = effectiveMaxExposureUsd < effectiveNotionalUsd/)
   assert.match(panel, /disabled=\{submitting \|\| riskEdit\.capitalUsd < 100 \|\| exposicionInsuficiente\}/)
   // El umbral visible y el motor comparten el cálculo que incluye comisión y redondea hacia arriba.
-  assert.match(panel, /calculateOpeningFundingRequirement/)
+  assert.match(panel, /planOpeningFunding/)
   assert.match(panel, /requiredAvailableMarginUsd/)
   assert.match(panel, /requiredCapitalBox/)
   // Las operaciones fallidas son contexto secundario: aparecen después de la tabla del historial.
