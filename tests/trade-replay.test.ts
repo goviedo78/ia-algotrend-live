@@ -19,7 +19,7 @@ const candles = [
 test('candles the cron skipped are all applied, in order', () => {
   // El cron no corrió entre las 04:32 y las 17:35: una sola corrida tiene que ver las 7 velas.
   const decision = replayOpenTrade(trade363, SIGNAL, candles)
-  assert.deepEqual(decision, { kind: 'CLOSE', candleTime: 1790240400, reason: 'SL', closePrice: 83236.23 })
+  assert.deepEqual(decision, { kind: 'CLOSE', candleTime: 1790240400, reason: 'SL', closePrice: 83236.23, trailingStopActive: true })
 })
 
 test('hourly runs reach the same close as one run over the gap', () => {
@@ -37,7 +37,7 @@ test('hourly runs reach the same close as one run over the gap', () => {
       }
     }
   }
-  assert.deepEqual(closed, { kind: 'CLOSE', candleTime: 1790240400, reason: 'SL', closePrice: 83236.23 })
+  assert.deepEqual(closed, { kind: 'CLOSE', candleTime: 1790240400, reason: 'SL', closePrice: 83236.23, trailingStopActive: true })
 })
 
 test('a candle already applied is never evaluated again', () => {
@@ -54,4 +54,20 @@ test('a trade opened before the marker keeps the old rule on its first run', () 
   const decision = replayOpenTrade(trade363, null, candles.slice(0, 3))
   assert.equal(decision.kind, 'MANAGED')
   assert.equal(decision.kind === 'MANAGED' && decision.lastManagedTime, candles[2].time)
+})
+
+test('trigger evidence survives activation and closure within one candle or a replay gap', () => {
+  for (const direction of ['LONG', 'SHORT'] as const) {
+    const state: ManagedTrade = { direction, signalTime: 1000, openPrice: 100, stopLoss: direction === 'LONG' ? 98 : 102, takeProfit: direction === 'LONG' ? 103 : 97 }
+    const activation = { time: 4600, open: 100, high: direction === 'LONG' ? 101.5 : 100.2, low: direction === 'LONG' ? 99.8 : 98.5, close: direction === 'LONG' ? 101.4 : 98.6, volume: 1 }
+    const sameCandle = replayOpenTrade(state, 1000, [{ ...activation, close: direction === 'LONG' ? 101 : 99 }])
+    assert.equal(sameCandle.kind, 'CLOSE')
+    assert.equal(sameCandle.kind === 'CLOSE' && sameCandle.trailingStopActive, true)
+    const gap = replayOpenTrade(state, 1000, [activation, { ...activation, time: 8200, high: 101.6, low: 98.4 }])
+    assert.equal(gap.kind, 'CLOSE')
+    assert.equal(gap.kind === 'CLOSE' && gap.trailingStopActive, true)
+    const fixedStop = replayOpenTrade(state, 1000, [{ ...activation, high: 102.1, low: 97.9 }])
+    assert.equal(fixedStop.kind, 'CLOSE')
+    assert.equal(fixedStop.kind === 'CLOSE' && fixedStop.trailingStopActive, undefined)
+  }
 })

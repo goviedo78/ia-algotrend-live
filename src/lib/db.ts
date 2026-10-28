@@ -169,8 +169,9 @@ export async function getOpenTrade(tableName: string = TABLE): Promise<Trade | n
   return (data as Trade) ?? null
 }
 
-export async function getAllTrades(limit = 200, tableName: string = TABLE): Promise<Trade[]> {
-  const { data, error } = await supabase.from(tableName).select().order('open_time', { ascending: false }).limit(limit)
+export async function getAllTrades(limit = 200, tableName: string = TABLE, signal?: AbortSignal): Promise<Trade[]> {
+  const query = supabase.from(tableName).select().order('open_time', { ascending: false }).order('id', { ascending: false }).limit(limit)
+  const { data, error } = await (signal ? query.abortSignal(signal) : query)
   if (error) throw new Error(error.message)
   return (data ?? []) as Trade[]
 }

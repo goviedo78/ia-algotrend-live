@@ -24,7 +24,7 @@ Para levantar o modificar este ecosistema, estas son las integraciones actuales 
 | **VAPID (Push)** | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`<br>`VAPID_PRIVATE_KEY` | Generación de notificaciones Push nativas en el navegador/celular del cliente. |
 | **Cron Job** | Cron en `cron-job.org` apuntando a `/api/cron/check` | Principal: cron-job.org job 7501566 al endpoint canónico de gonovi.app, minutos UTC 2,7,17,32,47. GitHub es sólo respaldo. Ver `scripts/configure-btc-cron.mjs` y runbook de brokers. |
 | **Webhook TV** | `WEBHOOK_SECRET` | Token de seguridad para recibir señales POST desde alertas directas de TradingView en `/api/webhook/tradingview`. |
-| **Telegram** | `TELEGRAM_BOT_TOKEN`<br>`TELEGRAM_CHAT_ID` | Notificaciones automáticas de logs y señales con emojis y formato en HTML (`src/lib/telegram.ts`). |
+| **Telegram** | Señales: `ALGOTREND_TELEGRAM_BOT_TOKEN`, `ALGOTREND_TELEGRAM_CHAT_ID`, `ALGOTREND_TELEGRAM_THREAD_ID` opcional.<br>Infraestructura: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`. | Destinos separados. Alertas BTC 1H en PNG con captions breves y precios; cierre con duración, últimas cinco cerradas y PnL acumulado. Configuración, formato aprobado y auditoría de pruebas: `docs/telegram-algotrend.md`. |
 | **Emails** | `RESEND_API_KEY`<br>`ALERT_EMAIL` | Notificaciones por correo electrónico al abrir/cerrar operaciones vía Resend API (`src/lib/email.ts`). |
 | **Mercado** | Bitstamp API REST/WS (Público) | Origen de datos (Precio BTC) vía REST (1h) y WebSocket (tiempo real) para la UI. |
 

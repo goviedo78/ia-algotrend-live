@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, action: 'signal_already_processed' })
     }
 
-    await notifyOpen(trade)
+    await notifyOpen(trade, prob)
     await safeExecuteBingxOpen(trade, undefined, 'webhook')
 
     const emoji = signal === 'LONG' ? '🟢' : '🔴'

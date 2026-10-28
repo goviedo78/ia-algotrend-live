@@ -16,9 +16,11 @@ import {
 import { dispatchBrokerSignal } from '@/lib/brokers/signals'
 import { safeProcessBrokerJobsInApp } from '@/lib/brokers/worker'
 import { isTransientUpstreamError } from '@/lib/cron-errors'
+import { triggerNotice, type SignalNotice } from '@/lib/signal-notices'
+import { previewSignalNotice, publishSignalNotice, safelyRunNotice } from '@/lib/signal-notices-runtime'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 30
+export const maxDuration = 60
 
 const PAIR = 'btcusd'
 const STEP = 3600
@@ -288,6 +290,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, action: 'no_candles', actions })
     }
 
+    // Keep a separate snapshot for read-only prealerts. Trading below still
+    // excludes the open candle and uses its unchanged confirmation rules.
+    const previewCandles = candles
     // Strip the current OPEN candle — Bitstamp includes it as the last entry.
     // We only analyze CLOSED candles, just like TradingView/Pine Script.
     const nowHour = Math.floor(Date.now() / 1000 / STEP) * STEP
@@ -306,6 +311,7 @@ export async function GET(req: NextRequest) {
 
     const lastCandle = candles[candles.length - 1]
     let existingTradeClosedThisRun = false
+    let pendingTriggerNotice: SignalNotice | null = null
 
     // ── 1. Check if there's an open trade that needs SL/TP management ──
     const existingTrade = await getOpenTrade()
@@ -348,7 +354,7 @@ export async function GET(req: NextRequest) {
       if (closeAt) {
         const trade = await closeTrade(existingTrade.id, closeAt.time, closeAt.price, closeAt.reason)
         await closeTradeEverywhere(trade, actions)
-        await notifyClose(trade)
+        await notifyClose(trade, decision.kind === 'CLOSE' && decision.trailingStopActive)
         await sendPushDirect({
           title: `⚪ AlgoTrend — Salida ${directionLabel(trade.direction)}`,
           body: `Precio: $${trade.close_price?.toLocaleString('es-MX')} | Resultado: ${trade.pnl_pct?.toFixed(2)}% (${closeReasonLabel(trade.close_reason)})`,
@@ -359,7 +365,8 @@ export async function GET(req: NextRequest) {
         actions.push(`closed_${closeAt.reason}`)
       } else {
         if (decision.kind === 'MANAGED') {
-          await updateOpenTradeRisk(existingTrade.id, decision.stopLoss, decision.takeProfit, decision.lastManagedTime)
+          const saved = await updateOpenTradeRisk(existingTrade.id, decision.stopLoss, decision.takeProfit, decision.lastManagedTime)
+          pendingTriggerNotice = triggerNotice(existingTrade, saved)
           if (decision.stopLoss !== existingTrade.stop_loss || decision.takeProfit !== existingTrade.take_profit) {
             actions.push('trailing_updated')
           }
@@ -413,6 +420,7 @@ export async function GET(req: NextRequest) {
             'SIGNAL',
           )
           await closeTradeEverywhere(closed, actions)
+          await notifyClose(closed)
           existingTradeClosedThisRun = true
         }
 
@@ -434,7 +442,7 @@ export async function GET(req: NextRequest) {
             await safeExecuteBingxOpen(trade, actions, 'cron')
           }
           await queueBrokerPlatformSignal(trade, 'OPEN', signalResult.time, signalResult.close, actions)
-          await notifyOpen(trade)
+          await notifyOpen(trade, prob * 100)
 
           const emoji = signal === 'LONG' ? '🟢' : '🔴'
           const dir = signal === 'LONG' ? 'LARGO' : 'CORTO'
@@ -454,6 +462,13 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // A trigger followed by a close/reversal in this run is already explained
+    // in the close card; don't announce an operation that has just ended.
+    const trigger = existingTradeClosedThisRun ? null : pendingTriggerNotice
+    after(() => safelyRunNotice(async () => {
+      if (trigger) await publishSignalNotice(trigger)
+      await previewSignalNotice(previewCandles)
+    }))
     return NextResponse.json({
       ok: true,
       time: last.time,

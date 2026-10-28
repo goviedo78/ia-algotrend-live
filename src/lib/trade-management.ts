@@ -15,7 +15,7 @@ export interface ManagedTrade {
 
 export type TradeManagementDecision =
   | { kind: 'BEFORE_ENTRY' }
-  | { kind: 'CLOSE'; reason: CloseReason; closePrice: number }
+  | { kind: 'CLOSE'; reason: CloseReason; closePrice: number; trailingStopActive?: true }
   | { kind: 'TRAIL'; stopLoss: number; takeProfit: number | null }
   | { kind: 'HOLD' }
 
@@ -78,7 +78,8 @@ export function evaluateOpenTradeAgainstCandle(
   const closeReason: CloseReason | null = trade.direction === 'LONG'
     ? (price <= stopLoss ? 'SL' : (takeProfit !== null && price >= takeProfit ? 'TP' : null))
     : (price >= stopLoss ? 'SL' : (takeProfit !== null && price <= takeProfit ? 'TP' : null))
-  if (closeReason) return { kind: 'CLOSE', reason: closeReason, closePrice: price }
+  if (closeReason) return { kind: 'CLOSE', reason: closeReason, closePrice: price,
+    ...(closeReason === 'SL' && takeProfit === null ? { trailingStopActive: true as const } : {}) }
 
   if (stopLoss !== trade.stopLoss || takeProfit !== trade.takeProfit) {
     return { kind: 'TRAIL', stopLoss, takeProfit }
@@ -88,7 +89,7 @@ export function evaluateOpenTradeAgainstCandle(
 
 export type OpenTradeReplay =
   | { kind: 'NOTHING_NEW' }
-  | { kind: 'CLOSE'; candleTime: number; reason: CloseReason; closePrice: number }
+  | { kind: 'CLOSE'; candleTime: number; reason: CloseReason; closePrice: number; trailingStopActive?: true }
   | { kind: 'MANAGED'; stopLoss: number; takeProfit: number | null; lastManagedTime: number }
 
 /**
@@ -118,7 +119,12 @@ export function replayOpenTrade(
   for (const candle of pending) {
     const decision = evaluateOpenTradeAgainstCandle({ ...trade, stopLoss, takeProfit }, candle)
     if (decision.kind === 'CLOSE') {
-      return { kind: 'CLOSE', candleTime: candle.time, reason: decision.reason, closePrice: decision.closePrice }
+      // Carry notification evidence even when activation and closure happen in one
+      // replay. The closed database row may still contain its original fixed TP.
+      const trailingStopActive = decision.reason === 'SL' && (decision.trailingStopActive || (takeProfit === null &&
+        (trade.direction === 'LONG' ? stopLoss >= trade.openPrice : stopLoss <= trade.openPrice)))
+      return { kind: 'CLOSE', candleTime: candle.time, reason: decision.reason, closePrice: decision.closePrice,
+        ...(trailingStopActive ? { trailingStopActive: true as const } : {}) }
     }
     if (decision.kind === 'TRAIL') {
       stopLoss = decision.stopLoss

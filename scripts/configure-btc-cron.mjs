@@ -7,7 +7,7 @@ export const BTC_CRON_CONFIG = {
   saveResponses: true,
   requestMethod: 0,
   requestTimeout: 60,
-  schedule: { timezone: 'UTC', hours: [-1], mdays: [-1], minutes: [2, 7, 17, 32, 47], months: [-1], wdays: [-1], expiresAt: 0 },
+  schedule: { timezone: 'UTC', hours: [-1], mdays: [-1], minutes: [2, 7, 17, 32, 47, 57], months: [-1], wdays: [-1], expiresAt: 0 },
 }
 const clean = value => value?.replace(/\\n/g, '').trim() ?? ''
 
