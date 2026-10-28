@@ -7,7 +7,7 @@ const apiSecret = z.string().trim().min(16).max(512)
 const symbol = z.string().trim().regex(/^[A-Za-z0-9_-]{3,40}$/).transform((value) => value.toUpperCase())
 
 export const connectionCreateSchema = z.object({
-  broker: z.enum(['BINGX', 'BINANCE']),
+  broker: z.enum(['BINGX', 'BINANCE', 'BITUNIX']),
   environment: z.enum(['DEMO', 'LIVE']),
   strategyCode: z.enum(BROKER_STRATEGY_CODES),
   label: safeLabel,
@@ -27,7 +27,11 @@ export const connectionCreateSchema = z.object({
     p2p: z.literal(false),
   }).strict(),
   ipRestrictionConfirmed: z.boolean().default(false),
-}).strict()
+}).strict().refine((input) => input.broker !== 'BITUNIX' || input.environment === 'LIVE', {
+  path: ['environment'], message: 'Bitunix sólo admite cuentas reales.',
+}).refine((input) => input.broker !== 'BITUNIX' || input.strategyCode === 'ALGOTREND_BTC_1H', {
+  path: ['strategyCode'], message: 'Bitunix está disponible para BTC 1H.',
+})
 
 export const rotateCredentialsSchema = z.object({
   apiKey: apiSecret,

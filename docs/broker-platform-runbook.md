@@ -2,6 +2,10 @@
 
 Estado de referencia: 2026-10-14. La ejecución vive dentro del backend de `gonovi.app`; no requiere VPS, worker externo ni webhooks para AlgoTrend BTC 1H. Las cuentas reales sólo operan después de la aprobación administrativa y de habilitar los interruptores globales.
 
+La preparación de la alternativa Bitunix (BTC 1H, ejecución desactivada por defecto), sus
+pruebas y pasos de publicación están en [bitunix-connections.md](bitunix-connections.md).
+Esa preparación no modifica los controles ni las conexiones existentes de BingX.
+
 ## Flujo operativo
 
 1. `GET /api/cron/check` calcula AlgoTrend BTC 1H con velas cerradas.

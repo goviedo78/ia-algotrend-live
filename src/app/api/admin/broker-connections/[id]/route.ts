@@ -11,6 +11,7 @@ import { adminConnectionSchema } from '@/lib/brokers/schemas'
 import { safeProcessBrokerJobsInApp } from '@/lib/brokers/worker'
 import { brokerStrategy } from '@/lib/brokers/strategies'
 import { loadBrokerAdapter } from '@/lib/brokers/adapter-loader'
+import { runtimeFlag } from '@/lib/brokers/runtime'
 
 export const maxDuration = 30
 
@@ -30,7 +31,7 @@ export async function PATCH(request: NextRequest, context: Context) {
     const admin = createAdminClient()
     const { data: connection, error: lookupError } = await admin
       .from('broker_connections')
-      .select('id, user_id, status, validated_at, requested_strategy_code, requested_symbol, requested_timeframe')
+      .select('id, user_id, broker, status, validated_at, requested_strategy_code, requested_symbol, requested_timeframe')
       .eq('id', id)
       .neq('status', 'DELETED')
       .maybeSingle()
@@ -70,6 +71,10 @@ export async function PATCH(request: NextRequest, context: Context) {
       return NextResponse.json({ ok: true, status: 'PENDING_APPROVAL' })
     }
 
+    if (connection.broker === 'BITUNIX' && ['APPROVE', 'RESUME'].includes(parsed.data.action) && !runtimeFlag('BITUNIX_EXECUTION_ENABLED')) {
+      throw new BrokerPlatformError('BITUNIX_EXECUTION_DISABLED', 'Bitunix está en validación; sus órdenes todavía no están habilitadas.', 409)
+    }
+
     if (parsed.data.action === 'APPROVE') {
       const strategy = brokerStrategy(connection.requested_strategy_code)
       if (!strategy || strategy.symbol !== connection.requested_symbol || strategy.timeframe !== connection.requested_timeframe) {
@@ -88,7 +93,7 @@ export async function PATCH(request: NextRequest, context: Context) {
         adapter.getLastPrice(strategy.symbol),
       ])
       if (!rules.openEnabled || !rules.closeEnabled) {
-        throw new BrokerPlatformError('INSTRUMENT_TRADING_DISABLED', 'BingX no permite abrir y cerrar este instrumento por API.', 422)
+        throw new BrokerPlatformError('INSTRUMENT_TRADING_DISABLED', 'El broker no permite abrir y cerrar este instrumento por API.', 422)
       }
       const minimumExecutableNotional = Math.max(rules.minimumNotional, rules.minimumQuantity * lastPrice)
       if (parsed.data.risk.fixedNotionalUsd + 1e-8 < minimumExecutableNotional) {

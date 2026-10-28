@@ -464,7 +464,7 @@ async function reconcileOrder(job: Job) {
   if (!remoteOrder) throw new BrokerPlatformError('ORDER_RECONCILIATION_PENDING', 'La orden todavía no está disponible para reconciliar.', 503, true)
 
   const brokerOrderId = remoteOrder.brokerOrderId ?? storedOrder.broker_order_id
-  if (!brokerOrderId) throw new BrokerPlatformError('ORDER_ID_MISSING', 'BingX no devolvió un identificador de orden.', 503, true)
+  if (!brokerOrderId) throw new BrokerPlatformError('ORDER_ID_MISSING', 'El broker no devolvió un identificador de orden.', 503, true)
   const fills = await adapter.getOrderFills(
     storedOrder.symbol,
     brokerOrderId,
@@ -485,7 +485,7 @@ async function reconcileOrder(job: Job) {
   ) {
     throw new BrokerPlatformError(
       'ORDER_FILLS_PENDING',
-      'BingX todavía no devolvió las ejecuciones contables de la orden.',
+      'El broker todavía no devolvió las ejecuciones contables de la orden.',
       503,
       true,
     )

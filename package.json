@@ -12,6 +12,7 @@
     "test:brokers": "NODE_OPTIONS=--conditions=react-server tsx --test tests/brokers/*.test.ts",
     "test:engine": "NODE_OPTIONS=--conditions=react-server tsx --test tests/*.test.ts",
     "broker:keygen": "node scripts/generate-broker-envelope-key.mjs",
+    "broker:check:bitunix": "NODE_OPTIONS=--conditions=react-server tsx scripts/check-bitunix.ts",
     "deploy:prod": "bash scripts/deploy-prod.sh",
     "deploy:preview": "vercel deploy"
   },

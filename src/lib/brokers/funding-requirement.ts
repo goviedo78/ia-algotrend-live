@@ -1,4 +1,10 @@
 export const DEFAULT_BINGX_TAKER_FEE_RATE = 0.0005
+// Bitunix published VIP0 futures rate, reserved conservatively until actual fills.
+export const DEFAULT_BITUNIX_TAKER_FEE_RATE = 0.0006
+
+export function defaultTakerFeeRate(broker: string) {
+  return broker === 'BITUNIX' ? DEFAULT_BITUNIX_TAKER_FEE_RATE : DEFAULT_BINGX_TAKER_FEE_RATE
+}
 
 function ceilUsd(value: number) {
   if (!Number.isFinite(value) || value < 0) return 0

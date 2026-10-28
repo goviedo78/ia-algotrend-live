@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { fetchBingxTickerPrice } from './adapters/bingx'
+import { fetchBitunixTickerPrice } from './adapters/bitunix'
 import type { BrokerEnvironment } from './domain'
 import type { BrokerOpenPositionSummary } from './order-history-types'
 
@@ -17,22 +18,24 @@ function isSupportedEnvironment(value: string): value is BrokerEnvironment {
 async function loadMarkPrices(
   positions: BrokerOpenPositionSummary[],
 ): Promise<Map<string, number>> {
-  const wanted = new Map<string, { symbol: string; environment: BrokerEnvironment }>()
+  const wanted = new Map<string, { symbol: string; environment: BrokerEnvironment; broker: string }>()
   for (const position of positions) {
-    // Hoy el único adaptador es BingX. Cualquier otro broker se muestra sin valuar
-    // hasta que tenga su propia fuente de precio, en vez de asumir un ticker ajeno.
-    if (position.broker !== 'BINGX') continue
+    if (!['BINGX', 'BITUNIX'].includes(position.broker)) continue
+    if (position.broker === 'BITUNIX' && position.environment !== 'LIVE') continue
     if (!isSupportedEnvironment(position.environment)) continue
-    wanted.set(`${position.environment}:${position.symbol}`, {
+    wanted.set(`${position.broker}:${position.environment}:${position.symbol}`, {
       symbol: position.symbol,
       environment: position.environment,
+      broker: position.broker,
     })
   }
   if (!wanted.size) return new Map()
 
   const entries = await Promise.all([...wanted].map(async ([key, request]) => {
     try {
-      const price = await fetchBingxTickerPrice(request.symbol, request.environment, { ttlMs: PRICE_TTL_MS })
+      const price = request.broker === 'BITUNIX'
+        ? await fetchBitunixTickerPrice(request.symbol, { ttlMs: PRICE_TTL_MS })
+        : await fetchBingxTickerPrice(request.symbol, request.environment, { ttlMs: PRICE_TTL_MS })
       return [key, price] as const
     } catch {
       // Un ticker caído no puede tumbar el historial entero: esa posición queda sin valuar.
@@ -85,7 +88,7 @@ export async function valueOpenPositions(
   const pricedAt = new Date().toISOString()
   return positions.map((position) => applyMarkPrice(
     position,
-    prices.get(`${position.environment}:${position.symbol}`),
+    prices.get(`${position.broker}:${position.environment}:${position.symbol}`),
     pricedAt,
   ))
 }

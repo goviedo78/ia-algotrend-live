@@ -1,4 +1,4 @@
-export const BROKERS = ['BINGX', 'BINANCE'] as const
+export const BROKERS = ['BINGX', 'BINANCE', 'BITUNIX'] as const
 export const BROKER_ENVIRONMENTS = ['DEMO', 'LIVE'] as const
 export const CONNECTION_STATUSES = [
   'DRAFT',
