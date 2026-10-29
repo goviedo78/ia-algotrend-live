@@ -40,6 +40,11 @@ function number(value: unknown) {
   if (!Number.isFinite(result)) return invalidResponse()
   return result
 }
+function positionDirection(side: unknown): TradeDirection {
+  if (side === 'BUY' || side === 'LONG') return 'LONG'
+  if (side === 'SELL' || side === 'SHORT') return 'SHORT'
+  return invalidResponse()
+}
 function id(value: unknown): string {
   // Never round exchange int64 identifiers. The documented API returns strings.
   if (typeof value === 'number' && !Number.isSafeInteger(value)) return invalidResponse()
@@ -191,14 +196,15 @@ export class BitunixAdapter implements BrokerAdapter {
       const quantity = number(item.qty)
       const entryPrice = number(item.avgOpenPrice)
       const unrealizedPnl = number(item.unrealizedPNL)
-      if (!['LONG', 'SHORT'].includes(String(item.side)) || quantity < 0) return invalidResponse()
+      const direction = positionDirection(item.side)
+      if (quantity < 0) return invalidResponse()
       const exchangeSymbol = String(item.symbol)
       if (bitunixSymbol(exchangeSymbol) !== exchangeSymbol) return invalidResponse()
       const canonicalSymbol = `${exchangeSymbol.slice(0, -4)}-USDT`
       // Linear USDT futures: PnL = qty * (mark - entry) with the side's sign.
-      const markPrice = quantity > 0 ? entryPrice + unrealizedPnl / quantity * (item.side === 'LONG' ? 1 : -1) : entryPrice
+      const markPrice = quantity > 0 ? entryPrice + unrealizedPnl / quantity * (direction === 'LONG' ? 1 : -1) : entryPrice
       if (quantity > 0 && markPrice <= 0) return invalidResponse()
-      return { symbol: symbol ? normalizeSymbol(symbol) : canonicalSymbol, direction: item.side as TradeDirection, quantity, availableQuantity: quantity, entryPrice, markPrice, leverage: number(item.leverage), unrealizedPnl }
+      return { symbol: symbol ? normalizeSymbol(symbol) : canonicalSymbol, direction, quantity, availableQuantity: quantity, entryPrice, markPrice, leverage: number(item.leverage), unrealizedPnl }
     }).filter(item => item.quantity > 0)
   }
 
@@ -254,7 +260,7 @@ export class BitunixAdapter implements BrokerAdapter {
       params.side = input.direction === 'LONG' ? 'BUY' : 'SELL'
       params.tradeSide = input.reduceOnly ? 'CLOSE' : 'OPEN'
       if (input.reduceOnly) {
-        const matches = (await this.rawPositions(input.symbol)).filter(item => item.symbol === params.symbol && item.side === input.direction && number(item.qty) > 0)
+        const matches = (await this.rawPositions(input.symbol)).filter(item => item.symbol === params.symbol && positionDirection(item.side) === input.direction && number(item.qty) > 0)
         if (matches.length !== 1 || number(matches[0].qty) + 1e-12 < input.quantity) {
           throw new BrokerPlatformError('BITUNIX_CLOSE_POSITION_MISMATCH', 'No se pudo identificar una única posición para el cierre autorizado.', 409)
         }
@@ -284,7 +290,9 @@ export class BitunixAdapter implements BrokerAdapter {
       const trades = rows(data.tradeList)
       for (const trade of trades) {
         if (id(trade.orderId) !== brokerOrderId || trade.symbol !== bitunixSymbol(symbol)) continue
-        if (clientOrderId && trade.clientId !== undefined && trade.clientId !== clientOrderId) continue
+        // The live endpoint can omit clientId or return null/empty. Exact orderId
+        // and symbol above remain mandatory; a nonempty foreign clientId is rejected.
+        if (clientOrderId && trade.clientId != null && trade.clientId !== '' && trade.clientId !== clientOrderId) continue
         const brokerFillId = id(trade.tradeId)
         if (seen.has(brokerFillId)) continue
         const quantity = number(trade.qty)

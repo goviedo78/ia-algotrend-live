@@ -232,3 +232,39 @@ test('funding estimates reserve the correct broker fee without changing BingX va
   const rates = await adapter(async () => { throw new Error('no private fee endpoint') }).getCommissionRates()
   assert.equal(calculateOpeningFundingRequirement({ notionalUsd: 1000, leverage: 1, reserveUsd: 0, takerFeeRate: rates.taker }).openingFeeUsd, 0.6)
 })
+
+test('live Bitunix BUY/SELL positions normalize to LONG/SHORT with correct mark price', async () => {
+  for (const [side, direction, expectedPrice] of [['BUY', 'LONG', 61000], ['SELL', 'SHORT', 59000]]) {
+    const result = await adapter(async () => success([{ ...position, side }])).getPositions('BTC-USDT')
+    assert.equal(result[0].direction, direction)
+    assert.equal(result[0].markPrice, expectedPrice)
+  }
+  await assert.rejects(adapter(async () => success([{ ...position, side: 'unknown' }])).getPositions(), { code: 'BITUNIX_INVALID_RESPONSE' })
+})
+
+test('hedge closes find live BUY/SELL positions and keep the original side and exact positionId', () => enabled(async () => {
+  for (const direction of ['LONG', 'SHORT'] as const) {
+    const api = adapter(async (url, init) => {
+      if (String(url).includes('position_mode')) return success({ positionMode: 'HEDGE' })
+      if (String(url).includes('get_pending_positions')) return success([{ ...position, side: direction === 'LONG' ? 'BUY' : 'SELL' }])
+      const body = JSON.parse(String(init?.body))
+      assert.equal(body.positionId, position.positionId)
+      assert.equal(body.side, direction === 'LONG' ? 'BUY' : 'SELL')
+      assert.equal(body.tradeSide, 'CLOSE')
+      assert.equal(body.qty, '0.001')
+      return success({ orderId: '1', clientId: open.clientOrderId })
+    })
+    await api.placeMarketOrder({ ...open, direction, side: direction === 'LONG' ? 'SELL' : 'BUY', quantity: 0.001, reduceOnly: true })
+  }
+}))
+
+test('live fills with null or empty clientId reconcile only by exact order and symbol', async () => {
+  for (const clientId of [null, '', undefined]) {
+    const fill = { tradeId: 'fill-live', orderId: 'order-live', symbol: 'BTCUSDT', clientId, qty: '0.0001', price: '80121.1', fee: '0.004807266', realizedPNL: '0', ctime: now() }
+    const api = adapter(async () => success({ total: '4', tradeList: [fill, { ...fill, orderId: 'foreign' }, { ...fill, symbol: 'ETHUSDT' }, { ...fill, clientId: 'foreign' }] }))
+    const fills = await api.getOrderFills('BTC-USDT', 'order-live', new Date(now()), 'our-client')
+    assert.equal(fills.length, 1)
+    assert.equal(fills[0].quantity, 0.0001)
+    assert.equal(fills[0].fee, 0.004807266)
+  }
+})
