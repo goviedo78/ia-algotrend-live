@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { loadBrokerAdapter } from '@/lib/brokers/adapter-loader'
 import { requireBrokerMember } from '@/lib/brokers/auth'
-import { riskPolicyFromRow } from '@/lib/brokers/dto'
-import { BrokerPlatformError, publicError } from '@/lib/brokers/errors'
-import { planOpeningNotional } from '@/lib/brokers/sizing'
+import { publicError } from '@/lib/brokers/errors'
 import { requireOwnedConnection } from '@/lib/brokers/ownership'
 import { enforceBrokerRateLimit, requestIdentifier } from '@/lib/brokers/rate-limit'
-import { createAdminClient } from '@/lib/supabase/admin'
+
+import { loadConnectionOpeningState } from '@/lib/brokers/opening-state'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -20,32 +18,8 @@ export async function GET(request: NextRequest, context: Context) {
     const { id } = await context.params
     await requireOwnedConnection(id, user.id)
 
-    const admin = createAdminClient()
-    const [{ adapter }, policyResult, runtimeResult] = await Promise.all([
-      loadBrokerAdapter(id),
-      admin.from('broker_risk_policies').select('*').eq('connection_id', id).maybeSingle(),
-      admin.rpc('get_broker_risk_runtime', { target_connection_id: id }),
-    ])
-    if (policyResult.error || runtimeResult.error) throw policyResult.error || runtimeResult.error
-    const policy = riskPolicyFromRow(policyResult.data)
-    if (!policy) throw new BrokerPlatformError('RISK_POLICY_MISSING', 'La conexión no tiene política de riesgo.', 409)
-
-    const [balance, commissionRates] = await Promise.all([
-      adapter.getBalance(),
-      adapter.getCommissionRates(),
-    ])
-    const runtime = Array.isArray(runtimeResult.data) ? runtimeResult.data[0] : runtimeResult.data
-    const sizingCapitalUsd = Math.max(0, Math.min(
-      balance.equity,
-      Number(runtime?.compound_capital_usd ?? policy.declaredCapitalUsd),
-    ))
-    // Mismo cálculo que el motor: en modo porcentaje la entrada se recorta al saldo libre.
-    const { targetNotionalUsd, notionalUsd, limitedByBalance, ...funding } = planOpeningNotional({
-      policy,
-      sizingCapitalUsd,
-      availableMarginUsd: balance.availableMargin,
-      takerFeeRate: commissionRates.taker,
-    })
+    const { policy, plan, dailyLoss, availableMarginUsd, takerFeeRate, sizingCapitalUsd } = await loadConnectionOpeningState(id)
+    const { targetNotionalUsd, notionalUsd, limitedByBalance, ...funding } = plan
 
     return NextResponse.json({
       connectionId: id,
@@ -54,8 +28,10 @@ export async function GET(request: NextRequest, context: Context) {
       configuredNotionalUsd: targetNotionalUsd,
       limitedByBalance,
       leverage: policy.maxLeverage,
-      takerFeeRate: commissionRates.taker,
-      availableMarginUsd: balance.availableMargin,
+      takerFeeRate,
+      availableMarginUsd,
+      sizingCapitalUsd,
+      dailyLoss,
       ...funding,
     }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {

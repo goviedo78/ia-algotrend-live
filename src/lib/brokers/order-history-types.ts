@@ -157,6 +157,7 @@ export type BrokerMissedOpportunity = {
   missedReturnPct: number | null
   missedGrossPnlUsd: number | null
   outcome: 'WIN' | 'LOSS' | 'FLAT' | 'PENDING' | 'NOT_APPLICABLE'
+  retryBlockedReason?: string | null
   canRetry: boolean
 }
 

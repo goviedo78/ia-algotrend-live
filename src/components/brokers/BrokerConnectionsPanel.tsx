@@ -18,6 +18,7 @@ import {
   type BrokerOrderHistoryResponse,
 } from '@/lib/brokers/order-history-types'
 import { BrokerPrivacyToggle, BrokerSensitiveValue, redactText, useBrokerPrivacy } from './BrokerPrivacy'
+import type { dailyLossStatus } from '@/lib/brokers/daily-loss'
 import { BROKER_STRATEGIES } from '@/lib/brokers/strategies'
 import { calculateOpeningFundingRequirement, DEFAULT_BINGX_TAKER_FEE_RATE, defaultTakerFeeRate } from '@/lib/brokers/funding-requirement'
 import styles from './brokers.module.css'
@@ -44,6 +45,8 @@ type FundingRequirement = {
   connectionId: string
   sizingMode: 'FIXED_NOTIONAL' | 'EQUITY_PERCENT'
   targetNotionalUsd: number
+  sizingCapitalUsd: number
+  dailyLoss: ReturnType<typeof dailyLossStatus>
   limitedByBalance?: boolean
   leverage: number
   takerFeeRate: number
@@ -485,16 +488,18 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
                   {connections.filter((connection) => connection.riskPolicy?.enabled).map((connection) => {
                     const policy = connection.riskPolicy!
                     const liveRequirement = fundingRequirements[connection.id]
-                    const estimate = liveRequirement ?? fundingEstimate(policy, defaultTakerFeeRate(connection.broker))
                     const byBalance = sizingChoiceOf(policy) !== 'FIXED'
+                    const estimate = liveRequirement ?? (byBalance ? null : fundingEstimate(policy, defaultTakerFeeRate(connection.broker)))
                     return <article className={styles.fundingEstimateCard} key={connection.id}>
                       <strong>{redactText(privacyMode, connection.label)}</strong>
                       <small>{BROKER_STRATEGIES[connection.requestedStrategy.code]?.label ?? connection.requestedStrategy.code} · {policy.maxLeverage}x</small>
                       {byBalance
                         ? <div className={styles.requiredCapitalBox}><span>Saldo libre en el broker</span><strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{liveRequirement ? `${liveRequirement.availableMarginUsd.toFixed(2)} USD` : 'Consultando…'}</BrokerSensitiveValue></strong><small>Abre con lo que haya, si alcanza el lote mínimo</small></div>
-                        : <div className={styles.requiredCapitalBox}><span>Saldo libre mínimo para abrir</span><strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate.requiredAvailableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong><small>Umbral estricto contra falta de fondos</small></div>}
-                      <div><span>{byBalance ? 'Entrada estimada' : 'Capital fijo por entrada'}<strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{byBalance && !liveRequirement ? 'Según tu saldo' : `${estimate.targetNotionalUsd.toFixed(2)} USD`}</BrokerSensitiveValue></strong></span><span>Margen de la orden<strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate.orderMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Comisión cubierta<strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate.openingFeeUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span><span>Reserva protegida<strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate.reserveUsd.toFixed(2)} USD</BrokerSensitiveValue></strong></span></div>
-                      <small>Tasa taker usada: {(estimate.takerFeeRate * 100).toFixed(4)}% {liveRequirement && connection.broker === 'BINGX' ? '· consultada en BingX' : '· estimación conservadora'}</small>
+                        : <div className={styles.requiredCapitalBox}><span>Saldo libre mínimo para abrir</span><strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate!.requiredAvailableMarginUsd.toFixed(2)} USD</BrokerSensitiveValue></strong><small>Umbral estricto contra falta de fondos</small></div>}
+                      <div><span>{byBalance ? 'Entrada estimada' : 'Capital fijo por entrada'}<strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{byBalance && !liveRequirement ? 'Según tu saldo' : estimate ? `${estimate.targetNotionalUsd.toFixed(2)} USD` : 'Según tu saldo'}</BrokerSensitiveValue></strong></span><span>Margen de la orden<strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate ? `${estimate.orderMarginUsd.toFixed(2)} USD` : 'Según tu saldo'}</BrokerSensitiveValue></strong></span><span>Comisión cubierta<strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate ? `${estimate.openingFeeUsd.toFixed(2)} USD` : 'Según tu saldo'}</BrokerSensitiveValue></strong></span><span>Reserva protegida<strong><BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{estimate ? `${estimate.reserveUsd.toFixed(2)} USD` : 'Según tu saldo'}</BrokerSensitiveValue></strong></span></div>
+                      <small>Tasa taker usada: {((estimate?.takerFeeRate ?? defaultTakerFeeRate(connection.broker)) * 100).toFixed(4)}% {liveRequirement && connection.broker === 'BINGX' ? '· consultada en BingX' : '· estimación conservadora'}</small>
+                      <small>Corte diario: {policy.sizingMode === 'EQUITY_PERCENT' ? policy.dailyLossLimitPct === 100 ? 'Sin corte' : `${policy.dailyLossLimitPct}%` : <BrokerSensitiveValue hidden={privacyMode} fallback="•••• USD">{policy.dailyLossLimitUsd.toFixed(2)} USD</BrokerSensitiveValue>}. Se configura aparte del porcentaje por entrada.</small>
+                      {liveRequirement?.dailyLoss.blocked && <p className={styles.notice} role="alert">{redactText(privacyMode, liveRequirement.dailyLoss.message ?? '')} <button type="button" className={styles.retryButton} onClick={() => editRisk(connection)}>Editar capital</button></p>}
                       {byBalance && <small>{liveRequirement?.limitedByBalance ? 'Ajustada a tu saldo libre actual. ' : ''}El importe final se calcula con tu saldo al abrir.</small>}
                     </article>
                   })}
@@ -514,6 +519,7 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
               history={orderHistory}
               connections={connections}
               privacyMode={privacyMode}
+              onEditRisk={(connectionId) => { const connection = connections.find(item => item.id === connectionId); if (connection) editRisk(connection) }}
               onRetry={(intentId) => void retryMissedOpen(intentId)}
               retryingIntentId={retryingIntentId}
               onClosePosition={(position) => void closeOpenPosition(position)}

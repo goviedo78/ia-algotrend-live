@@ -367,3 +367,30 @@ test('percent sizing keeps its reserve when the balance trims the entry', () => 
   // 90% de 110 = 99 USD no entra con 11 USD de reserva y la comisión: se recorta sin tocar la reserva.
   assert.ok(result.notionalUsd < 99 && result.notionalUsd >= 98.9)
 })
+
+test('the displayed 100 percent no-cut setting really disables the daily cut, even after a withdrawal', () => {
+  const result = evaluateRisk({
+    action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 100,
+    sizingCapitalUsd: 100, availableMargin: 100, positions: [], ownedPositions: [], rules,
+    policy: { ...policy, sizingMode: 'EQUITY_PERCENT', exposurePerOrderPct: 50, maxTotalExposurePct: 100, dailyLossLimitPct: 100, marginReservePct: 0 },
+    ordersLastMinute: 0, realizedPnlTodayUsd: -150, connectionStatus: 'ACTIVE',
+  })
+  assert.equal(result.notionalUsd, 50)
+})
+
+test('the reported user case remains protected by its chosen 2 percent daily cut at every entry allocation', () => {
+  for (const allocation of [50, 70, 100]) {
+    assert.throws(() => evaluateRisk({
+      action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 100000,
+      sizingCapitalUsd: 197.8199, availableMargin: 197.8199, positions: [], ownedPositions: [], rules,
+      policy: { ...policy, sizingMode: 'EQUITY_PERCENT', declaredCapitalUsd: 1000000, fixedNotionalUsd: 1000000 * allocation / 100, exposurePerOrderPct: allocation, maxTotalExposurePct: 100, dailyLossLimitPct: 2, marginReservePct: 0 },
+      ordersLastMinute: 0, realizedPnlTodayUsd: -3.965186, connectionStatus: 'ACTIVE',
+    }), (error: unknown) => {
+      assert.equal((error as {code: string}).code, 'RISK_DAILY_LOSS_LIMIT')
+      assert.match((error as Error).message, /2%/)
+      assert.match((error as Error).message, /3\.97/)
+      assert.match((error as Error).message, /3\.96/)
+      return true
+    })
+  }
+})
