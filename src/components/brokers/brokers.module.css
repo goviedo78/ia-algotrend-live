@@ -393,3 +393,14 @@
 .chartGrid { stroke: var(--broker-border); stroke-width: 1; }
 .chartLabel { fill: var(--broker-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 @media (max-width: 600px) { .historyFilters label { width: 100%; min-width: 0; } }
+
+.retryBlocked { display: grid; gap: 8px; min-width: 160px; }
+@media (max-width: 760px) {
+  .tableWrap .missedTable { min-width: 0; table-layout: fixed; }
+  .missedTable thead { display: none; }
+  .missedTable tbody, .missedTable tr, .missedTable td { display: block; width: 100%; }
+  .missedTable tr { padding: 12px 0; border-top: 1px solid var(--broker-border-soft); }
+  .tableWrap .missedTable td { border: 0; min-height: 0; padding: 7px 0; overflow-wrap: anywhere; }
+  .missedTable td::before { content: attr(data-label); display: block; color: var(--broker-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+  .missedOperationsCard { min-width: 0; padding: 16px; }
+}

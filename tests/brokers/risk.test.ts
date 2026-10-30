@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { evaluateRisk as evaluateRiskRaw } from '../../src/lib/brokers/risk'
+import { managedSizingCapitalUsd, planOpeningNotional } from '../../src/lib/brokers/sizing'
 import type { RiskPolicy } from '../../src/lib/brokers/domain'
 import type { RiskEvaluationInput } from '../../src/lib/brokers/risk'
 
@@ -366,4 +367,54 @@ test('percent sizing keeps its reserve when the balance trims the entry', () => 
   })
   // 90% de 110 = 99 USD no entra con 11 USD de reserva y la comisión: se recorta sin tocar la reserva.
   assert.ok(result.notionalUsd < 99 && result.notionalUsd >= 98.9)
+})
+
+test('the displayed 100 percent no-cut setting really disables the daily cut, even after a withdrawal', () => {
+  const result = evaluateRisk({
+    action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 100,
+    sizingCapitalUsd: 100, availableMargin: 100, positions: [], ownedPositions: [], rules,
+    policy: { ...policy, sizingMode: 'EQUITY_PERCENT', exposurePerOrderPct: 50, maxTotalExposurePct: 100, dailyLossLimitPct: 100, marginReservePct: 0 },
+    ordersLastMinute: 0, realizedPnlTodayUsd: -150, connectionStatus: 'ACTIVE',
+  })
+  assert.equal(result.notionalUsd, 50)
+})
+
+test('the reported user case remains protected by its chosen 2 percent daily cut at every entry allocation', () => {
+  for (const allocation of [50, 70, 100]) {
+    assert.throws(() => evaluateRisk({
+      action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 100000,
+      sizingCapitalUsd: 197.8199, availableMargin: 197.8199, positions: [], ownedPositions: [], rules,
+      policy: { ...policy, sizingMode: 'EQUITY_PERCENT', declaredCapitalUsd: 1000000, fixedNotionalUsd: 1000000 * allocation / 100, exposurePerOrderPct: allocation, maxTotalExposurePct: 100, dailyLossLimitPct: 2, marginReservePct: 0 },
+      ordersLastMinute: 0, realizedPnlTodayUsd: -3.965186, connectionStatus: 'ACTIVE',
+    }), (error: unknown) => {
+      assert.equal((error as {code: string}).code, 'RISK_DAILY_LOSS_LIMIT')
+      assert.match((error as Error).message, /2%/)
+      assert.match((error as Error).message, /3\.97/)
+      assert.match((error as Error).message, /3\.96/)
+      return true
+    })
+  }
+})
+
+
+test('edit previews use equity plus connection PnL, then constrain by free margin exactly as the engine', () => {
+  const cases = [
+    { capital: 1000000, pnl: 0, equity: 200, free: 100, expectedCapital: 200 },
+    { capital: 150, pnl: 20, equity: 200, free: 200, expectedCapital: 170 },
+    { capital: 150, pnl: -20, equity: 200, free: 200, expectedCapital: 130 },
+    { capital: 150, pnl: 80, equity: 200, free: 200, expectedCapital: 200 },
+  ]
+  for (const c of cases) {
+    const editedPolicy = { ...policy, sizingMode: 'EQUITY_PERCENT' as const, declaredCapitalUsd: c.capital, exposurePerOrderPct: 50, maxTotalExposurePct: 100, dailyLossLimitPct: 100, marginReservePct: 0 }
+    const sizingCapitalUsd = managedSizingCapitalUsd(c.capital, c.pnl, c.equity)
+    assert.equal(sizingCapitalUsd, c.expectedCapital)
+    const preview = planOpeningNotional({ policy: editedPolicy, sizingCapitalUsd, availableMarginUsd: c.free, takerFeeRate: 0.0005 })
+    const approved = evaluateRisk({
+      action: 'OPEN', direction: 'LONG', symbol: 'BTC-USDT', price: 100,
+      sizingCapitalUsd, availableMargin: c.free, positions: [], ownedPositions: [], rules,
+      policy: editedPolicy, openingFeeRate: 0.0005, ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+    })
+    assert.equal(preview.notionalUsd, approved.notionalUsd)
+    if (c.free === 100) assert.ok(preview.notionalUsd > 99 && preview.notionalUsd < 100)
+  }
 })

@@ -5,6 +5,7 @@ import { readAllHistoryRows, readHistoryByIds } from './history-pagination'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizeSymbol, strategyTradeKey } from './domain'
 import { brokerStrategy } from './strategies'
+import { loadConnectionOpeningState } from './opening-state'
 import type { BrokerMissedOpportunity } from './order-history-types'
 
 // Motivos de rechazo en lenguaje del titular. El código crudo igual viaja en la respuesta
@@ -109,7 +110,7 @@ export function buildMissedOpportunities(input: {
   intents: IntentRow[]
   signalsById: Map<string, SignalRow>
   laterSignals: SignalRow[]
-  connections: Map<string, { label: string; status: string; notionalUsd: number | null }>
+  connections: Map<string, { label: string; status: string; notionalUsd: number | null; retryBlockedReason?: string | null }>
 }): BrokerMissedOpportunity[] {
   const closesByKey = new Map<string, SignalRow[]>()
   // Cierre indexado por la operación exacta que cierra, cuando el emisor la numera.
@@ -182,7 +183,8 @@ export function buildMissedOpportunities(input: {
       closedAt,
       notionalUsd,
       ...result,
-      canRetry: intent.action === 'OPEN' && closedAt == null && connection?.status === 'ACTIVE',
+      canRetry: intent.action === 'OPEN' && closedAt == null && connection?.status === 'ACTIVE' && !connection.retryBlockedReason,
+      retryBlockedReason: intent.action === 'OPEN' && closedAt == null ? connection?.retryBlockedReason ?? null : null,
     } satisfies BrokerMissedOpportunity
   })
 }
@@ -214,7 +216,7 @@ export async function loadMissedOpportunities(filters: {
       .in('id', ids).order('id')),
     readHistoryByIds(connectionIds, ids => admin.from('broker_connections').select('id, label, status').in('id', ids).order('id')),
     readHistoryByIds(connectionIds, ids => admin.from('broker_risk_policies')
-      .select('connection_id, fixed_notional_usd, suggested_notional_per_order_usd')
+      .select('connection_id, sizing_mode, fixed_notional_usd, suggested_notional_per_order_usd')
       .in('connection_id', ids).order('connection_id')),
   ])
   const firstError = signalsResult.error || connectionsResult.error || policiesResult.error
@@ -240,18 +242,26 @@ export async function loadMissedOpportunities(filters: {
     : { data: [], error: null }
   if (laterSignals.error) throw laterSignals.error
 
-  const notionalByConnection = new Map(
-    (policiesResult.data ?? []).map((policy) => [
-      policy.connection_id,
-      Number(policy.fixed_notional_usd) || Number(policy.suggested_notional_per_order_usd) || null,
-    ]),
-  )
-  const connections = new Map(
-    (connectionsResult.data ?? []).map((connection) => [
-      connection.id,
-      { label: connection.label, status: connection.status, notionalUsd: notionalByConnection.get(connection.id) ?? null },
-    ]),
-  )
+  const policies = new Map((policiesResult.data ?? []).map(policy => [policy.connection_id, policy]))
+  const connections = new Map(await Promise.all((connectionsResult.data ?? []).map(async (connection) => {
+    const policy = policies.get(connection.id)
+    // A stored percent-mode amount is derived from the declared cap, never a balance estimate.
+    let notionalUsd: number | null = policy?.sizing_mode === 'FIXED_NOTIONAL'
+      ? numberOrNull(policy.fixed_notional_usd) ?? numberOrNull(policy.suggested_notional_per_order_usd)
+      : null
+    let retryBlockedReason: string | null = null
+    if (connection.status === 'ACTIVE') {
+      try {
+        const state = await loadConnectionOpeningState(connection.id)
+        notionalUsd = numberOrNull(state.plan.notionalUsd)
+        retryBlockedReason = state.dailyLoss.message
+      } catch {
+        // Keep history readable when the broker is unavailable; never invent a percent estimate.
+        retryBlockedReason = 'No se pudo consultar el saldo y el corte diario. Actualizá antes de reenviar.'
+      }
+    }
+    return [connection.id, { label: connection.label, status: connection.status, notionalUsd, retryBlockedReason }] as const
+  })))
 
   return buildMissedOpportunities({
     intents: intents as IntentRow[],

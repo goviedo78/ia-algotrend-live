@@ -3,6 +3,7 @@ import type { RiskPolicy, SignalAction, TradeDirection } from './domain'
 import { normalizeSymbol } from './domain'
 import { BrokerPlatformError } from './errors'
 import { planOpeningNotional } from './sizing'
+import { assertDailyLossAllowsOpening, dailyLossStatus } from './daily-loss'
 
 // Posición abierta por ESTA conexión (cantidad neta propia), derivada de su historial
 // de órdenes filled. Base de la regla permanente de ownership.
@@ -162,9 +163,7 @@ export function evaluateRisk(input: RiskEvaluationInput): ApprovedOrder {
   if (plan.targetNotionalUsd <= 0 || maxTotalExposureUsd <= 0 || dailyLossLimitUsd <= 0 || plan.reserveUsd < 0) {
     reject('RISK_LIMITS_NOT_CONFIGURED', 'Los límites de riesgo no están configurados.')
   }
-  if (input.realizedPnlTodayUsd <= -dailyLossLimitUsd) {
-    reject('RISK_DAILY_LOSS_LIMIT', 'Límite de pérdida diaria alcanzado.')
-  }
+  assertDailyLossAllowsOpening(dailyLossStatus(policy, input.sizingCapitalUsd, input.realizedPnlTodayUsd))
   if (!Number.isFinite(input.availableMargin) || input.availableMargin <= 0) {
     reject('RISK_MARGIN_TOO_LOW', 'Margen disponible insuficiente.')
   }

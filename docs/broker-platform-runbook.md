@@ -104,6 +104,15 @@ Cuando la estrategia da vuelta la posición emite un cierre y enseguida una aper
 
 Toda intención rechazada aparece en el panel del titular bajo «Operaciones que no se ejecutaron», con el motivo en castellano y, cuando la estrategia ya cerró ese trade, el resultado que se perdió. El porcentaje sale de los precios de referencia de las señales y es exacto; el importe en USD es bruto, estimado con el lotaje configurado y sin comisiones. Un cierre rechazado no genera resultado: la posición sigue viva.
 
+Corrección del incidente del 29/10/2026 (código; requiere publicar para llegar a los usuarios):
+
+- El importe guardado en `fixed_notional_usd` en modo porcentaje puede derivarse del tope de capital de USD 1.000.000. No representa saldo real ni debe mostrarse como capital previsto. El historial consulta el mismo cálculo de saldo, comisiones y reserva que el endpoint de capital previsto; si no se puede consultar, omite la estimación porcentual en USD.
+- El porcentaje por entrada y el corte de pérdida diaria son controles independientes. El panel muestra el corte fuera de Avanzado, con pérdida neta y umbral actual cuando bloquea. El día del ledger se reinicia a las 00:00 UTC.
+- Un reenvío con el corte diario alcanzado se informa como bloqueado antes de encolar. La RPC sigue conservando las validaciones de operación vigente, pertenencia, idempotencia y serialización; el worker vuelve a validar al ejecutar.
+- En modo porcentaje, `daily_loss_limit_pct = 100` cumple la opción «Sin corte». Valores menores mantienen el corte configurado; monto fijo conserva su corte en USD. No cambiar políticas existentes ni reenviar operaciones como parte de una reparación de interfaz.
+- La vista previa al editar conserva la base de equity más PnL propio, incluso con margen ocupado o al cambiar el tope de capital; el saldo libre sólo limita la financiación.
+- En móvil, las operaciones no ejecutadas muestran campos apilados, incluido el motivo y la acción, sin exigir desplazamiento horizontal.
+
 Antes de abrir, el motor valida:
 
 - conexión `ACTIVE` y política habilitada;

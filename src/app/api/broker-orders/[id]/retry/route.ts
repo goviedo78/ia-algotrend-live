@@ -1,5 +1,8 @@
 import { after, NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireOwnedConnection } from '@/lib/brokers/ownership'
+import { loadConnectionOpeningState } from '@/lib/brokers/opening-state'
+import { assertDailyLossAllowsOpening } from '@/lib/brokers/daily-loss'
 import { assertSameOrigin, requireBrokerMember } from '@/lib/brokers/auth'
 import { writeBrokerAudit } from '@/lib/brokers/audit'
 import { BrokerPlatformError, publicError } from '@/lib/brokers/errors'
@@ -21,7 +24,17 @@ export async function POST(request: NextRequest, context: Context) {
       throw new BrokerPlatformError('INVALID_INTENT_ID', 'La operación fallida no es válida.', 400)
     }
 
-    const { data: connectionId, error } = await createAdminClient().rpc('retry_broker_missed_open', {
+    const admin = createAdminClient()
+    const { data: intent, error: intentError } = await admin.from('broker_order_intents')
+      .select('connection_id').eq('id', id).eq('user_id', user.id).maybeSingle()
+    if (intentError) throw intentError
+    if (!intent) throw new BrokerPlatformError('INTENT_NOT_FOUND', 'Operación no encontrada.', 404)
+    await requireOwnedConnection(intent.connection_id, user.id)
+    // Do not accept a retry we already know will be rejected. The worker checks again at execution.
+    const state = await loadConnectionOpeningState(intent.connection_id)
+    assertDailyLossAllowsOpening(state.dailyLoss)
+
+    const { data: connectionId, error } = await admin.rpc('retry_broker_missed_open', {
       target_intent_id: id,
       expected_user_id: user.id,
     })
