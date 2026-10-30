@@ -188,7 +188,10 @@ export function evaluateRisk(input: RiskEvaluationInput): ApprovedOrder {
 
   const currentExposure = ownedPolicyPositions.reduce((total, position) => total + Math.abs(position.quantity * position.markPrice), 0)
   if (!compoundSizing && orderNotionalUsd > policy.maxNotionalPerOrderUsd) reject('RISK_ORDER_NOTIONAL_LIMIT', 'El tamaño supera el máximo por orden.')
-  if (currentExposure + orderNotionalUsd > maxTotalExposureUsd) reject('RISK_TOTAL_EXPOSURE_LIMIT', 'La exposición total superaría el máximo.')
+  // Tolerancia de un centavo: en modo porcentaje el tope total suele ser igual al de la
+  // orden y el redondeo a 8 decimales del importe lo dejaba 1e-9 arriba, rechazando
+  // entradas válidas (incidente 29/10/2026).
+  if (currentExposure + orderNotionalUsd > maxTotalExposureUsd + 0.01) reject('RISK_TOTAL_EXPOSURE_LIMIT', 'La exposición total superaría el máximo.')
 
   const quantity = floorToStep(orderNotionalUsd / input.price, input.rules.quantityStep, input.rules.quantityPrecision)
   if (plan.limitedByBalance && (quantity < input.rules.minimumQuantity || orderNotionalUsd < input.rules.minimumNotional)) {

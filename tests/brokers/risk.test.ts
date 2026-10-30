@@ -418,3 +418,16 @@ test('edit previews use equity plus connection PnL, then constrain by free margi
     if (c.free === 100) assert.ok(preview.notionalUsd > 99 && preview.notionalUsd < 100)
   }
 })
+
+test('percent sizing never rejects its own order as total exposure because of 8-decimal rounding', () => {
+  // 50.37 * 70% = 35.259 rounds up at the 8th decimal; the engine used to reject it.
+  const percentPolicy = { ...policy, sizingMode: 'EQUITY_PERCENT' as const, exposurePerOrderPct: 70, maxTotalExposurePct: 70, dailyLossLimitPct: 100, marginReservePct: 0 }
+  for (const capital of [50.37, 110.95, 196.98, 197.8199]) {
+    const approved = evaluateRisk({
+      action: 'OPEN', direction: 'SHORT', symbol: 'BTC-USDT', price: 80_123.4,
+      sizingCapitalUsd: capital, availableMargin: capital, positions: [], ownedPositions: [], rules, policy: percentPolicy,
+      openingFeeRate: 0.0005, ordersLastMinute: 0, realizedPnlTodayUsd: 0, connectionStatus: 'ACTIVE',
+    })
+    assert.ok(approved.notionalUsd <= capital * 0.7 + 1e-6)
+  }
+})
