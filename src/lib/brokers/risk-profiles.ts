@@ -2,6 +2,9 @@ import type { RiskProfile } from './domain'
 
 export const DEFAULT_BROKER_ALLOCATION_PCT = 90
 export const DEFAULT_BROKER_MARGIN_RESERVE_PCT = 10
+// Corte diario por defecto: ninguno. El titular lo elige a la vista al conectar; un 2% oculto
+// bloqueaba la entrada siguiente tras una sola pérdida normal (incidente 29/10/2026).
+export const NO_DAILY_LOSS_CUT_PCT = 100
 
 const PROFILES: Record<RiskProfile, {
   exposurePerOrderPct: number

@@ -1,9 +1,10 @@
 import type { RiskPolicy } from './domain'
 import { BrokerPlatformError } from './errors'
+import { NO_DAILY_LOSS_CUT_PCT } from './risk-profiles'
 
 export function dailyLossStatus(policy: RiskPolicy, sizingCapitalUsd: number, netPnlTodayUsd: number) {
   const percent = policy.sizingMode === 'EQUITY_PERCENT'
-  const disabled = percent && policy.dailyLossLimitPct === 100
+  const disabled = percent && policy.dailyLossLimitPct >= NO_DAILY_LOSS_CUT_PCT
   const limitUsd = percent ? sizingCapitalUsd * policy.dailyLossLimitPct / 100 : policy.dailyLossLimitUsd
   const blocked = !disabled && netPnlTodayUsd <= -limitUsd
   const limitLabel = percent ? `${policy.dailyLossLimitPct}% (${limitUsd.toFixed(2)} USD)` : `${limitUsd.toFixed(2)} USD`

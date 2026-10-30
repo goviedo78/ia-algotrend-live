@@ -61,7 +61,7 @@ test('the route forwards the new parameters and falls back to the stored policy'
   assert.match(route, /const maxOpenPositions = parsed\.data\.maxOpenPositions \?\? Math\.max\(1, currentPolicy\.maxOpenPositions\)/)
   assert.match(route, /const maxLeverage = parsed\.data\.maxLeverage \?\? Math\.max\(1, currentPolicy\.maxLeverage\)/)
   assert.match(route, /select\('max_open_positions, max_orders_per_minute, max_leverage, margin_reserve_pct, daily_loss_limit_pct'\)/)
-  assert.match(route, /const dailyLossLimitPct = parsed\.data\.dailyLossLimitPct \?\? currentPolicy\.dailyLossLimitPct \?\? suggestion\.dailyLossLimitPct/)
+  assert.match(route, /const dailyLossLimitPct = parsed\.data\.dailyLossLimitPct \?\? currentPolicy\.dailyLossLimitPct \?\? NO_DAILY_LOSS_CUT_PCT/)
   // La exposición y la reserva ahora son del titular, con el derivado sólo como respaldo.
   assert.match(route, /const maxTotalExposureUsd = parsed\.data\.maxTotalExposureUsd\s*\?\?/)
   assert.match(route, /const minAvailableMarginUsd = parsed\.data\.minAvailableMarginUsd\s*\?\?/)
@@ -168,4 +168,12 @@ test('el panel acompaña la exposición en vez de dejar el guardado trabado', as
   // El titular ve el saldo real del broker contra el mínimo estricto.
   assert.match(panel, /const availableMarginUsd = fundingRequirements\[connection\.id\]\?\.availableMarginUsd/)
   assert.match(panel, /margenFaltanteUsd > 0/)
+})
+
+test('new connections default to no daily cut and the creation form shows the cut outside Advanced', async () => {
+  const route = await readFile(path.join(root, 'src/app/api/broker-connections/route.ts'), 'utf8')
+  assert.match(route, /const dailyLossLimitPct = parsed\.data\.dailyLossLimitPct \?\? NO_DAILY_LOSS_CUT_PCT/)
+  const panel = await readFile(path.join(root, 'src/components/brokers/BrokerConnectionsPanel.tsx'), 'utf8')
+  const createForm = panel.slice(panel.indexOf('name="dailyLossPct"') - 600, panel.indexOf('name="reservePct"'))
+  assert.ok(createForm.indexOf('name="dailyLossPct"') < createForm.indexOf('<summary>Avanzado'))
 })

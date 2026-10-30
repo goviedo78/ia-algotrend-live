@@ -379,6 +379,10 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
                   <BrokerFieldLabel label="Porcentaje del saldo (%)" tooltip="Parte del saldo de la cuenta que usa cada apertura." example="Ejemplo: 50% de 200 USD son 100 USD por entrada." />
                   <input name="percentValue" required type="number" min="1" max="99" step="1" value={percentValue} onChange={(event) => setPercentValue(Number(event.target.value) || 0)} />
                 </label>}
+                <label className={styles.field}>
+                  <BrokerFieldLabel label="Corte de pérdida diaria (%)" tooltip="Frena nuevas aperturas el resto del día al perder este porcentaje. 100 = sin corte, se siguen todas las señales." example={dailyLossPct >= 100 ? 'Ahora: sin corte.' : `Ahora: frena tras perder ${dailyLossPct}% en el día.`} />
+                  <input name="dailyLossPct" required type="number" min="0.1" max="100" step="0.1" value={dailyLossPct} onChange={(event) => setDailyLossPct(Number(event.target.value) || 0)} />
+                </label>
                 <div className={`${styles.capitalScope} ${styles.fullWidth}`}>
                   <ShieldCheck size={18} />
                   <div><strong>Apalancamiento 1x</strong><span>{environment === 'DEMO' ? 'Opera con el saldo simulado de BingX.' : 'Opera con el saldo real de Futuros. Nunca transfiere fondos.'} Si esta API la comparte otra estrategia, usá Monto fijo para no quitarle saldo. Podés cambiar el apalancamiento después de aprobar.</span></div>
@@ -386,10 +390,6 @@ export function BrokerConnectionsPanel({ email }: { email: string }) {
                 <details className={`${styles.advancedRisk} ${styles.fullWidth}`}>
                   <summary>Avanzado <span>Opcional</span></summary>
                   <div className={styles.advancedRiskGrid}>
-                    <label className={styles.field}>
-                      <BrokerFieldLabel label="Corte de pérdida diaria (%)" tooltip="Frena nuevas aperturas el resto del día al perder este porcentaje. 100 = sin corte." example="Ejemplo: 5 frena tras perder 5% en el día." />
-                      <input name="dailyLossPct" required type="number" min="0.1" max="100" step="0.1" value={dailyLossPct} onChange={(event) => setDailyLossPct(Number(event.target.value) || 0)} />
-                    </label>
                     <label className={styles.field}>
                       <BrokerFieldLabel label="Saldo que queda libre (%)" tooltip="Parte del saldo que nunca se usa para abrir. 0 = usa todo." example="Ejemplo: 10 deja libre el 10%." />
                       <input name="reservePct" required type="number" min="0" max="10" step="0.1" value={reservePct} onChange={(event) => setReservePct(Number(event.target.value) || 0)} />

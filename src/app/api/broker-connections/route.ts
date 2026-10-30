@@ -9,7 +9,7 @@ import { BrokerPlatformError, publicError } from '@/lib/brokers/errors'
 import { enforceBrokerRateLimit, requestIdentifier } from '@/lib/brokers/rate-limit'
 import { readBrokerJson } from '@/lib/brokers/request'
 import { connectionCreateSchema } from '@/lib/brokers/schemas'
-import { deriveRiskSuggestion } from '@/lib/brokers/risk-profiles'
+import { NO_DAILY_LOSS_CUT_PCT, deriveRiskSuggestion } from '@/lib/brokers/risk-profiles'
 import { brokerStrategy } from '@/lib/brokers/strategies'
 import { safeProcessBrokerJobsInApp } from '@/lib/brokers/worker'
 
@@ -67,13 +67,12 @@ export async function POST(request: NextRequest) {
     const derived = deriveRiskSuggestion(parsed.data.capitalUsd, parsed.data.riskProfile, parsed.data.allocationPct)
     const marginReservePct = parsed.data.marginReservePct ?? derived.marginReservePct
     const fixedNotionalUsd = parsed.data.sizingMode === 'FIXED_NOTIONAL' ? parsed.data.fixedNotionalUsd : undefined
+    const dailyLossLimitPct = parsed.data.dailyLossLimitPct ?? NO_DAILY_LOSS_CUT_PCT
     const suggestion = {
       ...derived,
       marginReservePct,
-      dailyLossLimitPct: parsed.data.dailyLossLimitPct ?? derived.dailyLossLimitPct,
-      suggestedDailyLossLimitUsd: parsed.data.dailyLossLimitPct
-        ? Math.min(1_000_000, Math.floor(parsed.data.capitalUsd * parsed.data.dailyLossLimitPct) / 100)
-        : derived.suggestedDailyLossLimitUsd,
+      dailyLossLimitPct,
+      suggestedDailyLossLimitUsd: Math.min(1_000_000, Math.floor(parsed.data.capitalUsd * dailyLossLimitPct) / 100),
       suggestedNotionalPerOrderUsd: fixedNotionalUsd ?? derived.suggestedNotionalPerOrderUsd,
       suggestedMaxTotalExposureUsd: Math.max(derived.suggestedMaxTotalExposureUsd, fixedNotionalUsd ?? 0),
       suggestedMinAvailableMarginUsd: Math.floor(parsed.data.capitalUsd * marginReservePct) / 100,

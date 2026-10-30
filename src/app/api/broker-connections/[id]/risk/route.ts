@@ -6,7 +6,7 @@ import { BrokerPlatformError, publicError } from '@/lib/brokers/errors'
 import { requireOwnedConnection } from '@/lib/brokers/ownership'
 import { enforceBrokerRateLimit, requestIdentifier } from '@/lib/brokers/rate-limit'
 import { readBrokerJson } from '@/lib/brokers/request'
-import { DEFAULT_BROKER_MARGIN_RESERVE_PCT, deriveRiskSuggestion } from '@/lib/brokers/risk-profiles'
+import { DEFAULT_BROKER_MARGIN_RESERVE_PCT, NO_DAILY_LOSS_CUT_PCT, deriveRiskSuggestion } from '@/lib/brokers/risk-profiles'
 import { riskChangeSchema } from '@/lib/brokers/schemas'
 
 type Context = { params: Promise<{ id: string }> }
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest, context: Context) {
     const maxOpenPositions = parsed.data.maxOpenPositions ?? Math.max(1, currentPolicy.maxOpenPositions)
     const maxOrdersPerMinute = parsed.data.maxOrdersPerMinute ?? Math.max(1, currentPolicy.maxOrdersPerMinute)
     const maxLeverage = parsed.data.maxLeverage ?? Math.max(1, currentPolicy.maxLeverage)
-    const dailyLossLimitPct = parsed.data.dailyLossLimitPct ?? currentPolicy.dailyLossLimitPct ?? suggestion.dailyLossLimitPct
+    const dailyLossLimitPct = parsed.data.dailyLossLimitPct ?? currentPolicy.dailyLossLimitPct ?? NO_DAILY_LOSS_CUT_PCT
     // Tope global de apalancamiento: es configuración del dueño de la plataforma
     // (BROKER_MAX_ALLOWED_LEVERAGE), la misma que ya aplica la ruta de administración.
     const globalMaxLeverage = Math.max(1, Number(process.env.BROKER_MAX_ALLOWED_LEVERAGE ?? 1))
