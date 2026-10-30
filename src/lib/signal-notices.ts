@@ -62,12 +62,10 @@ export function noticeLines(notice: SignalNotice) {
     `Vela confirmada: ${localTradeDate(notice.time)} · CDMX`,
   ]
   return [
-    'Con los datos actuales aparece una posible señal.',
-    'Si se mantienen la tendencia, el KNN y los filtros al cierre, podría confirmarse.',
-    `Probabilidad de señal provisional: ${notice.probabilityPct!.toFixed(1)}%`,
-    ...(notice.reversal ? ['Si se confirma, podría revertir la operación actual.'] : []),
-    `Cierre pendiente: ${localTradeDate(notice.validUntil!)} · CDMX`,
-    'No es una entrada confirmada. Puede desaparecer antes del cierre.',
+    `Probabilidad de señal: ${notice.probabilityPct!.toFixed(1)}%`,
+    ...(notice.reversal ? [`Posible giro de ${notice.direction === 'LONG' ? 'VENTA a COMPRA' : 'COMPRA a VENTA'}.`] : []),
+    `Cierre de vela: ${localTradeDate(notice.validUntil!)} · CDMX`,
+    'Señal sin confirmar.',
   ]
 }
 

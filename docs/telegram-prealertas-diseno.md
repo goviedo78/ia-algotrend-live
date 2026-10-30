@@ -67,12 +67,14 @@ inmutable. Si no se valida un nivel claro, el texto no muestra X.
 
 Ejemplo sin precio inventado:
 
-CONDICIONES FAVORABLES · COMPRA
+CONDICIONES FAVORABLES · 🟢 COMPRA
 BTC · 1H
-Con los datos actuales aparece una posible señal de compra.
-Falta que cierre la vela y se mantengan la tendencia, el KNN y los filtros.
-Confirmación pendiente: [hora real de cierre] · CDMX.
-Esto no es una entrada confirmada.
+Probabilidad de señal: [valor real]%
+Cierre de vela: [fecha y hora real] · CDMX
+Señal sin confirmar.
+
+Si corresponde, se añade «Posible giro de VENTA a COMPRA» o su inverso.
+La imagen y el caption usan este formato breve desde el 28-10-2026.
 
 Solo cuando haya escenarios validados:
 «Si la vela cierra en [rango calculado] y se mantienen las demás condiciones,

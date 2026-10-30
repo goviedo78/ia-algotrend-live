@@ -9,7 +9,7 @@ test('both notice cards render locally without emoji downloads', async () => {
     const notice: SignalNotice = { kind, identity: 'test', direction: 'SHORT', time: 1793239200, validUntil: 1793242800, probabilityPct: 91.2, openPrice: 80000, stopLoss: 79300, reversal: true }
     const png = Buffer.from(await renderNoticeCard(notice))
     assert.equal(png.readUInt32BE(16), 1080)
-    assert.equal(png.readUInt32BE(20), kind === 'TRIGGER' ? 820 : 1120)
+    assert.equal(png.readUInt32BE(20), 820)
   }
 })
 
@@ -42,7 +42,7 @@ test('real notice delivery only writes the private ledger, uses dedicated channe
     assert.equal(init?.method, 'POST')
     assert.ok(init?.body instanceof FormData)
     assert.equal(init.body.get('chat_id'), '-123')
-    assert.match(String(init.body.get('caption')), /No es una entrada confirmada/)
+    assert.match(String(init.body.get('caption')), /Señal sin confirmar/)
     sends++
     return Response.json({ ok: true, result: { message_id: 3 } })
   })

@@ -15,7 +15,9 @@ test('only full-engine provisional signals near candle close generate prealerts'
   assert.equal(notice.direction, 'LONG')
   assert.equal(notice.validUntil, time + 3600)
   assert.match(formatNotice(notice), /CONDICIONES FAVORABLES · 🟢 COMPRA/)
-  assert.match(formatNotice(notice), /No es una entrada confirmada/)
+  assert.match(formatNotice(notice), /Señal sin confirmar/)
+  assert.equal(formatNotice(notice).split('\n').length, 5)
+  assert.doesNotMatch(formatNotice(notice), /Con los datos actuales|Si se mantienen|Puede desaparecer/)
   assert.match(formatNotice(notice), /90.0%/)
   assert.doesNotMatch(formatNotice(notice), /sobre \$|debajo de \$/)
   const short = evaluatePrealert({ ...base, run: () => [{ ...result, longSig: false, shortSig: true, probUp: .1, probDown: .9 }] })!
@@ -35,7 +37,8 @@ test('missing transitions, ATR blocking, same-side positions and incomplete/stal
   assert.equal(evaluatePrealert({ ...base, candles: candles.map((c, i) => i === candles.length - 1 ? { ...c, close: NaN } : c) }), null)
   assert.equal(evaluatePrealert({ ...base, run: () => [{ ...result, shortSig: true }] }), null)
   const notice = evaluatePrealert({ ...base, openTrade: { ...trade, direction: 'SHORT' } })!
-  assert.match(formatNotice(notice), /podría revertir/)
+  assert.match(formatNotice(notice), /Posible giro de VENTA a COMPRA/)
+  assert.equal(formatNotice(notice).split('\n').length, 6)
 })
 
 test('trigger notices require a persisted transition into a protective trailing stop', () => {

@@ -18,5 +18,5 @@ export function noticeCardElement(notice: SignalNotice) {
 }
 
 export async function renderNoticeCard(notice: SignalNotice) {
-  return new Uint8Array(await new ImageResponse(noticeCardElement(notice), { width: 1080, height: notice.kind === 'TRIGGER' ? 820 : 1120 }).arrayBuffer())
+  return new Uint8Array(await new ImageResponse(noticeCardElement(notice), { width: 1080, height: 820 }).arrayBuffer())
 }

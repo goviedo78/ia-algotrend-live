@@ -1,5 +1,17 @@
 # Telegram · AlgoTrend BTC/USD 1H
 
+## Prealerta resumida — 28-10-2026
+
+Se acorta «Condiciones favorables» en caption e imagen: dirección, BTC 1H,
+probabilidad de señal, fecha/hora de cierre y «Señal sin confirmar».
+Solo si corresponde, se añade «Posible giro de VENTA a COMPRA» o su inverso.
+Se eliminan explicaciones repetidas del motor. La imagen pasa de 1080×1120
+a 1080×820. No cambia cuándo se emite ni la lógica de confirmación.
+Publicado con `npm run deploy:prod`: `dpl_EdsVZf45twLwBNuhPXt7ouBHzmjc`,
+READY, target production y alias `https://gonovi.app`; landing completa verificada.
+62 pruebas de motor/Telegram aprobadas; TypeScript, lint y build correctos.
+
+
 ## Avisos nuevos autorizados — 28-10-2026
 
 Además de entradas y cierres, se implementan:
