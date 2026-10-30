@@ -18,7 +18,7 @@ export async function GET(request: NextRequest, context: Context) {
     const { id } = await context.params
     await requireOwnedConnection(id, user.id)
 
-    const { policy, plan, dailyLoss, availableMarginUsd, takerFeeRate, sizingCapitalUsd } = await loadConnectionOpeningState(id)
+    const { policy, plan, dailyLoss, availableMarginUsd, takerFeeRate, sizingCapitalUsd, accountEquityUsd, connectionNetPnlUsd } = await loadConnectionOpeningState(id)
     const { targetNotionalUsd, notionalUsd, limitedByBalance, ...funding } = plan
 
     return NextResponse.json({
@@ -31,6 +31,8 @@ export async function GET(request: NextRequest, context: Context) {
       takerFeeRate,
       availableMarginUsd,
       sizingCapitalUsd,
+      accountEquityUsd,
+      connectionNetPnlUsd,
       dailyLoss,
       ...funding,
     }, { headers: { 'Cache-Control': 'no-store' } })

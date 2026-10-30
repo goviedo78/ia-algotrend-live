@@ -50,3 +50,9 @@ export function planOpeningNotional(input: {
   }
   return { targetNotionalUsd, notionalUsd, limitedByBalance, ...fund(notionalUsd) }
 }
+
+// Preview a capital edit using this connection's reconciled PnL and the broker's equity.
+// Free margin is checked separately by planOpeningNotional; it is not the equity basis.
+export function managedSizingCapitalUsd(declaredCapitalUsd: number, connectionNetPnlUsd: number, accountEquityUsd: number) {
+  return Math.max(0, Math.min(accountEquityUsd, declaredCapitalUsd + connectionNetPnlUsd))
+}

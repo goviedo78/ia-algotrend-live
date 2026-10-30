@@ -110,6 +110,7 @@ Corrección del incidente del 29/10/2026 (código; requiere publicar para llegar
 - El porcentaje por entrada y el corte de pérdida diaria son controles independientes. El panel muestra el corte fuera de Avanzado, con pérdida neta y umbral actual cuando bloquea. El día del ledger se reinicia a las 00:00 UTC.
 - Un reenvío con el corte diario alcanzado se informa como bloqueado antes de encolar. La RPC sigue conservando las validaciones de operación vigente, pertenencia, idempotencia y serialización; el worker vuelve a validar al ejecutar.
 - En modo porcentaje, `daily_loss_limit_pct = 100` cumple la opción «Sin corte». Valores menores mantienen el corte configurado; monto fijo conserva su corte en USD. No cambiar políticas existentes ni reenviar operaciones como parte de una reparación de interfaz.
+- La vista previa al editar conserva la base de equity más PnL propio, incluso con margen ocupado o al cambiar el tope de capital; el saldo libre sólo limita la financiación.
 - En móvil, las operaciones no ejecutadas muestran campos apilados, incluido el motivo y la acción, sin exigir desplazamiento horizontal.
 
 Antes de abrir, el motor valida:
