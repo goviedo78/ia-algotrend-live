@@ -10,6 +10,18 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
+  async redirects() {
+    // Un solo host indexable: www.gonovi.app respondía 200 con el mismo
+    // contenido que el apex, lo que duplica URLs en Google.
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.gonovi.app" }],
+        destination: "https://gonovi.app/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

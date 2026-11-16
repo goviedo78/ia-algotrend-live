@@ -5,9 +5,16 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: '/official/',
+        allow: ['/', '/official/'],
         disallow: [
           '/api/',
+          // Áreas privadas: solo redirigen a /auth, no hay nada que indexar.
+          '/auth',
+          '/account',
+          '/cuenta/',
+          '/admin/',
+          // Enlaces cortos de seguimiento: redirigen fuera y ensucian analytics.
+          '/x/',
           '/official/dashboard/',
           '/official/analytics/',
           '/official/checkout/',

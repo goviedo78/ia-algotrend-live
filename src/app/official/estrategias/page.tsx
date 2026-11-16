@@ -4,6 +4,7 @@ import { getCachedStrategySnapshot } from '@/lib/public-cache'
 export const metadata = {
   title: 'Resultados en vivo | GONOVI',
   description: 'Rendimiento mensual y operaciones abiertas de BTC 1H, Oro 30M y Oro 15M.',
+  alternates: { canonical: 'https://gonovi.app/official/estrategias' },
 }
 
 // The public snapshot is shared by all visitors and refreshed in the

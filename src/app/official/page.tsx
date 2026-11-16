@@ -6,12 +6,12 @@ export const metadata: Metadata = {
   title: 'GONOVI · Inicio',
   description: 'Inicio oficial de GONOVI: indicadores, demos, educación interactiva, partners y comunidad de trading.',
   alternates: {
-    canonical: 'https://gonovi.app/official',
+    canonical: 'https://gonovi.app/',
   },
   openGraph: {
     title: 'GONOVI · Inicio',
     description: 'Indicadores, educación interactiva y ecosistema de trading visual para la comunidad GONOVI.',
-    url: 'https://gonovi.app/official',
+    url: 'https://gonovi.app/',
     siteName: 'GONOVI',
     images: [{ url: '/og-card.png', width: 1200, height: 630 }],
     type: 'website',
