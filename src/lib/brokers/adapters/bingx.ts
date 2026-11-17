@@ -8,8 +8,10 @@ import type {
   BrokerFillResult,
   BrokerOrderResult,
   BrokerPosition,
+  BrokerTriggerOrder,
   InstrumentRules,
   PlaceMarketOrderInput,
+  PlaceTriggerOrderInput,
 } from './types'
 
 type QueryValue = string | number | boolean | undefined | null
@@ -102,6 +104,28 @@ export function fillBelongsToOrder(
   return Number.isFinite(asNumber) && Number.isFinite(targetAsNumber) && asNumber === targetAsNumber
 }
 
+/**
+ * JSON de BingX sin perder precisión en los identificadores.
+ *
+ * BingX serializa varios IDs de orden como número JSON de 19 dígitos; `JSON.parse` los redondea
+ * al double más cercano (2118735794511286271 → 2118735794511286300). Para leer fills alcanzaba
+ * comparando en `Number` a ambos lados, pero cancelar o consultar una orden condicional exige el
+ * ID exacto: con el redondeado BingX no la encuentra. Todo entero de 16+ dígitos que aparezca como
+ * valor se lee como texto; ningún campo numérico real de BingX (precios, cantidades, horas en ms)
+ * llega a ese largo.
+ */
+export function parseBingxJson(text: string): unknown {
+  return JSON.parse(text.replace(/([:\[,]\s*)(-?\d{16,})(?=\s*[,\]}])/g, '$1"$2"'))
+}
+
+async function readBingxPayload<T>(response: Response): Promise<T> {
+  try {
+    return parseBingxJson(await response.text()) as T
+  } catch {
+    return {} as T
+  }
+}
+
 function sanitizeBingxError(payload: BingxPayload, status: number) {
   const brokerCode = String(payload.code ?? status).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40)
   const retryableCodes = new Set(['100410', '100500', '109500', '110500'])
@@ -157,6 +181,8 @@ function mapOrderStatus(rawStatus: string): BrokerOrderResult['status'] {
     NEW: 'NEW',
     PENDING: 'NEW',
     PARTIALLY_FILLED: 'PARTIALLY_FILLED',
+    // La API REST v2 lo escribe sin guion bajo; el stream de WebSocket, con.
+    PARTIALLYFILLED: 'PARTIALLY_FILLED',
     FILLED: 'FILLED',
     CANCELED: 'CANCELED',
     CANCELLED: 'CANCELED',
@@ -210,7 +236,7 @@ export class BingxAdapter implements BrokerAdapter {
   }
 
   private async request<T extends BingxPayload>(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'DELETE',
     path: string,
     params: Record<string, QueryValue> = {},
   ): Promise<T> {
@@ -222,7 +248,7 @@ export class BingxAdapter implements BrokerAdapter {
       cache: 'no-store',
       signal: AbortSignal.timeout(10_000),
     })
-    const payload = await response.json().catch(() => ({})) as T
+    const payload = await readBingxPayload<T>(response)
     if (!response.ok || Number(payload.code ?? 0) !== 0) throw sanitizeBingxError(payload, response.status)
     return payload
   }
@@ -436,9 +462,12 @@ export class BingxAdapter implements BrokerAdapter {
     const allFills = Array.isArray(payload.data)
       ? payload.data
       : payload.data?.fill_orders ?? payload.data?.fills ?? []
+    // Sin clientOrderId (cierres por stop/objetivo) BingX ya filtra por orderId; igual se
+    // descarta cualquier fila que declare OTRA orden.
     const fills = clientOrderId
       ? allFills.filter((fill) => fillBelongsToOrder(fill, brokerOrderId, clientOrderId))
-      : allFills
+      : allFills.filter((fill) => (fill.orderId ?? fill.orderID ?? fill.order_id) == null
+        || fillBelongsToOrder(fill, brokerOrderId))
     return fills.map((fill, index) => {
       const quantity = Math.abs(finiteNumber(fill.qty ?? fill.volume))
       const price = finiteNumber(fill.price ?? fill.tradePrice)
@@ -459,5 +488,88 @@ export class BingxAdapter implements BrokerAdapter {
         filledAt,
       }
     }).filter((fill) => fill.quantity > 0 && fill.price > 0)
+  }
+
+  // ── Órdenes condicionales de protección ──────────────────────────────────────────────
+  // BingX sólo acepta `clientOrderId` en MARKET y LIMIT: un STOP_MARKET o TAKE_PROFIT_MARKET se
+  // identifica únicamente por su `orderID`, que se guarda como texto.
+
+  async placeTriggerOrder(input: PlaceTriggerOrderInput) {
+    const hedgeMode = await this.isHedgeMode()
+    const payload = await this.request<{ code?: number; data?: Record<string, unknown> }>(
+      'POST',
+      '/openApi/swap/v2/trade/order',
+      {
+        symbol: normalizeSymbol(input.symbol),
+        type: input.kind === 'STOP_LOSS' ? 'STOP_MARKET' : 'TAKE_PROFIT_MARKET',
+        side: input.direction === 'LONG' ? 'SELL' : 'BUY',
+        positionSide: hedgeMode ? input.direction : 'BOTH',
+        quantity: input.quantity,
+        stopPrice: input.triggerPrice,
+        // Último precio operado, no el mark price: la estrategia mide su stop sobre las velas
+        // de precio operado, y es lo que hay que imitar.
+        workingType: 'CONTRACT_PRICE',
+        // En modo hedge BingX prohíbe reduceOnly: el lado de la posición ya hace que sólo cierre.
+        reduceOnly: hedgeMode ? undefined : true,
+      },
+    )
+    const result = mapOrder(payload.data ?? {}, '')
+    if (!result.brokerOrderId) {
+      throw new BrokerPlatformError('BINGX_TRIGGER_ORDER_ID_MISSING', 'BingX no devolvió el identificador de la orden de protección.', 503, true)
+    }
+    return result
+  }
+
+  async listOpenTriggerOrders(symbol: string): Promise<BrokerTriggerOrder[]> {
+    const normalized = normalizeSymbol(symbol)
+    const payload = await this.request<{
+      code?: number
+      data?: Array<Record<string, unknown>> | { orders?: Array<Record<string, unknown>> }
+    }>('GET', '/openApi/swap/v2/trade/openOrders', { symbol: normalized })
+    const orders = Array.isArray(payload.data) ? payload.data : payload.data?.orders ?? []
+    return orders.flatMap((order): BrokerTriggerOrder[] => {
+      const type = String(order.type ?? '').toUpperCase()
+      const kind = type === 'STOP_MARKET' ? 'STOP_LOSS' : type === 'TAKE_PROFIT_MARKET' ? 'TAKE_PROFIT' : null
+      const rawId = order.orderID ?? order.orderId
+      if (!kind || rawId == null || String(order.symbol ?? normalized) !== normalized) return []
+      const positionSide = String(order.positionSide ?? '').toUpperCase()
+      const side = String(order.side ?? '').toUpperCase()
+      // Una orden de protección reduce la posición: vender cierra un largo, comprar un corto.
+      const direction = positionSide === 'LONG' || positionSide === 'SHORT'
+        ? positionSide as TradeDirection
+        : side === 'SELL' ? 'LONG' : side === 'BUY' ? 'SHORT' : null
+      return [{
+        brokerOrderId: String(rawId),
+        kind,
+        direction,
+        triggerPrice: finiteNumber(order.stopPrice),
+        quantity: Math.abs(finiteNumber(order.origQty ?? order.quantity)),
+      }]
+    })
+  }
+
+  async getOrderById(symbol: string, brokerOrderId: string) {
+    try {
+      const payload = await this.request<{ code?: number; data?: Record<string, unknown> }>(
+        'GET',
+        '/openApi/swap/v2/trade/order',
+        { symbol: normalizeSymbol(symbol), orderId: brokerOrderId },
+      )
+      if (!payload.data || Object.keys(payload.data).length === 0) return null
+      return mapOrder(payload.data, '')
+    } catch (error) {
+      if (
+        error instanceof BrokerPlatformError
+        && ['BINGX_80016', 'BINGX_109421'].includes(error.code)
+      ) return null
+      throw error
+    }
+  }
+
+  async cancelOrderById(symbol: string, brokerOrderId: string) {
+    await this.request('DELETE', '/openApi/swap/v2/trade/order', {
+      symbol: normalizeSymbol(symbol),
+      orderId: brokerOrderId,
+    })
   }
 }

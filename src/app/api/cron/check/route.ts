@@ -14,6 +14,11 @@ import {
   safeExecuteBingxOpen,
 } from '@/lib/bingx'
 import { dispatchBrokerSignal } from '@/lib/brokers/signals'
+import {
+  closeStrategyProtection,
+  requestStrategyProtectionSync,
+  upsertStrategyProtection,
+} from '@/lib/brokers/protection-sync'
 import { safeProcessBrokerJobsInApp } from '@/lib/brokers/worker'
 import { isTransientUpstreamError } from '@/lib/cron-errors'
 import { triggerNotice, type SignalNotice } from '@/lib/signal-notices'
@@ -143,10 +148,67 @@ async function queueBrokerPlatformSignal(
   }
 }
 
+const BROKER_STRATEGY_CODE = 'ALGOTREND_BTC_1H'
+
+// Mismo número de operación que viaja en `externalSignalId` (`algotrend-btc-1h-<id>-open-…`).
+function brokerTradeKey(tradeId: number) {
+  return `algotrend-btc-1h-${tradeId}`
+}
+
+/**
+ * Publica el stop y el objetivo VIGENTES de la operación para que el worker los refleje como
+ * órdenes reales en el broker de cada cuenta. Al activarse el trailing el stop sube y el
+ * objetivo desaparece; las cuentas reemplazan su stop y retiran su take profit.
+ * Nunca rompe el cron: la señal y las notificaciones siguen aunque esto falle.
+ */
+async function publishBrokerProtection(
+  trade: Pick<Trade, 'id' | 'direction'>,
+  stopLoss: number,
+  takeProfit: number | null,
+  actions: string[],
+  options: { requestSync: boolean },
+) {
+  try {
+    const { changed } = await upsertStrategyProtection({
+      strategyCode: BROKER_STRATEGY_CODE,
+      tradeKey: brokerTradeKey(trade.id),
+      symbol: 'BTC-USDT',
+      direction: trade.direction,
+      stopLoss,
+      takeProfit,
+    })
+    if (changed) actions.push('protection_target_updated')
+    if (options.requestSync) {
+      const accounts = await requestStrategyProtectionSync(BROKER_STRATEGY_CODE, brokerTradeKey(trade.id))
+      if (accounts) actions.push(`protection_sync_${accounts}`)
+    }
+  } catch (error) {
+    actions.push('protection_target_failed')
+    await logEvent('broker_protection_fail', {
+      tradeId: trade.id,
+      error: error instanceof Error ? error.name : 'unknown',
+    })
+  }
+}
+
+async function closeBrokerProtection(trade: Pick<Trade, 'id'>, actions: string[]) {
+  try {
+    await closeStrategyProtection(BROKER_STRATEGY_CODE, brokerTradeKey(trade.id))
+  } catch (error) {
+    actions.push('protection_close_failed')
+    await logEvent('broker_protection_fail', {
+      tradeId: trade.id,
+      error: error instanceof Error ? error.name : 'unknown',
+    })
+  }
+}
+
 async function closeTradeEverywhere(trade: Trade, actions: string[]) {
   if (isLegacyBingxEnabled()) {
     await safeExecuteBingxClose(trade, actions, 'cron')
   }
+  // Antes del cierre: cuando su orden se llene, el worker retira el stop y el objetivo que queden.
+  await closeBrokerProtection(trade, actions)
   await queueBrokerPlatformSignal(
     trade,
     'CLOSE',
@@ -367,6 +429,9 @@ export async function GET(req: NextRequest) {
         if (decision.kind === 'MANAGED') {
           const saved = await updateOpenTradeRisk(existingTrade.id, decision.stopLoss, decision.takeProfit, decision.lastManagedTime)
           pendingTriggerNotice = triggerNotice(existingTrade, saved)
+          // Una vez por vela nueva: refleja el stop movido (y el objetivo retirado) en cada cuenta,
+          // y de paso detecta stops que ya dispararon en el broker.
+          await publishBrokerProtection(saved, decision.stopLoss, decision.takeProfit, actions, { requestSync: true })
           if (decision.stopLoss !== existingTrade.stop_loss || decision.takeProfit !== existingTrade.take_profit) {
             actions.push('trailing_updated')
           }
@@ -441,6 +506,9 @@ export async function GET(req: NextRequest) {
           if (isLegacyBingxEnabled()) {
             await safeExecuteBingxOpen(trade, actions, 'cron')
           }
+          // Antes de la señal: cuando la apertura se llene, el worker ya encuentra el stop y el
+          // objetivo que tiene que poner en el broker.
+          await publishBrokerProtection(trade, stop, tp, actions, { requestSync: false })
           await queueBrokerPlatformSignal(trade, 'OPEN', signalResult.time, signalResult.close, actions)
           await notifyOpen(trade, prob * 100)
 

@@ -75,6 +75,25 @@ export interface BrokerFillResult {
   filledAt: string
 }
 
+export type ProtectionKind = 'STOP_LOSS' | 'TAKE_PROFIT'
+
+export interface PlaceTriggerOrderInput {
+  symbol: string
+  // Dirección de la POSICIÓN protegida; la orden va en el sentido que la reduce.
+  direction: TradeDirection
+  kind: ProtectionKind
+  triggerPrice: number
+  quantity: number
+}
+
+export interface BrokerTriggerOrder {
+  brokerOrderId: string
+  kind: ProtectionKind
+  direction: TradeDirection | null
+  triggerPrice: number
+  quantity: number
+}
+
 export interface ValidationResult {
   accountReference: string | null
   canRead: boolean
@@ -94,6 +113,12 @@ export interface BrokerAdapter {
   placeMarketOrder(input: PlaceMarketOrderInput): Promise<BrokerOrderResult>
   getOrder(symbol: string, clientOrderId: string): Promise<BrokerOrderResult | null>
   getOrderFills(symbol: string, brokerOrderId: string, since: Date, clientOrderId?: string): Promise<BrokerFillResult[]>
+  // Órdenes condicionales de protección (stop / take profit). Opcionales: un broker que no
+  // las implemente sigue operando como antes, sólo con cierres a mercado.
+  placeTriggerOrder?(input: PlaceTriggerOrderInput): Promise<BrokerOrderResult>
+  listOpenTriggerOrders?(symbol: string): Promise<BrokerTriggerOrder[]>
+  getOrderById?(symbol: string, brokerOrderId: string): Promise<BrokerOrderResult | null>
+  cancelOrderById?(symbol: string, brokerOrderId: string): Promise<void>
 }
 
 export interface BrokerAdapterFactoryInput {

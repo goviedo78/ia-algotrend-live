@@ -10,12 +10,19 @@ import { BrokerPlatformError } from './errors'
 import { evaluateRisk, type OwnedPosition } from './risk'
 import { normalizeSymbol, type TradeDirection } from './domain'
 import { brokerExecutionMode } from './runtime'
+import {
+  cancelStaleProtection,
+  closeAlreadyDoneByProtection,
+  enqueueProtectionSync,
+  enqueueProtectionSyncIfTracked,
+  syncProtection,
+} from './protection-sync'
 
 type Job = {
   id: string
   connection_id: string
   intent_id: string | null
-  job_type: 'VALIDATE_CONNECTION' | 'EXECUTE_ORDER' | 'RECONCILE_ORDER'
+  job_type: 'VALIDATE_CONNECTION' | 'EXECUTE_ORDER' | 'RECONCILE_ORDER' | 'SYNC_PROTECTION'
   attempts: number
   max_attempts: number
   created_at: string
@@ -187,7 +194,7 @@ async function persistPositionSnapshots(
 // Deriva las posiciones que ESTA conexión abrió, desde su propio historial de órdenes:
 // Σ filled(apertura) − Σ filled(cierre) por (símbolo, lado). Base de la regla permanente de
 // ownership: el motor solo gestiona/cierra lo que la conexión abrió, nunca posiciones ajenas.
-async function computeOwnedPositions(connectionId: string): Promise<OwnedPosition[]> {
+export async function computeOwnedPositions(connectionId: string): Promise<OwnedPosition[]> {
   const admin = createAdminClient()
   const [orders, settlements] = await Promise.all([
     admin.from('broker_orders')
@@ -343,6 +350,40 @@ async function executeOrder(job: Job) {
     throw new BrokerPlatformError('RISK_POLICY_VERSION_MISMATCH', 'La política cambió después de crear la orden.', 409)
   }
 
+  // Stop y objetivo reales en el broker (protection-sync.ts). Un stop que quedó de una operación
+  // anterior en este símbolo y lado cerraría la posición nueva a un nivel que no es el suyo.
+  if (intent.action === 'OPEN') {
+    await cancelStaleProtection({
+      adapter,
+      connectionId: connection.id,
+      symbol: String(intent.symbol),
+      direction: intent.direction,
+    })
+  }
+  // Si el stop o el objetivo del broker ya cerraron esta operación, el cierre de la estrategia
+  // llega tarde y no tiene nada que hacer: se anota, no se rechaza.
+  if (
+    intent.action === 'CLOSE'
+    && intent.origin !== 'PROTECTION'
+    && await closeAlreadyDoneByProtection({ intent, adapter, ownedPositions: computeOwnedPositions })
+  ) {
+    const { error: closedError } = await admin.from('broker_order_intents').update({
+      status: 'CANCELED',
+      rejection_code: 'CLOSED_BY_PROTECTION',
+    }).eq('id', intent.id).eq('status', 'QUEUED')
+    if (closedError) throw closedError
+    await enqueueProtectionSync(connection.id, intent.id)
+    await writeBrokerAudit({
+      userId: intent.user_id,
+      connectionId: connection.id,
+      eventType: 'CLOSE_ALREADY_DONE_BY_PROTECTION',
+      outcome: 'SUCCESS',
+      metadata: { intentId: String(intent.id), symbol: String(intent.symbol), direction: String(intent.direction) },
+    })
+    await completeJob(job.id)
+    return
+  }
+
   const [balance, positions, rules, priceResult, recentOrders, riskRuntime, ownedPositions, commissionRates] = await Promise.all([
     adapter.getBalance(),
     adapter.getPositions(),
@@ -393,6 +434,25 @@ async function executeOrder(job: Job) {
       ownedPositions,
     })
     if (settled) {
+      await completeJob(job.id)
+      return
+    }
+  }
+
+  // Un cierre a mercado pedido por la protección (el precio ya había cruzado el stop) que llega
+  // cuando la posición ya no es nuestra: la cerró antes la estrategia u otro cierre. Nada que hacer.
+  if (intent.action === 'CLOSE' && intent.origin === 'PROTECTION') {
+    const stillOwned = ownedPositions.some((position) => (
+      normalizeSymbol(position.symbol) === normalizeSymbol(String(intent.symbol))
+      && position.direction === intent.direction
+      && position.quantity > 0
+    ))
+    if (!stillOwned) {
+      const { error: closedError } = await admin.from('broker_order_intents').update({
+        status: 'CANCELED',
+        rejection_code: 'POSITION_ALREADY_CLOSED',
+      }).eq('id', intent.id).eq('status', 'QUEUED')
+      if (closedError) throw closedError
       await completeJob(job.id)
       return
     }
@@ -460,7 +520,14 @@ async function reconcileOrder(job: Job) {
   const { data: storedOrder } = await admin.from('broker_orders').select('*').eq('intent_id', intent.id).maybeSingle()
   if (!storedOrder) throw new BrokerPlatformError('ORDER_NOT_PERSISTED', 'La orden todavía no está persistida.', 503, true)
   const { connection, adapter } = await loadBrokerAdapter(job.connection_id)
-  const remoteOrder = await adapter.getOrder(storedOrder.symbol, storedOrder.client_order_id)
+  // El cierre que ejecutó un stop/objetivo del broker no tiene clientOrderId (BingX no lo admite
+  // en órdenes condicionales): se consulta por su orderID, y sus fills desde que se colocó.
+  const byBrokerOrderId = intent.origin === 'PROTECTION'
+    && Boolean(storedOrder.broker_order_id)
+    && typeof adapter.getOrderById === 'function'
+  const remoteOrder = byBrokerOrderId
+    ? await adapter.getOrderById!(storedOrder.symbol, String(storedOrder.broker_order_id))
+    : await adapter.getOrder(storedOrder.symbol, storedOrder.client_order_id)
   if (!remoteOrder) throw new BrokerPlatformError('ORDER_RECONCILIATION_PENDING', 'La orden todavía no está disponible para reconciliar.', 503, true)
 
   const brokerOrderId = remoteOrder.brokerOrderId ?? storedOrder.broker_order_id
@@ -468,8 +535,8 @@ async function reconcileOrder(job: Job) {
   const fills = await adapter.getOrderFills(
     storedOrder.symbol,
     brokerOrderId,
-    new Date(storedOrder.created_at),
-    storedOrder.client_order_id,
+    new Date(byBrokerOrderId ? storedOrder.submitted_at ?? storedOrder.created_at : storedOrder.created_at),
+    byBrokerOrderId ? undefined : storedOrder.client_order_id,
   )
   const fillsQuantity = fills.reduce((sum, fill) => sum + fill.quantity, 0)
   // `getOrder` de BingX a veces devuelve la orden sin cantidad ejecutada. Si nos guiáramos sólo
@@ -594,6 +661,21 @@ async function reconcileOrder(job: Job) {
   if (!terminal) throw new BrokerPlatformError('ORDER_NOT_TERMINAL', 'La orden todavía no está cerrada.', 503, true)
   const freshPositions = await adapter.getPositions()
   await persistPositionSnapshots(intent.user_id, intent.connection_id, freshPositions)
+  // Apertura llena → poner stop/objetivo; cierre lleno → retirar lo que quede. La contabilidad ya
+  // quedó asentada: un fallo acá no debe repetirla, el sync horario lo vuelve a intentar.
+  try {
+    await enqueueProtectionSyncIfTracked(intent.id)
+  } catch (error) {
+    console.error('[broker-protection] enqueue after reconcile failed', errorCode(error))
+  }
+  await completeJob(job.id)
+}
+
+async function syncProtectionJob(job: Job) {
+  const outcome = await syncProtection(job, { ownedPositions: computeOwnedPositions })
+  if (outcome !== 'NOTHING_TO_DO' && outcome !== 'DISABLED' && outcome !== 'UNCHANGED') {
+    console.log('[broker-protection]', job.connection_id, outcome)
+  }
   await completeJob(job.id)
 }
 
@@ -601,6 +683,7 @@ export async function processBrokerJob(job: Job) {
   try {
     if (job.job_type === 'VALIDATE_CONNECTION') await validateConnection(job)
     else if (job.job_type === 'RECONCILE_ORDER') await reconcileOrder(job)
+    else if (job.job_type === 'SYNC_PROTECTION') await syncProtectionJob(job)
     else await executeOrder(job)
   } catch (error) {
     if (job.intent_id && job.job_type === 'EXECUTE_ORDER') {
